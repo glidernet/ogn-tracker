@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Project version="2G - 1.7.7" name="OGN_proto">
+  <Target name="OGN_proto" isCurrent="1">
+    <Device manufacturerId="9" manufacturerName="ST" chipId="561" chipName="STM32L152RD" boardId="" boardName=""/>
+    <BuildOption>
+      <Compile>
+        <Option name="OptimizationLevel" value="0"/>
+        <Option name="UseFPU" value="0"/>
+        <Option name="UserEditCompiler" value=""/>
+        <Option name="SupportCPlusplus" value="0"/>
+        <Includepaths>
+          <Includepath path="."/>
+        </Includepaths>
+        <DefinedSymbols>
+          <Define name="STM32L1XX_XL"/>
+          <Define name="USE_STDPERIPH_DRIVER"/>
+        </DefinedSymbols>
+      </Compile>
+      <Link useDefault="0">
+        <Option name="DiscardUnusedSection" value="0"/>
+        <Option name="UserEditLinkder" value=""/>
+        <Option name="UseMemoryLayout" value="1"/>
+        <Option name="nostartfiles" value="1"/>
+        <Option name="LTO" value="0"/>
+        <Option name="IsNewStartupCode" value="1"/>
+        <Option name="Library" value="Not use C Library"/>
+        <LinkedLibraries/>
+        <MemoryAreas debugInFlashNotRAM="1">
+          <Memory name="IROM1" type="ReadOnly" size="0x00060000" startValue="0x08000000"/>
+          <Memory name="IRAM1" type="ReadWrite" size="0x00014000" startValue="0x20000000"/>
+          <Memory name="IROM2" type="ReadOnly" size="" startValue=""/>
+          <Memory name="IRAM2" type="ReadWrite" size="" startValue=""/>
+        </MemoryAreas>
+        <LocateLinkFile path="../../../../coocox/coide/configuration/programdata/ogn_proto/arm-gcc-link.ld" type="0"/>
+      </Link>
+      <Output>
+        <Option name="OutputFileType" value="0"/>
+        <Option name="Path" value="./"/>
+        <Option name="Name" value="OGN_proto"/>
+        <Option name="HEX" value="1"/>
+        <Option name="BIN" value="1"/>
+      </Output>
+      <User>
+        <UserRun name="Run#1" type="Before" checked="0" value=""/>
+        <UserRun name="Run#1" type="After" checked="0" value=""/>
+      </User>
+    </BuildOption>
+    <DebugOption>
+      <Option name="org.coocox.codebugger.gdbjtag.core.adapter" value="ST-Link"/>
+      <Option name="org.coocox.codebugger.gdbjtag.core.debugMode" value="SWD"/>
+      <Option name="org.coocox.codebugger.gdbjtag.core.clockDiv" value="1M"/>
+      <Option name="org.coocox.codebugger.gdbjtag.corerunToMain" value="1"/>
+      <Option name="org.coocox.codebugger.gdbjtag.core.jlinkgdbserver" value=""/>
+      <Option name="org.coocox.codebugger.gdbjtag.core.userDefineGDBScript" value=""/>
+      <Option name="org.coocox.codebugger.gdbjtag.core.targetEndianess" value="0"/>
+      <Option name="org.coocox.codebugger.gdbjtag.core.jlinkResetMode" value="Type 0: Normal"/>
+      <Option name="org.coocox.codebugger.gdbjtag.core.resetMode" value="SYSRESETREQ"/>
+      <Option name="org.coocox.codebugger.gdbjtag.core.ifSemihost" value="0"/>
+      <Option name="org.coocox.codebugger.gdbjtag.core.ifCacheRom" value="1"/>
+      <Option name="org.coocox.codebugger.gdbjtag.core.ipAddress" value="127.0.0.1"/>
+      <Option name="org.coocox.codebugger.gdbjtag.core.portNumber" value="2009"/>
+      <Option name="org.coocox.codebugger.gdbjtag.core.autoDownload" value="1"/>
+      <Option name="org.coocox.codebugger.gdbjtag.core.verify" value="1"/>
+      <Option name="org.coocox.codebugger.gdbjtag.core.downloadFuction" value="Erase Effected"/>
+      <Option name="org.coocox.codebugger.gdbjtag.core.defaultAlgorithm" value="./stm32l1xx_384.elf"/>
+    </DebugOption>
+    <ExcludeFile/>
+  </Target>
+  <Components path="./">
+    <Component id="50" name="CMSIS core" path="" type="2"/>
+    <Component id="1281" name="cmsis_boot" path="" type="2"/>
+    <Component id="1282" name="RCC" path="" type="2"/>
+  </Components>
+  <Files>
+    <File name="cmsis_lib/Include/stm32l1xx_i2c.h" path="cmsis_lib/Include/stm32l1xx_i2c.h" type="1"/>
+    <File name="free_rtos/include/semphr.h" path="free_rtos/include/semphr.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_rcc.h" path="cmsis_lib/Include/stm32l1xx_rcc.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_lcd.h" path="cmsis_lib/Include/stm32l1xx_lcd.h" type="1"/>
+    <File name="cmsis_boot" path="" type="2"/>
+    <File name="free_rtos/queue.c" path="free_rtos/queue.c" type="1"/>
+    <File name="cmsis_lib/Source/stm32l1xx_rcc.c" path="cmsis_lib/Source/stm32l1xx_rcc.c" type="1"/>
+    <File name="cmsis_lib/Source/stm32l1xx_gpio.c" path="cmsis_lib/Source/stm32l1xx_gpio.c" type="1"/>
+    <File name="free_rtos/include/projdefs.h" path="free_rtos/include/projdefs.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_pwr.h" path="cmsis_lib/Include/stm32l1xx_pwr.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_dac.h" path="cmsis_lib/Include/stm32l1xx_dac.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_wwdg.h" path="cmsis_lib/Include/stm32l1xx_wwdg.h" type="1"/>
+    <File name="cmsis/core_cmFunc.h" path="cmsis/core_cmFunc.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_usart.h" path="cmsis_lib/Include/stm32l1xx_usart.h" type="1"/>
+    <File name="cmsis_lib/Source" path="" type="2"/>
+    <File name="free_rtos/include/StackMacros.h" path="free_rtos/include/StackMacros.h" type="1"/>
+    <File name="main.h" path="main.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_comp.h" path="cmsis_lib/Include/stm32l1xx_comp.h" type="1"/>
+    <File name="cmsis_boot/Startup/startup_stm32l1xx_hd.c" path="cmsis_boot/Startup/startup_stm32l1xx_hd.c" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_iwdg.h" path="cmsis_lib/Include/stm32l1xx_iwdg.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_gpio.h" path="cmsis_lib/Include/stm32l1xx_gpio.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_adc.h" path="cmsis_lib/Include/stm32l1xx_adc.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_opamp.h" path="cmsis_lib/Include/stm32l1xx_opamp.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_rtc.h" path="cmsis_lib/Include/stm32l1xx_rtc.h" type="1"/>
+    <File name="free_rtos/include/mpu_wrappers.h" path="free_rtos/include/mpu_wrappers.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_spi.h" path="cmsis_lib/Include/stm32l1xx_spi.h" type="1"/>
+    <File name="cmsis_boot/stm32l1xx.h" path="cmsis_boot/stm32l1xx.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_dma.h" path="cmsis_lib/Include/stm32l1xx_dma.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_fsmc.h" path="cmsis_lib/Include/stm32l1xx_fsmc.h" type="1"/>
+    <File name="cmsis_boot/system_stm32l1xx.h" path="cmsis_boot/system_stm32l1xx.h" type="1"/>
+    <File name="free_rtos/include/croutine.h" path="free_rtos/include/croutine.h" type="1"/>
+    <File name="cmsis_lib/Include" path="" type="2"/>
+    <File name="cmsis_lib/Include/stm32l1xx_crc.h" path="cmsis_lib/Include/stm32l1xx_crc.h" type="1"/>
+    <File name="cmsis/core_cmInstr.h" path="cmsis/core_cmInstr.h" type="1"/>
+    <File name="free_rtos/include" path="" type="2"/>
+    <File name="cmsis/core_cm3.h" path="cmsis/core_cm3.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_aes.h" path="cmsis_lib/Include/stm32l1xx_aes.h" type="1"/>
+    <File name="cmsis_boot/system_stm32l1xx.c" path="cmsis_boot/system_stm32l1xx.c" type="1"/>
+    <File name="free_rtos/include/portmacro.h" path="free_rtos/include/portmacro.h" type="1"/>
+    <File name="stm32l1xx_it.c" path="stm32l1xx_it.c" type="1"/>
+    <File name="free_rtos/list.c" path="free_rtos/list.c" type="1"/>
+    <File name="free_rtos" path="" type="2"/>
+    <File name="free_rtos/include/list.h" path="free_rtos/include/list.h" type="1"/>
+    <File name="free_rtos/heap_2.c" path="free_rtos/heap_2.c" type="1"/>
+    <File name="free_rtos/port.c" path="free_rtos/port.c" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_syscfg.h" path="cmsis_lib/Include/stm32l1xx_syscfg.h" type="1"/>
+    <File name="free_rtos/event_groups.c" path="free_rtos/event_groups.c" type="1"/>
+    <File name="cmsis" path="" type="2"/>
+    <File name="cmsis_lib" path="" type="2"/>
+    <File name="cmsis_lib/Include/stm32l1xx_dbgmcu.h" path="cmsis_lib/Include/stm32l1xx_dbgmcu.h" type="1"/>
+    <File name="free_rtos/croutine.c" path="free_rtos/croutine.c" type="1"/>
+    <File name="free_rtos/tasks.c" path="free_rtos/tasks.c" type="1"/>
+    <File name="free_rtos/include/task.h" path="free_rtos/include/task.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_flash.h" path="cmsis_lib/Include/stm32l1xx_flash.h" type="1"/>
+    <File name="free_rtos/include/event_groups.h" path="free_rtos/include/event_groups.h" type="1"/>
+    <File name="free_rtos/include/FreeRTOS.h" path="free_rtos/include/FreeRTOS.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_tim.h" path="cmsis_lib/Include/stm32l1xx_tim.h" type="1"/>
+    <File name="FreeRTOSConfig.h" path="FreeRTOSConfig.h" type="1"/>
+    <File name="free_rtos/include/timers.h" path="free_rtos/include/timers.h" type="1"/>
+    <File name="cmsis_lib/Include/misc.h" path="cmsis_lib/Include/misc.h" type="1"/>
+    <File name="free_rtos/timers.c" path="free_rtos/timers.c" type="1"/>
+    <File name="cmsis_boot/Startup" path="" type="2"/>
+    <File name="free_rtos/include/queue.h" path="free_rtos/include/queue.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_sdio.h" path="cmsis_lib/Include/stm32l1xx_sdio.h" type="1"/>
+    <File name="main.c" path="main.c" type="1"/>
+    <File name="free_rtos/include/portable.h" path="free_rtos/include/portable.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_exti.h" path="cmsis_lib/Include/stm32l1xx_exti.h" type="1"/>
+    <File name="cmsis_lib/Source/misc.c" path="cmsis_lib/Source/misc.c" type="1"/>
+  </Files>
+</Project>
