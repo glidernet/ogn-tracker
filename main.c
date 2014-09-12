@@ -29,6 +29,8 @@
 #include "main.h"
 #include <FreeRTOS.h>
 #include <task.h>
+#include <semphr.h>
+#include "console.h"
 
 /** @addtogroup Template_Project
   * @{
@@ -55,6 +57,7 @@ void prvSetupHardware(void)
    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
    GPIO_Init(GPIOA, &GPIO_InitStructure);
 
+   Console_Config();
 }
 
 void vTaskPulse(void* pvParameters)
@@ -84,7 +87,8 @@ int main(void)
      */ 
    prvSetupHardware();
 
-   xTaskCreate(vTaskPulse,     (char *)"LED",     256, NULL, tskIDLE_PRIORITY+1, NULL);
+   xTaskCreate(vTaskPulse,     (char *)"LED",     256,  NULL, tskIDLE_PRIORITY+1, NULL);
+   xTaskCreate(vTaskConsole,   (char *)"Console", 1024, NULL, tskIDLE_PRIORITY+2, NULL);
 
 	vTaskStartScheduler();
 	return 0;

@@ -81,7 +81,7 @@
 #define configUSE_PREEMPTION		1
 #define configUSE_IDLE_HOOK			0
 #define configUSE_TICK_HOOK			0
-#define configCPU_CLOCK_HZ			( ( unsigned long ) 16000000 )
+#define configCPU_CLOCK_HZ			( ( unsigned long ) 32000000 )
 #define configTICK_RATE_HZ			( ( TickType_t ) 1000 )
 #define configMAX_PRIORITIES		( 5 )
 #define configMINIMAL_STACK_SIZE	( ( unsigned short ) 120 )
@@ -127,6 +127,10 @@ priority values, 0 to 15.  This must correspond to the
 configKERNEL_INTERRUPT_PRIORITY setting.  Here 15 corresponds to the lowest
 NVIC value of 255. */
 #define configLIBRARY_KERNEL_INTERRUPT_PRIORITY	15
+
+/* Interrupts priorities */
+/* Priority 14: Console USART RX interrupt */
+#define configCONSOLE_INTERRUPT_PRIORITY (configLIBRARY_KERNEL_INTERRUPT_PRIORITY-1)
 
 /*-----------------------------------------------------------
  * UART configuration.
