@@ -155,3 +155,14 @@ void USART2_Send(uint8_t* data, uint16_t len)
    USART_ITConfig(USART2, USART_IT_TXE, ENABLE);
 }
 
+/**
+* @brief  Waits until USART2 transmission finishes.
+* @param  None
+* @retval None
+*/
+void USART2_Wait()
+{
+   /* Take access to USART2 TX  - will block if already used */
+   xSemaphoreTake(xUSART2Semaphore, portMAX_DELAY);
+   xSemaphoreGive(xUSART2Semaphore);
+}
