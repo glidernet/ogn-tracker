@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-#define CONSOLE_USART_SRC_ID  0
+#define CONSOLE_USART_SRC_ID  1
+#define GPS_USART_SRC_ID      2
 
 typedef struct
 {

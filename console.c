@@ -9,14 +9,25 @@
 #include "messages.h"
 #include "usart.h"
 #include "commands.h"
+#include "cir_buf.h"
 
 /* -------- defines -------- */
 #define MAX_INPUT_LENGTH    50
 #define MAX_OUTPUT_LENGTH   100
+#define NMEA_SENTENCE_MODE     0
+#define CONSOLE_SENTENCE_MODE  1
+#define MAX_NMEA_SENTENCE      100
+
 /* -------- variables -------- */
 /* Console task queue */
 xQueueHandle  console_que;
 static const char * const pcWelcomeMessage = "\r\nOGN Tracker Console.\r\n";
+/* Console NMEA sentence storage */
+char nmea_sentence[MAX_NMEA_SENTENCE];
+uint8_t nmea_sent_len;
+/* Pointers to data structures assigned in GPS task */
+xQueueHandle* gps_task_queue;
+cir_buf_str*  gps_task_cir_buf;
 
 /* -------- interrupt handlers -------- */
 /* -------- functions -------- */
@@ -31,8 +42,29 @@ void Console_Config(void)
 }
 
 /**
+* @brief  Sets circular buffer used for NMEA sentences.
+* @param  Initialized cir. buf. structure
+* @retval None
+*/
+void Console_SetNMEABuf(cir_buf_str* handle)
+{
+   gps_task_cir_buf = handle;
+}
+
+/**
+* @brief  Sets queue for USART3 received data.
+* @param  Initialized queue handle
+* @retval None
+*/
+void Console_SetGPSQue(xQueueHandle* handle)
+{
+   gps_task_queue = handle;
+}
+
+
+/**
 * @brief  Sends Console string.
-* @param  None
+* @param  String address & len.
 * @retval None
 */
 void Console_Send(const char* str, char block)
@@ -145,7 +177,8 @@ void handle_console_input(char cRxedChar)
 */
 void vTaskConsole(void* pvParameters)
 {
-   task_message msg;
+   task_message msg, gps_msg;
+   uint8_t      console_mode;
 
    console_que = xQueueCreate(10, sizeof(task_message));
    USART2_SetQue(&console_que);
@@ -157,6 +190,8 @@ void vTaskConsole(void* pvParameters)
 
    Console_Send(pcWelcomeMessage, 0);
 
+   console_mode = CONSOLE_SENTENCE_MODE;
+
    for(;;)
    {
       xQueueReceive(console_que, &msg, portMAX_DELAY);
@@ -164,7 +199,41 @@ void vTaskConsole(void* pvParameters)
       {
           case CONSOLE_USART_SRC_ID:
           {
-             handle_console_input(msg.msg_opcode);
+             char cons_char = msg.msg_opcode;
+             if (cons_char == '$')
+             {  /* start of NMEA sentence detected */
+                console_mode = NMEA_SENTENCE_MODE;
+                /* reset nmea string */
+                nmea_sent_len = 0;
+             }
+
+             if (console_mode == CONSOLE_SENTENCE_MODE)
+             {
+                /* normal console mode */
+                handle_console_input(cons_char);
+             }
+             else if (console_mode == NMEA_SENTENCE_MODE)
+             {
+                /* NMEA sentence mode - update string */
+                nmea_sentence[nmea_sent_len++] = cons_char;
+
+                if (cons_char == '\n')
+                {
+                   /* NMEA Sentence completed */
+                   nmea_sentence[nmea_sent_len++] = '\0';
+                   if (gps_task_cir_buf && gps_task_queue)
+                   {
+                      gps_msg.msg_data = (uint32_t)cir_put_data(gps_task_cir_buf, (uint8_t*)nmea_sentence, nmea_sent_len);
+                      gps_msg.msg_len  = nmea_sent_len;
+                      gps_msg.src_id   = CONSOLE_USART_SRC_ID;
+                      /* Send NMEA sentence to GPS task */
+                      xQueueSend(*gps_task_queue, &gps_msg, portMAX_DELAY);
+                   }
+                   /* go back to normal console mode */
+                   console_mode = CONSOLE_SENTENCE_MODE;
+                }
+                if (nmea_sent_len >= MAX_NMEA_SENTENCE) nmea_sent_len = 0;
+             }
              break;
           }
           default:

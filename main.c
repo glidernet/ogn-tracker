@@ -31,6 +31,7 @@
 #include <task.h>
 #include <semphr.h>
 #include "console.h"
+#include "gps.h"
 
 /** @addtogroup Template_Project
   * @{
@@ -58,6 +59,7 @@ void prvSetupHardware(void)
    GPIO_Init(GPIOA, &GPIO_InitStructure);
 
    Console_Config();
+   GPS_Config();
 }
 
 void vTaskPulse(void* pvParameters)
@@ -89,6 +91,7 @@ int main(void)
 
    xTaskCreate(vTaskPulse,     (char *)"LED",     256,  NULL, tskIDLE_PRIORITY+1, NULL);
    xTaskCreate(vTaskConsole,   (char *)"Console", 1024, NULL, tskIDLE_PRIORITY+2, NULL);
+   xTaskCreate(vTaskGPS,       (char *)"GPS",     1024, NULL, tskIDLE_PRIORITY+3, NULL);
 
 	vTaskStartScheduler();
 	return 0;
