@@ -10,6 +10,7 @@
 #include "usart.h"
 #include "commands.h"
 #include "cir_buf.h"
+#include "options.h"
 
 /* -------- defines -------- */
 #define MAX_INPUT_LENGTH    50
@@ -38,7 +39,11 @@ cir_buf_str*  gps_task_cir_buf;
 */
 void Console_Config(void)
 {
-   USART2_Config();
+   uint32_t* cons_speed = (uint32_t*)GetOption(OPT_CONS_SPEED);
+   if (cons_speed)
+   {
+      USART2_Config(*cons_speed);
+   }
 }
 
 /**

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <Project version="2G - 1.7.7" name="OGN_proto">
-  <Target name="OGN_proto" isCurrent="1">
+  <Target name="OGN_proto" isCurrent="0">
     <Device manufacturerId="9" manufacturerName="ST" chipId="561" chipName="STM32L152RD" boardId="" boardName=""/>
     <BuildOption>
       <Compile>
@@ -23,7 +23,8 @@
         <Option name="nostartfiles" value="1"/>
         <Option name="LTO" value="0"/>
         <Option name="IsNewStartupCode" value="1"/>
-        <Option name="Library" value="Not use C Library"/>
+        <Option name="Library" value="Use nano C Library"/>
+        <Option name="UserEditLinker" value="--entry=main; "/>
         <LinkedLibraries/>
         <MemoryAreas debugInFlashNotRAM="1">
           <Memory name="IROM1" type="ReadOnly" size="0x00060000" startValue="0x08000000"/>
@@ -66,7 +67,7 @@
     </DebugOption>
     <ExcludeFile/>
   </Target>
-  <Target name="OGN_proto_rel" isCurrent="0">
+  <Target name="OGN_proto_rel" isCurrent="1">
     <Device manufacturerId="9" manufacturerName="ST" chipId="561" chipName="STM32L152RD" boardId="" boardName=""/>
     <BuildOption>
       <Compile>
@@ -138,10 +139,11 @@
     <Component id="1282" name="RCC" path="" type="2"/>
   </Components>
   <Files>
+    <File name="cmsis_lib/Source/stm32l1xx_flash.c" path="cmsis_lib/Source/stm32l1xx_flash.c" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_i2c.h" path="cmsis_lib/Include/stm32l1xx_i2c.h" type="1"/>
     <File name="free_rtos/include/semphr.h" path="free_rtos/include/semphr.h" type="1"/>
-    <File name="cmsis_lib/Include/stm32l1xx_lcd.h" path="cmsis_lib/Include/stm32l1xx_lcd.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_rcc.h" path="cmsis_lib/Include/stm32l1xx_rcc.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_lcd.h" path="cmsis_lib/Include/stm32l1xx_lcd.h" type="1"/>
     <File name="cmsis_boot" path="" type="2"/>
     <File name="cmsis_lib/Source/stm32l1xx_rcc.c" path="cmsis_lib/Source/stm32l1xx_rcc.c" type="1"/>
     <File name="free_rtos/queue.c" path="free_rtos/queue.c" type="1"/>
@@ -152,8 +154,8 @@
     <File name="cmsis_lib/Include/stm32l1xx_dac.h" path="cmsis_lib/Include/stm32l1xx_dac.h" type="1"/>
     <File name="cmsis_lib/Source/stm32l1xx_usart.c" path="cmsis_lib/Source/stm32l1xx_usart.c" type="1"/>
     <File name="cir_buf.c" path="cir_buf.c" type="1"/>
-    <File name="cmsis/core_cmFunc.h" path="cmsis/core_cmFunc.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_wwdg.h" path="cmsis_lib/Include/stm32l1xx_wwdg.h" type="1"/>
+    <File name="cmsis/core_cmFunc.h" path="cmsis/core_cmFunc.h" type="1"/>
     <File name="usart.c" path="usart.c" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_usart.h" path="cmsis_lib/Include/stm32l1xx_usart.h" type="1"/>
     <File name="cmsis_lib/Source" path="" type="2"/>
@@ -162,8 +164,8 @@
     <File name="cmsis_lib/Include/stm32l1xx_comp.h" path="cmsis_lib/Include/stm32l1xx_comp.h" type="1"/>
     <File name="cmsis_boot/Startup/startup_stm32l1xx_hd.c" path="cmsis_boot/Startup/startup_stm32l1xx_hd.c" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_gpio.h" path="cmsis_lib/Include/stm32l1xx_gpio.h" type="1"/>
-    <File name="cmsis_lib/Include/stm32l1xx_adc.h" path="cmsis_lib/Include/stm32l1xx_adc.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_iwdg.h" path="cmsis_lib/Include/stm32l1xx_iwdg.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_adc.h" path="cmsis_lib/Include/stm32l1xx_adc.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_opamp.h" path="cmsis_lib/Include/stm32l1xx_opamp.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_rtc.h" path="cmsis_lib/Include/stm32l1xx_rtc.h" type="1"/>
     <File name="gps.c" path="gps.c" type="1"/>
@@ -174,13 +176,14 @@
     <File name="cmsis_lib/Include/stm32l1xx_dma.h" path="cmsis_lib/Include/stm32l1xx_dma.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_fsmc.h" path="cmsis_lib/Include/stm32l1xx_fsmc.h" type="1"/>
     <File name="cmsis_boot/system_stm32l1xx.h" path="cmsis_boot/system_stm32l1xx.h" type="1"/>
-    <File name="cir_buf.h" path="cir_buf.h" type="1"/>
     <File name="free_rtos/include/croutine.h" path="free_rtos/include/croutine.h" type="1"/>
+    <File name="cir_buf.h" path="cir_buf.h" type="1"/>
     <File name="cmsis_lib/Include" path="" type="2"/>
-    <File name="cmsis/core_cmInstr.h" path="cmsis/core_cmInstr.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_crc.h" path="cmsis_lib/Include/stm32l1xx_crc.h" type="1"/>
+    <File name="cmsis/core_cmInstr.h" path="cmsis/core_cmInstr.h" type="1"/>
     <File name="cmsis/core_cm3.h" path="cmsis/core_cm3.h" type="1"/>
     <File name="free_rtos/include" path="" type="2"/>
+    <File name="options.c" path="options.c" type="1"/>
     <File name="console.c" path="console.c" type="1"/>
     <File name="usart.h" path="usart.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_aes.h" path="cmsis_lib/Include/stm32l1xx_aes.h" type="1"/>
@@ -192,16 +195,17 @@
     <File name="free_rtos/list.c" path="free_rtos/list.c" type="1"/>
     <File name="free_rtos" path="" type="2"/>
     <File name="commands.c" path="commands.c" type="1"/>
-    <File name="free_rtos/heap_2.c" path="free_rtos/heap_2.c" type="1"/>
     <File name="gps.h" path="gps.h" type="1"/>
     <File name="free_rtos/include/list.h" path="free_rtos/include/list.h" type="1"/>
+    <File name="free_rtos/heap_2.c" path="free_rtos/heap_2.c" type="1"/>
     <File name="free_rtos/port.c" path="free_rtos/port.c" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_syscfg.h" path="cmsis_lib/Include/stm32l1xx_syscfg.h" type="1"/>
-    <File name="cmsis" path="" type="2"/>
     <File name="free_rtos/event_groups.c" path="free_rtos/event_groups.c" type="1"/>
+    <File name="cmsis" path="" type="2"/>
+    <File name="options.h" path="options.h" type="1"/>
     <File name="cmsis_lib" path="" type="2"/>
-    <File name="free_rtos/croutine.c" path="free_rtos/croutine.c" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_dbgmcu.h" path="cmsis_lib/Include/stm32l1xx_dbgmcu.h" type="1"/>
+    <File name="free_rtos/croutine.c" path="free_rtos/croutine.c" type="1"/>
     <File name="commands.h" path="commands.h" type="1"/>
     <File name="free_rtos/tasks.c" path="free_rtos/tasks.c" type="1"/>
     <File name="free_rtos/include/task.h" path="free_rtos/include/task.h" type="1"/>
@@ -216,9 +220,9 @@
     <File name="free_rtos/include/queue.h" path="free_rtos/include/queue.h" type="1"/>
     <File name="cmsis_boot/Startup" path="" type="2"/>
     <File name="free_rtos/timers.c" path="free_rtos/timers.c" type="1"/>
-    <File name="main.c" path="main.c" type="1"/>
     <File name="free_rtos/include/portable.h" path="free_rtos/include/portable.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_sdio.h" path="cmsis_lib/Include/stm32l1xx_sdio.h" type="1"/>
+    <File name="main.c" path="main.c" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_exti.h" path="cmsis_lib/Include/stm32l1xx_exti.h" type="1"/>
     <File name="cmsis_lib/Source/misc.c" path="cmsis_lib/Source/misc.c" type="1"/>
   </Files>

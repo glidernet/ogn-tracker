@@ -32,6 +32,7 @@
 #include <semphr.h>
 #include "console.h"
 #include "gps.h"
+#include "options.h"
 
 /** @addtogroup Template_Project
   * @{
@@ -87,6 +88,7 @@ int main(void)
        To reconfigure the default setting of SystemInit() function, refer to
        system_stm32l1xx.c file
      */ 
+   InitOptions();
    prvSetupHardware();
 
    xTaskCreate(vTaskPulse,     (char *)"LED",     256,  NULL, tskIDLE_PRIORITY+1, NULL);

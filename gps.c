@@ -8,6 +8,7 @@
 #include "messages.h"
 #include "cir_buf.h"
 #include "console.h"
+#include "options.h"
 
 /* -------- defines ---------- */
 /* -------- variables -------- */
@@ -33,7 +34,11 @@ void Handle_NMEA_String(char* str, uint8_t len)
 */
 void GPS_Config(void)
 {
-   USART3_Config();
+   uint32_t* gps_speed = (uint32_t*)GetOption(OPT_GPS_SPEED);
+   if (gps_speed)
+   {
+      USART3_Config(*gps_speed);
+   }
 }
 
 /**

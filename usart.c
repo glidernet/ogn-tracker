@@ -129,10 +129,10 @@ void USART3_IRQHandler(void)
 /* -------- functions -------- */
 /**
 * @brief  Configures the USART2 Peripheral.
-* @param  None
+* @param  USART speed
 * @retval None
 */
-void USART2_Config(void)
+void USART2_Config(uint32_t speed)
 {
    USART_InitTypeDef USART_InitStructure;
    GPIO_InitTypeDef  GPIO_InitStructure;
@@ -171,7 +171,7 @@ void USART2_Config(void)
    - Hardware flow control disabled (RTS and CTS signals)
    - Receive and transmit enabled
    */
-   USART_InitStructure.USART_BaudRate   = 4800;
+   USART_InitStructure.USART_BaudRate   = speed;
    USART_InitStructure.USART_WordLength = USART_WordLength_8b;
    USART_InitStructure.USART_StopBits   = USART_StopBits_1;
    USART_InitStructure.USART_Parity     = USART_Parity_No;
@@ -230,10 +230,10 @@ void USART2_Wait()
 /* -------- functions -------- */
 /**
 * @brief  Configures the USART3 Peripheral.
-* @param  None
+* @param  USART speed
 * @retval None
 */
-void USART3_Config(void)
+void USART3_Config(uint32_t speed)
 {
    USART_InitTypeDef USART_InitStructure;
    GPIO_InitTypeDef  GPIO_InitStructure;
@@ -272,7 +272,7 @@ void USART3_Config(void)
       - Hardware flow control disabled (RTS and CTS signals)
       - Receive enabled
       */
-   USART_InitStructure.USART_BaudRate   = 9600;
+   USART_InitStructure.USART_BaudRate   = speed;
    USART_InitStructure.USART_WordLength = USART_WordLength_8b;
    USART_InitStructure.USART_StopBits   = USART_StopBits_1;
    USART_InitStructure.USART_Parity     = USART_Parity_No;
