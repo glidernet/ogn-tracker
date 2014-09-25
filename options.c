@@ -196,4 +196,23 @@ void* GetOption(option_types opt_code)
    return ret_val;
 }
 
+void SetOption(option_types opt_code, void* value)
+{
+   switch (opt_code)
+   {
+     case OPT_CONS_SPEED:
+     {
+        SetConsSpeed(*(uint32_t*) value);
+        break;
+     }
+
+     case OPT_GPS_SPEED:
+     {
+        SetGPSSpeed(*(uint32_t*) value);
+        break;
+     }
+     default:
+        break;
+   }
+}
 

@@ -15,5 +15,6 @@ void ResetOptions(void);
 uint8_t WriteOptions(void);
 
 void* GetOption(option_types opt_code);
+void  SetOption(option_types opt_code, void* value);
 
 #endif /* __OPTIONS_H */
