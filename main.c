@@ -33,7 +33,7 @@
 #include "console.h"
 #include "gps.h"
 #include "options.h"
-#include "spi.h"
+#include "spirit1.h"
 
 /** @addtogroup Template_Project
   * @{
@@ -50,7 +50,7 @@ void prvSetupHardware(void)
    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
    Console_Config();
    GPS_Config();
-   SPI1_Config();
+   Spirit1_Config();
 }
 
 /**
