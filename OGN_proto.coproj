@@ -164,9 +164,9 @@
     <File name="cmsis_lib/Include/stm32l1xx_comp.h" path="cmsis_lib/Include/stm32l1xx_comp.h" type="1"/>
     <File name="cmsis_lib/Source/stm32l1xx_dma.c" path="cmsis_lib/Source/stm32l1xx_dma.c" type="1"/>
     <File name="cmsis_boot/Startup/startup_stm32l1xx_hd.c" path="cmsis_boot/Startup/startup_stm32l1xx_hd.c" type="1"/>
-    <File name="cmsis_lib/Include/stm32l1xx_gpio.h" path="cmsis_lib/Include/stm32l1xx_gpio.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_adc.h" path="cmsis_lib/Include/stm32l1xx_adc.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_iwdg.h" path="cmsis_lib/Include/stm32l1xx_iwdg.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_gpio.h" path="cmsis_lib/Include/stm32l1xx_gpio.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_opamp.h" path="cmsis_lib/Include/stm32l1xx_opamp.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_rtc.h" path="cmsis_lib/Include/stm32l1xx_rtc.h" type="1"/>
     <File name="cmsis_lib/Source/stm32l1xx_spi.c" path="cmsis_lib/Source/stm32l1xx_spi.c" type="1"/>
@@ -174,7 +174,7 @@
     <File name="messages.h" path="messages.h" type="1"/>
     <File name="free_rtos/include/mpu_wrappers.h" path="free_rtos/include/mpu_wrappers.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_spi.h" path="cmsis_lib/Include/stm32l1xx_spi.h" type="1"/>
-    <File name="spi.c" path="cmsis_lib/Source/spi.c" type="1"/>
+    <File name="spi.c" path="spi.c" type="1"/>
     <File name="cmsis_boot/stm32l1xx.h" path="cmsis_boot/stm32l1xx.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_dma.h" path="cmsis_lib/Include/stm32l1xx_dma.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_fsmc.h" path="cmsis_lib/Include/stm32l1xx_fsmc.h" type="1"/>
@@ -194,8 +194,8 @@
     <File name="free_rtos/include/portmacro.h" path="free_rtos/include/portmacro.h" type="1"/>
     <File name="cmsis_boot/system_stm32l1xx.c" path="cmsis_boot/system_stm32l1xx.c" type="1"/>
     <File name="stm32l1xx_it.c" path="stm32l1xx_it.c" type="1"/>
-    <File name="spi.h" path="cmsis_lib/Source/spi.h" type="1"/>
     <File name="free_rtos_cli" path="" type="2"/>
+    <File name="spi.h" path="spi.h" type="1"/>
     <File name="free_rtos/list.c" path="free_rtos/list.c" type="1"/>
     <File name="free_rtos" path="" type="2"/>
     <File name="commands.c" path="commands.c" type="1"/>
@@ -224,10 +224,10 @@
     <File name="free_rtos/include/queue.h" path="free_rtos/include/queue.h" type="1"/>
     <File name="cmsis_boot/Startup" path="" type="2"/>
     <File name="free_rtos/timers.c" path="free_rtos/timers.c" type="1"/>
-    <File name="free_rtos/include/portable.h" path="free_rtos/include/portable.h" type="1"/>
-    <File name="cmsis_lib/Include/stm32l1xx_sdio.h" path="cmsis_lib/Include/stm32l1xx_sdio.h" type="1"/>
     <File name="main.c" path="main.c" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_sdio.h" path="cmsis_lib/Include/stm32l1xx_sdio.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_exti.h" path="cmsis_lib/Include/stm32l1xx_exti.h" type="1"/>
+    <File name="free_rtos/include/portable.h" path="free_rtos/include/portable.h" type="1"/>
     <File name="cmsis_lib/Source/misc.c" path="cmsis_lib/Source/misc.c" type="1"/>
   </Files>
 </Project>
