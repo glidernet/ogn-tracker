@@ -133,6 +133,8 @@ NVIC value of 255. */
 #define configCONSOLE_INTERRUPT_PRIORITY (configLIBRARY_KERNEL_INTERRUPT_PRIORITY-1)
 /* Priority 13: GPS USART RX interrupt */
 #define configGPS_INTERRUPT_PRIORITY     (configLIBRARY_KERNEL_INTERRUPT_PRIORITY-2)
+/* Priority 12: SPI bus interrupt */
+#define configSPI_BUS_INTERRUPT_PRIORITY (configLIBRARY_KERNEL_INTERRUPT_PRIORITY-3)
 
 /*-----------------------------------------------------------
  * UART configuration.

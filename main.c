@@ -33,6 +33,7 @@
 #include "console.h"
 #include "gps.h"
 #include "options.h"
+#include "spi.h"
 
 /** @addtogroup Template_Project
   * @{
@@ -46,32 +47,10 @@
 /* Private functions ---------------------------------------------------------*/
 void prvSetupHardware(void)
 {
-   GPIO_InitTypeDef  GPIO_InitStructure;
-
    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
-
-   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
-   /* Configure PA5 (LED) in output pushpull mode */
-   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
-   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-   GPIO_Init(GPIOA, &GPIO_InitStructure);
-
    Console_Config();
    GPS_Config();
-}
-
-void vTaskPulse(void* pvParameters)
-{
-   for(;;)
-   {
-      GPIO_SetBits(GPIOA, GPIO_Pin_5);
-      vTaskDelay(1000);
-      GPIO_ResetBits(GPIOA, GPIO_Pin_5);
-      vTaskDelay(1000);
-   }
+   SPI1_Config();
 }
 
 /**
@@ -91,9 +70,8 @@ int main(void)
    InitOptions();
    prvSetupHardware();
 
-   xTaskCreate(vTaskPulse,     (char *)"LED",     256,  NULL, tskIDLE_PRIORITY+1, NULL);
-   xTaskCreate(vTaskConsole,   (char *)"Console", 1024, NULL, tskIDLE_PRIORITY+2, NULL);
-   xTaskCreate(vTaskGPS,       (char *)"GPS",     1024, NULL, tskIDLE_PRIORITY+3, NULL);
+   xTaskCreate(vTaskConsole,   (char *)"Console", 1024, NULL, tskIDLE_PRIORITY+1, NULL);
+   xTaskCreate(vTaskGPS,       (char *)"GPS",     1024, NULL, tskIDLE_PRIORITY+2, NULL);
 
 	vTaskStartScheduler();
 	return 0;
