@@ -13,6 +13,7 @@ extern "C" {
 
 /* --- SPIRIT1 related functions --- */
 void Spirit1_Config(void);
+void vTaskSP1(void* pvParameters);
 
 #ifdef __cplusplus
 }

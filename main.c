@@ -72,6 +72,7 @@ int main(void)
 
    xTaskCreate(vTaskConsole,   (char *)"Console", 1024, NULL, tskIDLE_PRIORITY+1, NULL);
    xTaskCreate(vTaskGPS,       (char *)"GPS",     1024, NULL, tskIDLE_PRIORITY+2, NULL);
+   xTaskCreate(vTaskSP1,       (char *)"SP1",     1024, NULL, tskIDLE_PRIORITY+3, NULL);
 
 	vTaskStartScheduler();
 	return 0;

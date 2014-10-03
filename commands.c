@@ -49,7 +49,7 @@ int8_t get_hex_val(char chr)
   * @retval integer value.
   */
 
-inline uint8_t get_hex_str_val(const char* str)
+uint8_t get_hex_str_val(const char* str)
 {
    return (get_hex_val(str[0])<<4) | get_hex_val(str[1]);
 }
