@@ -23,9 +23,17 @@ typedef struct {
    uint8_t*  buf_data;
    uint16_t  buf_ptr;
    uint16_t  buf_len;
-}cir_buf_str;
+} cir_buf_str;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 cir_buf_str* init_cir_buf(cir_buf_num buf_nr);
 uint8_t*     cir_put_data(cir_buf_str* buf_str_ptr, uint8_t* data, uint16_t len);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __CIR_BUF_H */

@@ -6,9 +6,17 @@
 #include <queue.h>
 #include "cir_buf.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void Console_Config(void);
 void vTaskConsole(void* pvParameters);
 void Console_SetNMEABuf(cir_buf_str* handle);
 void Console_SetGPSQue(xQueueHandle* handle);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __CONSOLE_H */

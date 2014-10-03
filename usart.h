@@ -8,6 +8,10 @@
 #include <queue.h>
 #include "cir_buf.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* --- USART2 related functions --- */
 void USART2_Config(uint32_t speed);
 void USART2_SetQue(xQueueHandle* handle);
@@ -18,5 +22,9 @@ void USART2_Wait(void);
 void USART3_Config(uint32_t speed);
 void USART3_SetQue(xQueueHandle* handle);
 void USART3_SetBuf(cir_buf_str* handle);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __USART_H */
