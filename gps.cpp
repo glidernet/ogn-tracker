@@ -44,17 +44,19 @@ static OgnPosition Position[4]; // we keep the 3 most recent positions
  void Handle_NMEA_String(const char* str, uint8_t len)
 { 
   xSemaphoreTake(xGpsPosMutex, portMAX_DELAY);
-  if(Position[PosPtr].ReadNMEA(str)<=0) return;
-  if(Position[PosPtr].isComplete())
-  { if(Position[PosPtr].isValid())                          // new position is complete: but GPS lock might not be there yet
-    { int RefPtr = (PosPtr+2)&3;
-      if(Position[RefPtr].isValid())
-      { Position[PosPtr].calcDifferences(Position[RefPtr]); // measure climb/turn rates
+  if(Position[PosPtr].ReadNMEA(str)>0)
+  { if(Position[PosPtr].isComplete())
+    { if(Position[PosPtr].isValid())                          // new position is complete: but GPS lock might not be there yet
+      { int RefPtr = (PosPtr+2)&3;
+        if(Position[RefPtr].isValid())
+        { Position[PosPtr].calcDifferences(Position[RefPtr]); // measure climb/turn rates
+        }
       }
+      PosPtr = (PosPtr+1)&3; Position[PosPtr].Clear();
     }
-    PosPtr = (PosPtr+1)&3; Position[PosPtr].Clear(); }
+  }
   xSemaphoreGive(xGpsPosMutex);
-}
+  return; }
 
 /**
 * @brief  Configures the GPS Task Peripherals.

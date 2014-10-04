@@ -84,7 +84,7 @@ all:	main.hex main.bin main.dmp
 $(CC_OBJ) : %.o : %.c makefile $(H_SRC)
 	$(CC)  -c $(CC_OPT)  $(INCDIR) $(DEFS) $< -o $@
 
-$(CPP_OBJ) : %.o : %.cc makefile $(H_SRC)
+$(CPP_OBJ) : %.o : %.cpp makefile $(H_SRC)
 	$(CPP) -c $(CPP_OPT) $(INCDIR) $(DEFS) $< -o $@
 
 main.elf:	$(CC_OBJ) $(CPP_OBJ) makefile
