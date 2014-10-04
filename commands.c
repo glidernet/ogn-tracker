@@ -257,11 +257,19 @@ static portBASE_TYPE prvGPSSpeedCommand( char *pcWriteBuffer,
 static portBASE_TYPE prvGPSTimeCommand( char *pcWriteBuffer,
                              size_t xWriteBufferLen,
                              const char *pcCommandString )
-{
-   uint32_t Time = GPS_GetUnixTime();
-   sprintf(pcWriteBuffer,"GPS Time = %ldsec\r\n", Time);
-   return pdFALSE;
-}
+{ uint32_t Time = GPS_GetPosition(NULL);
+  sprintf(pcWriteBuffer,"GPS Time = %ldsec\r\n", Time);
+  return pdFALSE; }
+
+/**
+  * @brief  Command gps_pos: prints GPS UTC time and position.
+  * @param  CLI template
+  * @retval CLI template
+  */
+static portBASE_TYPE prvGPSPosCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ GPS_GetPosition(pcWriteBuffer); return pdFALSE; }
 
 /**
   * @brief  Command spi1_send: send data over SPI1 bus.
@@ -350,6 +358,14 @@ static const CLI_Command_Definition_t GPSTimeCommand =
     0
 };
 
+static const CLI_Command_Definition_t GPSPosCommand =
+{
+    "gps_pos",
+    "gps_pos: GPS Time & Position\r\n",
+    prvGPSPosCommand,
+    0
+};
+
 static const CLI_Command_Definition_t SetGPSSpeedCommand =
 {
     "set_gps_speed",
@@ -393,6 +409,7 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&ConsSpeedCommand);
    FreeRTOS_CLIRegisterCommand(&GPSSpeedCommand);
    FreeRTOS_CLIRegisterCommand(&GPSTimeCommand);
+   FreeRTOS_CLIRegisterCommand(&GPSPosCommand);
    FreeRTOS_CLIRegisterCommand(&ResetCommand);
    FreeRTOS_CLIRegisterCommand(&SetConsSpeedCommand);
    FreeRTOS_CLIRegisterCommand(&SetGPSSpeedCommand);

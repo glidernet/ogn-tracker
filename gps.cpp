@@ -30,13 +30,15 @@ static int PosPtr=0;
 static OgnPosition Position[4]; // we keep the 3 most recent positions
 // static OGN_Packet  Packet;
 
- uint32_t GPS_GetUnixTime(void)
+ uint32_t GPS_GetPosition(char *Output)
 { xSemaphoreTake(xGpsPosMutex, portMAX_DELAY);
-  int Ptr=PosPtr; uint32_t Time=0;
-  if(Position[Ptr].isComplete()) Time=Position[Ptr].UnixTime;
+  int Ptr=PosPtr; uint32_t Time=0; if(Output) Output[0]=0;
+  if(Position[Ptr].isComplete())
+  { Time=Position[Ptr].UnixTime; if(Output) Position[Ptr].PrintLine(Output); }
   else
   { Ptr = (Ptr-1)&3;
-    if(Position[Ptr].isComplete()) Time=Position[Ptr].UnixTime;
+    if(Position[Ptr].isComplete())
+    { Time=Position[Ptr].UnixTime; if(Output) Position[Ptr].PrintLine(Output); }
   }
   xSemaphoreGive(xGpsPosMutex);
   return Time; }

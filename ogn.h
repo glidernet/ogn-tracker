@@ -363,6 +363,9 @@ class OgnPosition
    void PrintDateTime(void) const { printf("%02d.%02d.%04d %02d:%02d:%06.3f", Day, Month, Year, Hour, Min, Sec+0.001*FracSec ); }
    void PrintTime(void)     const { printf("%02d:%02d:%06.3f", Hour, Min, Sec+0.001*FracSec ); }
 
+   int PrintDateTime(char *Out) const { return sprintf(Out, "%02d.%02d.%04d %02d:%02d:%06.3f", Day, Month, Year, Hour, Min, Sec+0.001*FracSec ); }
+   int PrintTime(char *Out)     const { return sprintf(Out, "%02d:%02d:%06.3f", Hour, Min, Sec+0.001*FracSec ); }
+
    void Print(void) const
    { printf("Time/Date = "); PrintDateTime(); printf(" = %10ld.%03dsec\n", UnixTime, FracSec);
      printf("FixQuality=%d: %d satellites HDOP=%3.1f\n", FixQuality, Satellites, 0.1*HDOP);
@@ -370,12 +373,27 @@ class OgnPosition
      printf("Speed/Heading = %4.2fkt %06.2fdeg\n", 0.01*Speed, 0.01*Heading);
    }
 
+   int Print(char *Out) const
+   { int Len=0;
+     Len+=sprintf(Out+Len, "Time/Date = "); Len+=PrintDateTime(Out+Len); Len+=sprintf(Out+Len, " = %10ld.%03dsec\n", UnixTime, FracSec);
+     Len+=sprintf(Out+Len, "FixQuality=%d: %d satellites HDOP=%3.1f\n", FixQuality, Satellites, 0.1*HDOP);
+     Len+=sprintf(Out+Len, "Lat/Lon/Alt = [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m\n", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
+     Len+=sprintf(Out+Len, "Speed/Heading = %4.2fkt %06.2fdeg\n", 0.01*Speed, 0.01*Heading);
+     return Len; }
+
    void PrintLine(void) const
    { PrintTime();
      printf(" %d/%d/%02d/%4.1f/%4.1f/%4.1f", FixQuality, FixMode, Satellites, 0.1*PDOP, 0.1*HDOP, 0.1*VDOP);
      printf(" [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
      printf(" %4.1fkt %05.1fdeg", 0.01*Speed, 0.01*Heading);
      printf("\n"); }
+
+   int PrintLine(char *Out) const
+   { int Len=PrintTime(Out);
+     Len+=sprintf(Out+Len, " %d/%d/%02d/%4.1f/%4.1f/%4.1f", FixQuality, FixMode, Satellites, 0.1*PDOP, 0.1*HDOP, 0.1*VDOP);
+     Len+=sprintf(Out+Len," [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
+     Len+=sprintf(Out+Len, " %4.1fkt %05.1fdeg", 0.01*Speed, 0.01*Heading);
+     Len+=sprintf(Out+Len, "\n"); return Len; }
 
    int ReadNMEA(NMEA_RxMsg &RxMsg)
    {      if(RxMsg.isGPGGA()) return ReadGGA(RxMsg);
