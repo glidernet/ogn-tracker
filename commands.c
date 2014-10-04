@@ -269,7 +269,7 @@ static portBASE_TYPE prvGPSTimeCommand( char *pcWriteBuffer,
 static portBASE_TYPE prvGPSPosCommand( char *pcWriteBuffer,
                              size_t xWriteBufferLen,
                              const char *pcCommandString )
-{ GPS_GetPosition(pcWriteBuffer); return pdFALSE; }
+{ GPS_GetPosition(pcWriteBuffer); strcat(pcWriteBuffer, "\r"); return pdFALSE; }
 
 /**
   * @brief  Command spi1_send: send data over SPI1 bus.

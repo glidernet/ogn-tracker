@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <time.h>
 
+#include <math.h>
+
 #include "bitcount.h"
 #include "nmea.h"
 
@@ -363,8 +365,8 @@ class OgnPosition
    void PrintDateTime(void) const { printf("%02d.%02d.%04d %02d:%02d:%06.3f", Day, Month, Year, Hour, Min, Sec+0.001*FracSec ); }
    void PrintTime(void)     const { printf("%02d:%02d:%06.3f", Hour, Min, Sec+0.001*FracSec ); }
 
-   int PrintDateTime(char *Out) const { return sprintf(Out, "%02d.%02d.%04d %02d:%02d:%06.3f", Day, Month, Year, Hour, Min, Sec+0.001*FracSec ); }
-   int PrintTime(char *Out)     const { return sprintf(Out, "%02d:%02d:%06.3f", Hour, Min, Sec+0.001*FracSec ); }
+   int PrintDateTime(char *Out) const { return sprintf(Out, "%02d.%02d.%04d %02d:%02d:%02d.%03d", Day, Month, Year, Hour, Min, Sec, FracSec ); }
+   int PrintTime(char *Out)     const { return sprintf(Out, "%02d:%02d:%02d.%03d", Hour, Min, Sec, FracSec ); }
 
    void Print(void) const
    { printf("Time/Date = "); PrintDateTime(); printf(" = %10ld.%03dsec\n", UnixTime, FracSec);
@@ -389,10 +391,10 @@ class OgnPosition
      printf("\n"); }
 
    int PrintLine(char *Out) const
-   { int Len=PrintTime(Out);
-     Len+=sprintf(Out+Len, " %d/%d/%02d/%4.1f/%4.1f/%4.1f", FixQuality, FixMode, Satellites, 0.1*PDOP, 0.1*HDOP, 0.1*VDOP);
-     Len+=sprintf(Out+Len," [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
-     Len+=sprintf(Out+Len, " %4.1fkt %05.1fdeg", 0.01*Speed, 0.01*Heading);
+   { int Len=PrintDateTime(Out);
+     // Len+=sprintf(Out+Len, " %d/%d/%02d/%4.1f/%4.1f/%4.1f", FixQuality, FixMode, Satellites, 0.1*PDOP, 0.1*HDOP, 0.1*VDOP);
+     // Len+=sprintf(Out+Len," [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
+     // Len+=sprintf(Out+Len, " %4.1fkt %05.1fdeg", 0.01*Speed, 0.01*Heading);
      Len+=sprintf(Out+Len, "\n"); return Len; }
 
    int ReadNMEA(NMEA_RxMsg &RxMsg)
