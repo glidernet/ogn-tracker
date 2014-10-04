@@ -66,8 +66,8 @@ class OGN_Packet          // Packet structure for the OGN tracker
             0.0001/60*DecodeLatitude(), 0.0001/60*DecodeLongitude(), DecodeAltitude(),
             0.2*DecodeSpeed(), 0.1*DecodeHeading(), 0.1*DecodeClimbRate(), 0.1*DecodeTurnRate() ); }
 
-   OGN_Packet() { Header=0; Position[0]=0; Position[1]=0; Position[2]=0; Position[3]=0;
-                 setKey(); }
+   OGN_Packet() { Clear(); }
+   void Clear(void) { Header=0; Position[0]=0; Position[1]=0; Position[2]=0; Position[3]=0; setKey(); }
 
    void setKey(const char *Key = "OGN DEFAULT KEY")
    { for(int KeyIdx=0; KeyIdx<4; KeyIdx++)
@@ -392,9 +392,15 @@ class OgnPosition
 
    int PrintLine(char *Out) const
    { int Len=PrintDateTime(Out);
-     // Len+=sprintf(Out+Len, " %d/%d/%02d/%4.1f/%4.1f/%4.1f", FixQuality, FixMode, Satellites, 0.1*PDOP, 0.1*HDOP, 0.1*VDOP);
+     Len+=sprintf(Out+Len, " %d/%d/%02d", FixQuality, FixMode, Satellites);
+     Out[Len++]='/'; Len+=Format_UnsDec(Out+Len, PDOP, 3, 1);
+     Out[Len++]='/'; Len+=Format_UnsDec(Out+Len, HDOP, 3, 1);
+     Out[Len++]='/'; Len+=Format_UnsDec(Out+Len, VDOP, 3, 1);
      // Len+=sprintf(Out+Len," [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
+     Out[Len++]=' '; Len+=Format_UnsDec(Out+Len, Altitude, 4, 1); Out[Len++]='m';
      // Len+=sprintf(Out+Len, " %4.1fkt %05.1fdeg", 0.01*Speed, 0.01*Heading);
+     Out[Len++]=' '; Len+=Format_UnsDec(Out+Len, Speed/10  , 2, 1); Out[Len++]='k'; Out[Len++]='t';
+     Out[Len++]=' '; Len+=Format_UnsDec(Out+Len, Heading/10, 4, 1); Out[Len++]='d'; Out[Len++]='e'; Out[Len++]='g';
      Len+=sprintf(Out+Len, "\n"); return Len; }
 
    int ReadNMEA(NMEA_RxMsg &RxMsg)
@@ -659,6 +665,20 @@ class OgnPosition
      { int Dig=ReadDec1(Inp[Len]); if(Dig<0) break;
        Float = 10*Float + Dig; Len++; Mult*=10; }
      Ret: if(Sign=='-') Float=(-Float); return Len; }
+
+  uint8_t static Format_UnsDec(char *Str, uint32_t Value, int MinDigits=1, int DecPoint=0)
+  { uint32_t Base; uint8_t Pos, Len=0;
+    for( Pos=10, Base=1000000000; Base; Base/=10, Pos--)
+    { uint8_t Dig;
+      if(Value>=Base)
+      { Dig=Value/Base; Value-=Dig*Base; }
+      else
+      { Dig=0; }
+      if(Pos==DecPoint) { (*Str++)='.'; Len++; }
+      if( (Pos<=MinDigits) || (Dig>0) || (Pos<=DecPoint) )
+      { (*Str++)='0'+Dig; Len++; MinDigits=Pos; }
+    }
+    return Len; }
 
   private:
 

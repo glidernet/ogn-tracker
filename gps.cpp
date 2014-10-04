@@ -28,7 +28,7 @@ xQueueHandle gps_que;
 static SemaphoreHandle_t xGpsPosMutex = 0;
 static int PosPtr=0;
 static OgnPosition Position[4]; // we keep the 3 most recent positions
-// static OGN_Packet  Packet;
+static OGN_Packet  Packet;
 
  uint32_t GPS_GetPosition(char *Output)
 { xSemaphoreTake(xGpsPosMutex, portMAX_DELAY);
@@ -85,6 +85,7 @@ static OgnPosition Position[4]; // we keep the 3 most recent positions
    for(int Pos=0; Pos<4; Pos++)
      Position[Pos].Clear();
    PosPtr=0;
+   Packet.Clear();
 
    xGpsPosMutex = xSemaphoreCreateMutex();
 
