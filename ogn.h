@@ -46,9 +46,9 @@ class OGN_Packet          // Packet structure for the OGN tracker
        WordPtr[WordIdx]=Word;
      }
      return 26; }
-#ifdef UsePrintf
+
    void Dump(void) const
-   { printf("%08X: %08X %08X %08X %08X [%08X %04X] (%d)\n",
+   { printf("%08lX: %08lX %08lX %08lX %08lX [%08lX %04lX] (%d)\n",
              Header, Position[0], Position[1], Position[2], Position[3], FEC[0], FEC[1], checkFEC() ); }
 
    void DumpBytes(void) const
@@ -58,12 +58,11 @@ class OGN_Packet          // Packet structure for the OGN tracker
      printf(" (%d)\n", LDPC_Check(Data)); }
 
    void Print(void) const
-   { printf("%06X%c R%c %c%01X %c", getAddress(), isICAO()?'I':' ', '0'+getRelayed(), isPrivate()?'p':' ', getAcftType(), isEmergency()?'E':' ');
-     printf("%d/%dD/%4.1f %02dsec: [%+10.6f, %+10.6f]deg %dm %3.1fkt %05.1fdeg %+4.1fm/s %+4.1fdeg/s\n",
+   { printf("%06lX%c R%c %c%01lX %c", getAddress(), isICAO()?'I':' ', '0'+getRelayed(), isPrivate()?'p':' ', getAcftType(), isEmergency()?'E':' ');
+     printf("%ld/%ldD/%4.1f %02ldsec: [%+10.6f, %+10.6f]deg %ldm %3.1fkt %05.1fdeg %+4.1fm/s %+4.1fdeg/s\n",
             getFixQuality(), getFixMode()+2, 0.1*(10+DecodeDOP()), getTime(),
             0.0001/60*DecodeLatitude(), 0.0001/60*DecodeLongitude(), DecodeAltitude(),
             0.2*DecodeSpeed(), 0.1*DecodeHeading(), 0.1*DecodeClimbRate(), 0.1*DecodeTurnRate() ); }
-#endif
 
    OGN_Packet() { Header=0; Position[0]=0; Position[1]=0; Position[2]=0; Position[3]=0;
                  setKey(); }
@@ -340,13 +339,15 @@ class OgnPosition
 
   public:
 
-   OgnPosition()
+   OgnPosition() { Clear(); }
+
+   void Clear(void)
    { FixQuality=0; FixMode=0; PDOP=0; HDOP=0; VDOP=0; UnixTime=0;
      Altitude=0; Latitude=0; Longitude=0;
      Speed=0; Heading=0; ClimbRate=0; TurnRate=0; Temperature=0;
      DayTimeGGA=(-1); DayTimeRMC=(-1); }
 
-   bool isComplete(void) const                       // have both RMC and GGA sentences beed received and for same time ?
+   bool isComplete(void) const                       // have both RMC and GGA sentences been received and for same time ?
    { if((DayTimeGGA<0) || (DayTimeRMC<0) ) return 0;
      if(DayTimeGGA!=DayTimeRMC) return 0;
      if(UnixTime==0) return 0;
@@ -358,12 +359,12 @@ class OgnPosition
      if(UnixTime==0) return 0;
      if(Satellites<=0) return 0;
      return 1; }
-#ifdef UsePrintf
+
    void PrintDateTime(void) const { printf("%02d.%02d.%04d %02d:%02d:%06.3f", Day, Month, Year, Hour, Min, Sec+0.001*FracSec ); }
    void PrintTime(void)     const { printf("%02d:%02d:%06.3f", Hour, Min, Sec+0.001*FracSec ); }
 
    void Print(void) const
-   { printf("Time/Date = "); PrintDateTime(); printf(" = %10d.%03dsec\n", UnixTime, FracSec);
+   { printf("Time/Date = "); PrintDateTime(); printf(" = %10ld.%03dsec\n", UnixTime, FracSec);
      printf("FixQuality=%d: %d satellites HDOP=%3.1f\n", FixQuality, Satellites, 0.1*HDOP);
      printf("Lat/Lon/Alt = [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m\n", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
      printf("Speed/Heading = %4.2fkt %06.2fdeg\n", 0.01*Speed, 0.01*Heading);
@@ -375,7 +376,7 @@ class OgnPosition
      printf(" [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
      printf(" %4.1fkt %05.1fdeg", 0.01*Speed, 0.01*Heading);
      printf("\n"); }
-#endif
+
    int ReadNMEA(NMEA_RxMsg &RxMsg)
    {      if(RxMsg.isGPGGA()) return ReadGGA(RxMsg);
      else if(RxMsg.isGPRMC()) return ReadRMC(RxMsg);

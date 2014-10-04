@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+uint32_t GPS_GetUnixTime(void);
+
 void GPS_Config(void);
 void vTaskGPS(void* pvParameters);
 

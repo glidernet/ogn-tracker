@@ -60,7 +60,7 @@ H_SRC     += ldpc.h
 H_SRC     += bitcount.h
 H_SRC     += nmea.h
 
-CPP_SRC    = gps.cc
+CPP_SRC    = gps.cpp
 
 DEFS       = -DSTM32L1XX_XL -DUSE_STDPERIPH_DRIVER
 
@@ -72,7 +72,7 @@ INCDIR    += -Ispirit1_dk/inc
 LDSCRIPT   = arm-gcc-link.ld
 
 CC_OBJ     = $(CC_SRC:.c=.o)
-CPP_OBJ    = $(CPP_SRC:.cc=.o)
+CPP_OBJ    = $(CPP_SRC:.cpp=.o)
 
 CC_OPT     = -mcpu=cortex-m3 -mthumb -Wall -O3 -g -ffunction-sections -std=c99
 CPP_OPT    = -mcpu=cortex-m3 -mthumb -Wall -O3 -g -ffunction-sections
@@ -100,7 +100,7 @@ main.dmp:	main.elf
 	$(OBJDUMP) -d -S $< > $@
 
 clean:
-	rm -f main.elf main.map main.hex main.bin main.dmp *.o
+	rm -f main.elf main.map main.hex main.bin main.dmp $(CC_OBJ) $(CPP_OBJ) *.o
 
 arch:
 	tar cvzf OGN_Proto.tgz makefile *.h *.c *.cc *.ld free_rtos free_rtos_cli cmsis cmsis_boot cmsis_lib
