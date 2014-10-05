@@ -8,13 +8,17 @@
 #include <queue.h>
 #include <string.h>
 #include "options.h"
+#include "messages.h"
 #include "spi.h"
+#include "spirit1.h"
 
 /* -------- defines -------- */
 #define SPI_DATA_LEN 256
 /* -------- variables -------- */
 uint8_t SPI1_tx_data[SPI_DATA_LEN];
 uint8_t SPI1_rx_data[SPI_DATA_LEN];
+
+uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
 static const char * const pcVersion = "0.0.1\r\n";
@@ -301,6 +305,57 @@ static portBASE_TYPE prvSPI1SendCommand( char *pcWriteBuffer,
    return pdFALSE;
 }
 
+/**
+  * @brief  Command sp1_pkt: send OGN packet.
+  * @param  CLI template
+  * @retval CLI template
+  */
+static portBASE_TYPE prvSP1SendPacketCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{
+   const char*  param;
+   BaseType_t   param_len;
+   int i;
+   task_message sp1_msg;
+
+   param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
+
+   /* check number of provided hex values */
+   if (param_len != 2*OGN_PKT_LEN)
+   {
+      sprintf(pcWriteBuffer, "Error: provide 26 bytes.\r\n");
+      return pdFALSE;
+   }
+
+   /* check provided hex values */
+   for (i=0; i<param_len; i++)
+   {
+       if (get_hex_val(param[i]) == -1)
+       {
+           sprintf(pcWriteBuffer, "Error: provide hex values only.\r\n");
+           return pdFALSE;
+       }
+   }
+
+   /* convert string to array */
+   for (i=0; i<param_len; i=i+2)
+   {
+      OGN_packet[i>>1] = get_hex_str_val(&param[i]);
+   }
+   xQueueHandle* sp1_task_queue = Get_SP1Que();
+
+   sp1_msg.msg_data   = (uint32_t)&OGN_packet;
+   sp1_msg.msg_len    = OGN_PKT_LEN;
+   sp1_msg.msg_opcode = SP1_SEND_OGN_PKT;
+   sp1_msg.src_id     = CONSOLE_USART_SRC_ID;
+   /* Send NMEA sentence to GPS task */
+   xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
+
+   sprintf(pcWriteBuffer, "OGN packet sent.\r\n");
+   return pdFALSE;
+}
+
 /* -------- additional command constants -------- */
 static const CLI_Command_Definition_t ConsSpeedCommand =
 {
@@ -359,6 +414,15 @@ static const CLI_Command_Definition_t SPI1SendCommand =
     1
 };
 
+static const CLI_Command_Definition_t SP1SendPacketCommand =
+{
+    "sp1_pkt",
+    "sp1_pkt 26xhex: send OGN packet\r\n",
+    prvSP1SendPacketCommand,
+    1
+};
+
+
 /**
   * @brief  Function registers all console commands.
   * @param  None
@@ -372,6 +436,7 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&ResetCommand);
    FreeRTOS_CLIRegisterCommand(&SetConsSpeedCommand);
    FreeRTOS_CLIRegisterCommand(&SetGPSSpeedCommand);
+   FreeRTOS_CLIRegisterCommand(&SP1SendPacketCommand);
    FreeRTOS_CLIRegisterCommand(&SPI1SendCommand);
    FreeRTOS_CLIRegisterCommand(&VerCommand);
 }

@@ -3,8 +3,11 @@
 
 #include <stdint.h>
 
-#define CONSOLE_USART_SRC_ID  1
-#define GPS_USART_SRC_ID      2
+typedef enum
+{
+   CONSOLE_USART_SRC_ID = 1,
+   GPS_USART_SRC_ID
+} src_id_types;
 
 typedef struct
 {

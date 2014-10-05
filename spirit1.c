@@ -10,6 +10,8 @@
 #include "SPIRIT_Config.h"
 
 /* -------- defines -------- */
+#define SPIRIT1_PKT_LEN   56 /* 2*2 bytes of sync end + 2*26 OGN packet */
+
 #define SPR_SPI_MAX_REG_NUM  0xFF
 #define SPR_SPI_HDR_LEN      2
 
@@ -39,6 +41,8 @@
 /* -------- variables -------- */
 xQueueHandle     xQueueSP1;
 
+uint8_t Packet_TxBuff[96];
+
 uint8_t SPR_SPI_BufferTX[SPR_SPI_MAX_REG_NUM+SPR_SPI_HDR_LEN];
 uint8_t SPR_SPI_BufferRX[SPR_SPI_MAX_REG_NUM+SPR_SPI_HDR_LEN];
 /**
@@ -46,7 +50,7 @@ uint8_t SPR_SPI_BufferRX[SPR_SPI_MAX_REG_NUM+SPR_SPI_HDR_LEN];
 */
 SRadioInit xRadioInit = {
    0,         // Xtal Offset
-   868.000e6, // Base Frequency
+   867.990e6, // Base Frequency
    100e3,     // Channel space
    4,         // Channel number
    GFSK_BT05, // Modulation select
@@ -55,16 +59,59 @@ SRadioInit xRadioInit = {
    330e3      // Filter bandwidth
 };
 
+/**
+* @brief Packet Basic structure fitting
+*/
+PktBasicInit xBasicInit={
+  PKT_PREAMBLE_LENGTH_02BYTES,
+  PKT_SYNC_LENGTH_3BYTES,
+  0x6655A596,      /* sync word */
+  PKT_LENGTH_FIX,  /* pkt len type */
+  7,               /* length width */
+  PKT_NO_CRC,      /* no CRC fields */
+  PKT_CONTROL_LENGTH_0BYTES,
+  S_DISABLE,       /* no address field */
+  S_DISABLE,       /* no FEC */
+  S_DISABLE        /* no data whitening */
+};
+/* -------- constants -------- */
+/* Spirit1 Manchester encoding simulation */
+/* 0 encoded as 1->0 transition */
+/* 1 encoded as 0->1 transition */
+const uint8_t hex_2_manch_encoding[0x10] =
+{
+   0xAA, /* hex: 0, bin: 0000, manch: 10101010 */
+   0xA9, /* hex: 1, bin: 0001, manch: 10101001 */
+   0xA6, /* hex: 2, bin: 0010, manch: 10100110 */
+   0xA5, /* hex: 3, bin: 0011, manch: 10100101 */
+   0x9A, /* hex: 4, bin: 0100, manch: 10011010 */
+   0x99, /* hex: 5, bin: 0101, manch: 10011001 */
+   0x96, /* hex: 6, bin: 0110, manch: 10010110 */
+   0x95, /* hex: 7, bin: 0111, manch: 10010101 */
+   0x6A, /* hex: 8, bin: 1000, manch: 01101010 */
+   0x69, /* hex: 9, bin: 1001, manch: 01101001 */
+   0x66, /* hex: A, bin: 1010, manch: 01100110 */
+   0x65, /* hex: B, bin: 1011, manch: 01100101 */
+   0x5A, /* hex: C, bin: 1100, manch: 01011010 */
+   0x59, /* hex: D, bin: 1101, manch: 01011001 */
+   0x56, /* hex: E, bin: 1110, manch: 01010110 */
+   0x55  /* hex: F, bin: 1111, manch: 01010101 */
+};
 
 /* -------- interrupt handlers -------- */
 
 /* -------- functions -------- */
+xQueueHandle* Get_SP1Que()
+{
+   return &xQueueSP1;
+}
+
 StatusBytes SPI1WriteRegisters(uint8_t cRegAddress, uint8_t cNbBytes, uint8_t* pcBuffer)
 {
    uint8_t i;
    static uint16_t tmpstatus;
 
-   StatusBytes *status=(StatusBytes *)&tmpstatus;
+   StatusBytes* status=(StatusBytes*)&tmpstatus;
 
    /* Write header */
    SPR_SPI_BufferTX[0] = WRITE_HEADER;
@@ -80,7 +127,7 @@ StatusBytes SPI1WriteRegisters(uint8_t cRegAddress, uint8_t cNbBytes, uint8_t* p
 StatusBytes SPI1CommandStrobes(uint8_t cCommandCode)
 {
    static uint16_t tmpstatus;
-   StatusBytes *status=(StatusBytes *)&tmpstatus;
+   StatusBytes* status=(StatusBytes*)&tmpstatus;
 
    /* Command header */
    SPR_SPI_BufferTX[0] = COMMAND_HEADER;
@@ -97,11 +144,48 @@ StatusBytes SPI1ReadRegisters(uint8_t cRegAddress, uint8_t cNbBytes, uint8_t* pc
 {
    uint8_t i;
    static uint16_t tmpstatus;
-   StatusBytes *status=(StatusBytes *)&tmpstatus;
+   StatusBytes* status=(StatusBytes*)&tmpstatus;
 
    /* Read header */
    SPR_SPI_BufferTX[0] = READ_HEADER;
    SPR_SPI_BufferTX[1] = cRegAddress;
+
+   SPI1_Send(SPR_SPI_BufferTX, SPR_SPI_BufferRX, cNbBytes+2);
+
+   tmpstatus = ((uint16_t)SPR_SPI_BufferRX[0]<<8) | SPR_SPI_BufferRX[1];
+   for (i = 0; i<cNbBytes ; i++)  pcBuffer[i] = SPR_SPI_BufferRX[2+i];
+
+   return *status;
+}
+
+StatusBytes SPI1WriteFifo(uint8_t cNbBytes, uint8_t* pcBuffer)
+{
+   uint8_t i;
+   static uint16_t tmpstatus;
+   StatusBytes* status=(StatusBytes*)&tmpstatus;
+
+   /* Write header */
+   SPR_SPI_BufferTX[0] = WRITE_HEADER;
+   SPR_SPI_BufferTX[1] = LINEAR_FIFO_ADDRESS;
+
+   for (i = 0; i<cNbBytes ; i++)  SPR_SPI_BufferTX[2+i] = pcBuffer[i];
+
+   SPI1_Send(SPR_SPI_BufferTX, SPR_SPI_BufferRX, cNbBytes+2);
+
+   tmpstatus = ((uint16_t)SPR_SPI_BufferRX[0]<<8) | SPR_SPI_BufferRX[1];
+
+   return *status;
+}
+
+StatusBytes SPI1ReadFifo(uint8_t cNbBytes, uint8_t* pcBuffer)
+{
+   uint8_t i;
+   static uint16_t tmpstatus;
+   StatusBytes* status=(StatusBytes*)&tmpstatus;
+
+   /* Read header */
+   SPR_SPI_BufferTX[0] = READ_HEADER;
+   SPR_SPI_BufferTX[1] = LINEAR_FIFO_ADDRESS;
 
    SPI1_Send(SPR_SPI_BufferTX, SPR_SPI_BufferRX, cNbBytes+2);
 
@@ -160,6 +244,11 @@ void Spirit1_Config(void)
    Spirit1EnterShutdown();
 }
 
+/**
+* @brief  Function called when Spirit1 IC not detected.
+* @param  None
+* @retval None
+*/
 void SpiritNotPresent(void)
 {
    GPIO_InitTypeDef GPIO_InitStructure;
@@ -182,6 +271,47 @@ void SpiritNotPresent(void)
    }
 }
 
+/**
+* @brief  Configure TX parameters.
+* @param  None
+* @retval None
+*/
+void SpiritTXConf(void)
+{
+   /* Spirit Radio set power */
+   SpiritRadioSetPALeveldBm(0, -10.0F);
+   SpiritRadioSetPALevelMaxIndex(0);
+}
+
+/**
+* @brief  Send OGN packet.
+* @param  None
+* @retval None
+*/
+void SpiritSendOGNPacket(uint8_t* pkt_data, uint8_t pkt_len)
+{
+   uint8_t in_pkt_pos, out_pkt_pos = 0;
+
+   /* Fill end of sync word (sync start in SP1 sync register) */
+   Packet_TxBuff[out_pkt_pos++] = 0x96;
+   Packet_TxBuff[out_pkt_pos++] = 0x99;
+   Packet_TxBuff[out_pkt_pos++] = 0x96;
+   Packet_TxBuff[out_pkt_pos++] = 0x5A;
+
+   for (in_pkt_pos = 0; in_pkt_pos<pkt_len; in_pkt_pos++)
+   {
+      uint8_t up_half = pkt_data[in_pkt_pos]>>4;
+      uint8_t lo_half = pkt_data[in_pkt_pos]&0x0F;
+      Packet_TxBuff[out_pkt_pos++] = hex_2_manch_encoding[up_half];
+      Packet_TxBuff[out_pkt_pos++] = hex_2_manch_encoding[lo_half];
+   }
+
+   SpiritCmdStrobeFlushTxFifo();
+   SpiritSpiWriteLinearFifo(SPIRIT1_PKT_LEN, Packet_TxBuff);
+
+   SpiritCmdStrobeTx();
+}
+
 void vTaskSP1(void* pvParameters)
 {
    task_message msg;
@@ -199,11 +329,28 @@ void vTaskSP1(void* pvParameters)
 
    SpiritRadioInit(&xRadioInit);
 
+   /* Spirit Packet config */
+   SpiritPktBasicInit(&xBasicInit);
+
+   /* payload length config */
+   SpiritPktBasicSetPayloadLength(SPIRIT1_PKT_LEN);
+
+   /* Set TX parameters */
+   SpiritTXConf();
+
    /* Create queue for SP1 task messages received */
    xQueueSP1 = xQueueCreate(10, sizeof(task_message));
 
    for(;;)
    {
       xQueueReceive(xQueueSP1, &msg, portMAX_DELAY);
+      switch (msg.msg_opcode)
+      {
+         case SP1_SEND_OGN_PKT:
+            SpiritSendOGNPacket((uint8_t*)msg.msg_data, msg.msg_len);
+            break;
+         default:
+            break;
+      }
    }
 }

@@ -14,6 +14,7 @@
         <DefinedSymbols>
           <Define name="STM32L1XX_XL"/>
           <Define name="USE_STDPERIPH_DRIVER"/>
+          <Define name="SYSTEM_LIB"/>
         </DefinedSymbols>
       </Compile>
       <Link useDefault="0">
@@ -73,24 +74,26 @@
       <Compile>
         <Option name="OptimizationLevel" value="3"/>
         <Option name="UseFPU" value="0"/>
-        <Option name="UserEditCompiler" value="-std=c99"/>
-        <Option name="SupportCPlusplus" value="0"/>
+        <Option name="UserEditCompiler" value="-std=c99; --specs=nosys.specs"/>
+        <Option name="SupportCPlusplus" value="1"/>
         <Includepaths>
           <Includepath path="."/>
         </Includepaths>
         <DefinedSymbols>
           <Define name="STM32L1XX_XL"/>
           <Define name="USE_STDPERIPH_DRIVER"/>
+          <Define name="SUPPORT_CPLUSPLUS"/>
         </DefinedSymbols>
       </Compile>
       <Link useDefault="0">
         <Option name="DiscardUnusedSection" value="0"/>
         <Option name="UserEditLinkder" value=""/>
         <Option name="UseMemoryLayout" value="1"/>
-        <Option name="nostartfiles" value="1"/>
+        <Option name="nostartfiles" value="0"/>
         <Option name="LTO" value="0"/>
         <Option name="IsNewStartupCode" value="1"/>
         <Option name="Library" value="Use base C Library"/>
+        <Option name="UserEditLinker" value="-lstdc++; "/>
         <LinkedLibraries/>
         <MemoryAreas debugInFlashNotRAM="1">
           <Memory name="IROM1" type="ReadOnly" size="0x00060000" startValue="0x08000000"/>
@@ -152,8 +155,8 @@
     <File name="main.h" path="main.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_comp.h" path="cmsis_lib/Include/stm32l1xx_comp.h" type="1"/>
     <File name="cmsis_boot/Startup/startup_stm32l1xx_hd.c" path="cmsis_boot/Startup/startup_stm32l1xx_hd.c" type="1"/>
-    <File name="cmsis_lib/Include/stm32l1xx_gpio.h" path="cmsis_lib/Include/stm32l1xx_gpio.h" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_adc.h" path="cmsis_lib/Include/stm32l1xx_adc.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_gpio.h" path="cmsis_lib/Include/stm32l1xx_gpio.h" type="1"/>
     <File name="cmsis_lib/Source/stm32l1xx_spi.c" path="cmsis_lib/Source/stm32l1xx_spi.c" type="1"/>
     <File name="spirit1_dk/src/SPIRIT_Commands.c" path="spirit1_dk/src/SPIRIT_Commands.c" type="1"/>
     <File name="free_rtos/include/mpu_wrappers.h" path="free_rtos/include/mpu_wrappers.h" type="1"/>
@@ -167,8 +170,8 @@
     <File name="console.c" path="console.c" type="1"/>
     <File name="spirit1_dk/inc/SPIRIT_Radio.h" path="spirit1_dk/inc/SPIRIT_Radio.h" type="1"/>
     <File name="usart.h" path="usart.h" type="1"/>
-    <File name="cmsis_lib/Include/stm32l1xx_aes.h" path="cmsis_lib/Include/stm32l1xx_aes.h" type="1"/>
     <File name="spirit1.h" path="spirit1.h" type="1"/>
+    <File name="cmsis_lib/Include/stm32l1xx_aes.h" path="cmsis_lib/Include/stm32l1xx_aes.h" type="1"/>
     <File name="spirit1_dk/inc" path="" type="2"/>
     <File name="free_rtos" path="" type="2"/>
     <File name="commands.c" path="commands.c" type="1"/>
@@ -231,9 +234,11 @@
     <File name="free_rtos/heap_2.c" path="free_rtos/heap_2.c" type="1"/>
     <File name="free_rtos/include/list.h" path="free_rtos/include/list.h" type="1"/>
     <File name="gps.h" path="gps.h" type="1"/>
+    <File name="spirit1_dk/src/SPIRIT_PktCommon.c" path="spirit1_dk/src/SPIRIT_PktCommon.c" type="1"/>
     <File name="free_rtos/event_groups.c" path="free_rtos/event_groups.c" type="1"/>
     <File name="cmsis_lib/Include/stm32l1xx_dbgmcu.h" path="cmsis_lib/Include/stm32l1xx_dbgmcu.h" type="1"/>
     <File name="free_rtos/croutine.c" path="free_rtos/croutine.c" type="1"/>
+    <File name="spirit1_dk/src/SPIRIT_PktBasic.c" path="spirit1_dk/src/SPIRIT_PktBasic.c" type="1"/>
     <File name="free_rtos/tasks.c" path="free_rtos/tasks.c" type="1"/>
     <File name="FreeRTOSConfig.h" path="FreeRTOSConfig.h" type="1"/>
     <File name="free_rtos/include/timers.h" path="free_rtos/include/timers.h" type="1"/>

@@ -13,7 +13,7 @@
 #include "options.h"
 
 /* -------- defines -------- */
-#define MAX_INPUT_LENGTH    50
+#define MAX_INPUT_LENGTH    100
 #define MAX_OUTPUT_LENGTH   100
 #define NMEA_SENTENCE_MODE     0
 #define CONSOLE_SENTENCE_MODE  1
@@ -65,7 +65,6 @@ void Console_SetGPSQue(xQueueHandle* handle)
 {
    gps_task_queue = handle;
 }
-
 
 /**
 * @brief  Sends Console string.
