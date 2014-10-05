@@ -53,19 +53,21 @@ static OGN_Packet  Packet;
     { if(Position[PosPtr].isValid())                          // new position is complete: but GPS lock might not be there yet
       { int RefPtr = (PosPtr+2)&3;
         if(Position[RefPtr].isValid())
-        { Position[PosPtr].calcDifferences(Position[RefPtr]); // measure climb/turn rates
-          Packet.setAddress(0xE01234); Packet.clrICAO();
-          Packet.calcAddrParity();
-          Position[PosPtr].Encode(Packet);
-          Packet.setAcftType(0x1); Packet.clrPrivate();
-          Packet.Encrypt();
-          Packet.setFEC();          
-          sp1_msg.msg_data   = (uint32_t)&Packet.Header;
-          sp1_msg.msg_len    = OGN_PKT_LEN;
-          sp1_msg.msg_opcode = SP1_SEND_OGN_PKT;
-          sp1_msg.src_id     = GPS_USART_SRC_ID;
-          xQueueHandle* sp1_task_queue = Get_SP1Que();
-          xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
+        { int Delta=Position[PosPtr].calcDifferences(Position[RefPtr]); // measure climb/turn rates
+          if((Delta>0)&&(Delta<=5))
+          { Packet.setAddress(0xE01234); Packet.clrICAO();
+            Packet.calcAddrParity();
+            Position[PosPtr].Encode(Packet);
+            Packet.setAcftType(0x1); Packet.clrPrivate();
+            Packet.Encrypt();
+            Packet.setFEC();
+            sp1_msg.msg_data   = (uint32_t)&Packet.Header;
+            sp1_msg.msg_len    = OGN_PKT_LEN;
+            sp1_msg.msg_opcode = SP1_SEND_OGN_PKT;
+            sp1_msg.src_id     = GPS_USART_SRC_ID;
+            xQueueHandle* sp1_task_queue = Get_SP1Que();
+            xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
+          }
         }
       }
       PosPtr = (PosPtr+1)&3; Position[PosPtr].Clear();
