@@ -43,6 +43,8 @@ CC_SRC    += spirit1_dk/src/SPIRIT_Commands.c
 CC_SRC    += spirit1_dk/src/SPIRIT_Management.c
 CC_SRC    += spirit1_dk/src/SPIRIT_Calibration.c
 CC_SRC    += spirit1_dk/src/SPIRIT_Types.c
+CC_SRC    += spirit1_dk/src/SPIRIT_PktBasic.c
+CC_SRC    += spirit1_dk/src/SPIRIT_PktCommon.c
 
 H_SRC      = main.h
 H_SRC     += options.h
