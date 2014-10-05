@@ -507,7 +507,10 @@ class OgnPosition
      if((FixQuality>0)&&(FixMode>1)) Packet.setFixMode(FixMode-2);
                                 else Packet.setFixMode(0);
      Packet.EncodeDOP(PDOP-10);
-     Packet.setTime(Sec);
+     int ShortTime=Sec;
+     if(FracSec>500)
+     { ShortTime+=1; if(ShortTime>=60) ShortTime-=60; }
+     Packet.setTime(ShortTime);
      Packet.EncodeLatitude(Latitude);
      Packet.EncodeLongitude(Longitude);
      Packet.EncodeAltitude((Altitude+5)/10);
