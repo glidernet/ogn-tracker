@@ -37,6 +37,12 @@ CC_SRC    += free_rtos/croutine.c
 CC_SRC    += free_rtos/tasks.c
 CC_SRC    += free_rtos/timers.c
 CC_SRC    += free_rtos/queue.c
+CC_SRC    += spirit1_dk/src/SPIRIT_General.c
+CC_SRC    += spirit1_dk/src/SPIRIT_Radio.c
+CC_SRC    += spirit1_dk/src/SPIRIT_Commands.c
+CC_SRC    += spirit1_dk/src/SPIRIT_Management.c
+CC_SRC    += spirit1_dk/src/SPIRIT_Calibration.c
+CC_SRC    += spirit1_dk/src/SPIRIT_Types.c
 
 H_SRC      = main.h
 H_SRC     += options.h
@@ -54,29 +60,32 @@ H_SRC     += ldpc.h
 H_SRC     += bitcount.h
 H_SRC     += nmea.h
 
-CPP_SRC    = gps.cc
+CPP_SRC    = gps.cpp
 
 DEFS       = -DSTM32L1XX_XL -DUSE_STDPERIPH_DRIVER
 
-INCDIR     = -I. -Ifree_rtos/include -Ifree_rtos_cli -Icmsis -Icmsis_boot -Icmsis_lib/Include
+INCDIR     = -I.
+INCDIR    += -Ifree_rtos/include -Ifree_rtos_cli
+INCDIR    += -Icmsis -Icmsis_boot -Icmsis_lib/Include
+INCDIR    += -Ispirit1_dk/inc
 
 LDSCRIPT   = arm-gcc-link.ld
 
 CC_OBJ     = $(CC_SRC:.c=.o)
-CPP_OBJ    = $(CPP_SRC:.cc=.o)
+CPP_OBJ    = $(CPP_SRC:.cpp=.o)
 
-CC_OPT     = -mcpu=cortex-m3 -mthumb -Wall -O2 -g -ffunction-sections $(DEFS) $(INCDIR)
-CPP_OPT    = $(CC_OPT)
+CC_OPT     = -mcpu=cortex-m3 -mthumb -Wall -O2 -g -ffunction-sections -std=c99
+CPP_OPT    = -mcpu=cortex-m3 -mthumb -Wall -O2 -g -ffunction-sections
 
-LNK_OPT    = -mcpu=cortex-m3 -mthumb -nostartfiles -O2 -g -Wl,--gc-sections --specs=nano.specs --specs=nosys.specs -Wl,-Map=main.map -T$(LDSCRIPT)
+LNK_OPT    = -mcpu=cortex-m3 -mthumb -msoft-float -nostartfiles -O2 -g -Wl,--gc-sections --specs=nano.specs --specs=nosys.specs -Wl,-Map=main.map -T$(LDSCRIPT)
 
 all:	main.hex main.bin main.dmp
 
 $(CC_OBJ) : %.o : %.c makefile $(H_SRC)
-	$(CC) -c $(CC_OPT) $< -o $@
+	$(CC)  -c $(CC_OPT)  $(INCDIR) $(DEFS) $< -o $@
 
-$(CPP_OBJ) : %.o : %.cc makefile $(H_SRC)
-	$(CPP) -c $(CPP_OPT) $< -o $@
+$(CPP_OBJ) : %.o : %.cpp makefile $(H_SRC)
+	$(CPP) -c $(CPP_OPT) $(INCDIR) $(DEFS) $< -o $@
 
 main.elf:	$(CC_OBJ) $(CPP_OBJ) makefile
 	$(CPP) $(LNK_OPT) -o $@ $(CC_OBJ) $(CPP_OBJ)
@@ -91,7 +100,7 @@ main.dmp:	main.elf
 	$(OBJDUMP) -d -S $< > $@
 
 clean:
-	rm -f main.elf main.map main.hex main.bin main.dmp *.o
+	rm -f main.elf main.map main.hex main.bin main.dmp $(CC_OBJ) $(CPP_OBJ) *.o
 
 arch:
 	tar cvzf OGN_Proto.tgz makefile *.h *.c *.cc *.ld free_rtos free_rtos_cli cmsis cmsis_boot cmsis_lib

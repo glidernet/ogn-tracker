@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <time.h>
 
+#include <math.h>
+
 #include "bitcount.h"
 #include "nmea.h"
 
@@ -46,9 +48,9 @@ class OGN_Packet          // Packet structure for the OGN tracker
        WordPtr[WordIdx]=Word;
      }
      return 26; }
-#ifdef UsePrintf
+
    void Dump(void) const
-   { printf("%08X: %08X %08X %08X %08X [%08X %04X] (%d)\n",
+   { printf("%08lX: %08lX %08lX %08lX %08lX [%08lX %04lX] (%d)\n",
              Header, Position[0], Position[1], Position[2], Position[3], FEC[0], FEC[1], checkFEC() ); }
 
    void DumpBytes(void) const
@@ -58,15 +60,14 @@ class OGN_Packet          // Packet structure for the OGN tracker
      printf(" (%d)\n", LDPC_Check(Data)); }
 
    void Print(void) const
-   { printf("%06X%c R%c %c%01X %c", getAddress(), isICAO()?'I':' ', '0'+getRelayed(), isPrivate()?'p':' ', getAcftType(), isEmergency()?'E':' ');
-     printf("%d/%dD/%4.1f %02dsec: [%+10.6f, %+10.6f]deg %dm %3.1fkt %05.1fdeg %+4.1fm/s %+4.1fdeg/s\n",
+   { printf("%06lX%c R%c %c%01lX %c", getAddress(), isICAO()?'I':' ', '0'+getRelayed(), isPrivate()?'p':' ', getAcftType(), isEmergency()?'E':' ');
+     printf("%ld/%ldD/%4.1f %02ldsec: [%+10.6f, %+10.6f]deg %ldm %3.1fkt %05.1fdeg %+4.1fm/s %+4.1fdeg/s\n",
             getFixQuality(), getFixMode()+2, 0.1*(10+DecodeDOP()), getTime(),
             0.0001/60*DecodeLatitude(), 0.0001/60*DecodeLongitude(), DecodeAltitude(),
             0.2*DecodeSpeed(), 0.1*DecodeHeading(), 0.1*DecodeClimbRate(), 0.1*DecodeTurnRate() ); }
-#endif
 
-   OGN_Packet() { Header=0; Position[0]=0; Position[1]=0; Position[2]=0; Position[3]=0;
-                 setKey(); }
+   OGN_Packet() { Clear(); }
+   void Clear(void) { Header=0; Position[0]=0; Position[1]=0; Position[2]=0; Position[3]=0; setKey(); }
 
    void setKey(const char *Key = "OGN DEFAULT KEY")
    { for(int KeyIdx=0; KeyIdx<4; KeyIdx++)
@@ -340,13 +341,15 @@ class OgnPosition
 
   public:
 
-   OgnPosition()
+   OgnPosition() { Clear(); }
+
+   void Clear(void)
    { FixQuality=0; FixMode=0; PDOP=0; HDOP=0; VDOP=0; UnixTime=0;
      Altitude=0; Latitude=0; Longitude=0;
      Speed=0; Heading=0; ClimbRate=0; TurnRate=0; Temperature=0;
      DayTimeGGA=(-1); DayTimeRMC=(-1); }
 
-   bool isComplete(void) const                       // have both RMC and GGA sentences beed received and for same time ?
+   bool isComplete(void) const                       // have both RMC and GGA sentences been received and for same time ?
    { if((DayTimeGGA<0) || (DayTimeRMC<0) ) return 0;
      if(DayTimeGGA!=DayTimeRMC) return 0;
      if(UnixTime==0) return 0;
@@ -358,16 +361,27 @@ class OgnPosition
      if(UnixTime==0) return 0;
      if(Satellites<=0) return 0;
      return 1; }
-#ifdef UsePrintf
+
    void PrintDateTime(void) const { printf("%02d.%02d.%04d %02d:%02d:%06.3f", Day, Month, Year, Hour, Min, Sec+0.001*FracSec ); }
    void PrintTime(void)     const { printf("%02d:%02d:%06.3f", Hour, Min, Sec+0.001*FracSec ); }
 
+   int PrintDateTime(char *Out) const { return sprintf(Out, "%02d.%02d.%04d %02d:%02d:%02d.%03d", Day, Month, Year, Hour, Min, Sec, FracSec ); }
+   int PrintTime(char *Out)     const { return sprintf(Out, "%02d:%02d:%02d.%03d", Hour, Min, Sec, FracSec ); }
+
    void Print(void) const
-   { printf("Time/Date = "); PrintDateTime(); printf(" = %10d.%03dsec\n", UnixTime, FracSec);
+   { printf("Time/Date = "); PrintDateTime(); printf(" = %10ld.%03dsec\n", UnixTime, FracSec);
      printf("FixQuality=%d: %d satellites HDOP=%3.1f\n", FixQuality, Satellites, 0.1*HDOP);
      printf("Lat/Lon/Alt = [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m\n", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
      printf("Speed/Heading = %4.2fkt %06.2fdeg\n", 0.01*Speed, 0.01*Heading);
    }
+
+   int Print(char *Out) const
+   { int Len=0;
+     Len+=sprintf(Out+Len, "Time/Date = "); Len+=PrintDateTime(Out+Len); Len+=sprintf(Out+Len, " = %10ld.%03dsec\n", UnixTime, FracSec);
+     Len+=sprintf(Out+Len, "FixQuality=%d: %d satellites HDOP=%3.1f\n", FixQuality, Satellites, 0.1*HDOP);
+     Len+=sprintf(Out+Len, "Lat/Lon/Alt = [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m\n", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
+     Len+=sprintf(Out+Len, "Speed/Heading = %4.2fkt %06.2fdeg\n", 0.01*Speed, 0.01*Heading);
+     return Len; }
 
    void PrintLine(void) const
    { PrintTime();
@@ -375,7 +389,23 @@ class OgnPosition
      printf(" [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
      printf(" %4.1fkt %05.1fdeg", 0.01*Speed, 0.01*Heading);
      printf("\n"); }
-#endif
+
+   int PrintLine(char *Out) const
+   { int Len=PrintDateTime(Out);
+     Len+=sprintf(Out+Len, " %d/%d/%02d", FixQuality, FixMode, Satellites);
+     Out[Len++]='/'; Len+=Format_UnsDec(Out+Len, PDOP, 2, 1);
+     Out[Len++]='/'; Len+=Format_UnsDec(Out+Len, HDOP, 2, 1);
+     Out[Len++]='/'; Len+=Format_UnsDec(Out+Len, VDOP, 2, 1);
+     // Len+=sprintf(Out+Len," [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
+     Out[Len++]='['; Len+=Format_SignDec(Out+Len, Latitude/60, 6, 4);
+     Out[Len++]=','; Len+=Format_SignDec(Out+Len, Longitude/60, 7, 4);
+     Out[Len++]=']'; Out[Len++]='d'; Out[Len++]='e'; Out[Len++]='g';
+     Out[Len++]=' '; Len+=Format_UnsDec(Out+Len, Altitude, 4, 1); Out[Len++]='m';
+     // Len+=sprintf(Out+Len, " %4.1fkt %05.1fdeg", 0.01*Speed, 0.01*Heading);
+     Out[Len++]=' '; Len+=Format_UnsDec(Out+Len, Speed/10  , 2, 1); Out[Len++]='k'; Out[Len++]='t';
+     Out[Len++]=' '; Len+=Format_UnsDec(Out+Len, Heading/10, 4, 1); Out[Len++]='d'; Out[Len++]='e'; Out[Len++]='g';
+     Len+=sprintf(Out+Len, "\n"); return Len; }
+
    int ReadNMEA(NMEA_RxMsg &RxMsg)
    {      if(RxMsg.isGPGGA()) return ReadGGA(RxMsg);
      else if(RxMsg.isGPRMC()) return ReadRMC(RxMsg);
@@ -385,7 +415,7 @@ class OgnPosition
    int ReadNMEA(const char *NMEA)
    { int Err=0;
      Err=ReadGGA(NMEA); if(Err!=(-1)) return Err;
-     // Err=ReadGSA(NMEA); if(Err!=(-1)) return Err;
+     Err=ReadGSA(NMEA); if(Err!=(-1)) return Err;
      Err=ReadRMC(NMEA); if(Err!=(-1)) return Err;
      return 0; }
 
@@ -410,7 +440,7 @@ class OgnPosition
 
      FixQuality =ReadDec1(GGA[Index[6]]); if(FixQuality<0) FixQuality=0;
      Satellites=ReadDec2(GGA+Index[7]); if(Satellites<0) Satellites=0;
-     printf("FixQuality=%d: %d satellites\n", FixQuality, Satellites);
+     // printf("FixQuality=%d: %d satellites\n", FixQuality, Satellites);
      ReadHDOP(GGA+Index[8]);
 
      ReadLatitude( GGA[Index[3]], GGA+Index[2]);
@@ -418,6 +448,7 @@ class OgnPosition
      ReadAltitude(GGA[Index[10]], GGA+Index[9]);
      ReadGeoidSepar(GGA[Index[12]], GGA+Index[11]);
 
+     // printf("ReadGGA() OK\n");
      return 0; }
 
    int ReadGSA(NMEA_RxMsg &RxMsg)
@@ -435,6 +466,7 @@ class OgnPosition
      ReadPDOP(GSA+Index[15]);
      ReadHDOP(GSA+Index[16]);
      ReadVDOP(GSA+Index[17]);
+     // printf("ReadGSA() OK\n");
      return 1; }
 
    int ReadRMC(NMEA_RxMsg &RxMsg)
@@ -456,7 +488,8 @@ class OgnPosition
      ReadLongitude(RMC[Index[6]], RMC+Index[5]);
      ReadSpeed(RMC+Index[7]);
      ReadHeading(RMC+Index[8]);
-     return 0; }
+     // printf("ReadRMC() OK\n");
+     return 1; }
 
    int calcDifferences(OgnPosition &RefPos) // calculate climb rate and turn ratewith an earlier reference position
    { ClimbRate=0; TurnRate=0;
@@ -638,6 +671,25 @@ class OgnPosition
      { int Dig=ReadDec1(Inp[Len]); if(Dig<0) break;
        Float = 10*Float + Dig; Len++; Mult*=10; }
      Ret: if(Sign=='-') Float=(-Float); return Len; }
+
+  uint8_t static Format_UnsDec(char *Str, uint32_t Value, int MinDigits=1, int DecPoint=0)
+  { uint32_t Base; uint8_t Pos, Len=0;
+    for( Pos=10, Base=1000000000; Base; Base/=10, Pos--)
+    { uint8_t Dig;
+      if(Value>=Base)
+      { Dig=Value/Base; Value-=Dig*Base; }
+      else
+      { Dig=0; }
+      if(Pos==DecPoint) { (*Str++)='.'; Len++; }
+      if( (Pos<=MinDigits) || (Dig>0) || (Pos<=DecPoint) )
+      { (*Str++)='0'+Dig; Len++; MinDigits=Pos; }
+    }
+    return Len; }
+
+  uint8_t static Format_SignDec(char *Str, int32_t Value, int MinDigits=1, int DecPoint=0)
+  { if(Value<0) { (*Str++)='-'; Value=(-Value); }
+           else { (*Str++)='+'; }
+    return 1+Format_UnsDec(Str, Value, MinDigits, DecPoint); }
 
   private:
 

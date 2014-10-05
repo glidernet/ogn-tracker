@@ -28,15 +28,17 @@ xQueueHandle gps_que;
 static SemaphoreHandle_t xGpsPosMutex = 0;
 static int PosPtr=0;
 static OgnPosition Position[4]; // we keep the 3 most recent positions
-// static OGN_Packet  Packet;
+static OGN_Packet  Packet;
 
- uint32_t GPS_GetUnixTime(void)
+ uint32_t GPS_GetPosition(char *Output)
 { xSemaphoreTake(xGpsPosMutex, portMAX_DELAY);
-  int Ptr=PosPtr; uint32_t Time=0;
-  if(Position[Ptr].isComplete()) Time=Position[Ptr].UnixTime;
+  int Ptr=PosPtr; uint32_t Time=0; if(Output) Output[0]=0;
+  if(Position[Ptr].isComplete())
+  { Time=Position[Ptr].UnixTime; if(Output) Position[Ptr].PrintLine(Output); }
   else
   { Ptr = (Ptr-1)&3;
-    if(Position[Ptr].isComplete()) Time=Position[Ptr].UnixTime;
+    if(Position[Ptr].isComplete())
+    { Time=Position[Ptr].UnixTime; if(Output) Position[Ptr].PrintLine(Output); }
   }
   xSemaphoreGive(xGpsPosMutex);
   return Time; }
@@ -44,17 +46,19 @@ static OgnPosition Position[4]; // we keep the 3 most recent positions
  void Handle_NMEA_String(const char* str, uint8_t len)
 { 
   xSemaphoreTake(xGpsPosMutex, portMAX_DELAY);
-  if(Position[PosPtr].ReadNMEA(str)<=0) return;
-  if(Position[PosPtr].isComplete())
-  { if(Position[PosPtr].isValid())                          // new position is complete: but GPS lock might not be there yet
-    { int RefPtr = (PosPtr+2)&3;
-      if(Position[RefPtr].isValid())
-      { Position[PosPtr].calcDifferences(Position[RefPtr]); // measure climb/turn rates
+  if(Position[PosPtr].ReadNMEA(str)>0)
+  { if(Position[PosPtr].isComplete())
+    { if(Position[PosPtr].isValid())                          // new position is complete: but GPS lock might not be there yet
+      { int RefPtr = (PosPtr+2)&3;
+        if(Position[RefPtr].isValid())
+        { Position[PosPtr].calcDifferences(Position[RefPtr]); // measure climb/turn rates
+        }
       }
+      PosPtr = (PosPtr+1)&3; Position[PosPtr].Clear();
     }
-    PosPtr = (PosPtr+1)&3; Position[PosPtr].Clear(); }
+  }
   xSemaphoreGive(xGpsPosMutex);
-}
+  return; }
 
 /**
 * @brief  Configures the GPS Task Peripherals.
@@ -81,6 +85,7 @@ static OgnPosition Position[4]; // we keep the 3 most recent positions
    for(int Pos=0; Pos<4; Pos++)
      Position[Pos].Clear();
    PosPtr=0;
+   Packet.Clear();
 
    xGpsPosMutex = xSemaphoreCreateMutex();
 

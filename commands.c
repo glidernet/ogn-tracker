@@ -11,6 +11,8 @@
 #include "messages.h"
 #include "spi.h"
 #include "spirit1.h"
+#include "gps.h"
+
 
 /* -------- defines -------- */
 #define SPI_DATA_LEN 256
@@ -53,7 +55,7 @@ int8_t get_hex_val(char chr)
   * @retval integer value.
   */
 
-uint8_t get_hex_str_val(const char* str)
+inline uint8_t get_hex_str_val(const char* str)
 {
    return (get_hex_val(str[0])<<4) | get_hex_val(str[1]);
 }
@@ -253,6 +255,28 @@ static portBASE_TYPE prvGPSSpeedCommand( char *pcWriteBuffer,
 }
 
 /**
+  * @brief  Command gps_time: prints GPS UTC time.
+  * @param  CLI template
+  * @retval CLI template
+  */
+static portBASE_TYPE prvGPSTimeCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ uint32_t Time = GPS_GetPosition(NULL);
+  sprintf(pcWriteBuffer,"GPS Time = %ldsec\r\n", Time);
+  return pdFALSE; }
+
+/**
+  * @brief  Command gps_pos: prints GPS UTC time and position.
+  * @param  CLI template
+  * @retval CLI template
+  */
+static portBASE_TYPE prvGPSPosCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ GPS_GetPosition(pcWriteBuffer); strcat(pcWriteBuffer, "\r"); return pdFALSE; }
+
+/**
   * @brief  Command spi1_send: send data over SPI1 bus.
   * @param  CLI template
   * @retval CLI template
@@ -382,6 +406,22 @@ static const CLI_Command_Definition_t GPSSpeedCommand =
     0
 };
 
+static const CLI_Command_Definition_t GPSTimeCommand =
+{
+    "gps_time",
+    "gps_time: GPS UTC Time\r\n",
+    prvGPSTimeCommand,
+    0
+};
+
+static const CLI_Command_Definition_t GPSPosCommand =
+{
+    "gps_pos",
+    "gps_pos: GPS Time & Position\r\n",
+    prvGPSPosCommand,
+    0
+};
+
 static const CLI_Command_Definition_t SetGPSSpeedCommand =
 {
     "set_gps_speed",
@@ -433,6 +473,8 @@ void RegisterCommands(void)
    /* The commands are displayed in help in the order provided here */
    FreeRTOS_CLIRegisterCommand(&ConsSpeedCommand);
    FreeRTOS_CLIRegisterCommand(&GPSSpeedCommand);
+   FreeRTOS_CLIRegisterCommand(&GPSTimeCommand);
+   FreeRTOS_CLIRegisterCommand(&GPSPosCommand);
    FreeRTOS_CLIRegisterCommand(&ResetCommand);
    FreeRTOS_CLIRegisterCommand(&SetConsSpeedCommand);
    FreeRTOS_CLIRegisterCommand(&SetGPSSpeedCommand);

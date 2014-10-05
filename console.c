@@ -14,7 +14,8 @@
 
 /* -------- defines -------- */
 #define MAX_INPUT_LENGTH    100
-#define MAX_OUTPUT_LENGTH   100
+#define MAX_OUTPUT_LENGTH   128
+
 #define NMEA_SENTENCE_MODE     0
 #define CONSOLE_SENTENCE_MODE  1
 #define MAX_NMEA_SENTENCE      100
