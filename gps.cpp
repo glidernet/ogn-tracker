@@ -11,6 +11,7 @@
 #include "cir_buf.h"
 #include "console.h"
 #include "options.h"
+#include "spirit1.h"
 
 /* -------- defines ---------- */
 /* -------- variables -------- */
@@ -44,7 +45,8 @@ static OGN_Packet  Packet;
   return Time; }
 
  void Handle_NMEA_String(const char* str, uint8_t len)
-{ 
+{ task_message sp1_msg;
+
   xSemaphoreTake(xGpsPosMutex, portMAX_DELAY);
   if(Position[PosPtr].ReadNMEA(str)>0)
   { if(Position[PosPtr].isComplete())
@@ -52,6 +54,18 @@ static OGN_Packet  Packet;
       { int RefPtr = (PosPtr+2)&3;
         if(Position[RefPtr].isValid())
         { Position[PosPtr].calcDifferences(Position[RefPtr]); // measure climb/turn rates
+          Packet.setAddress(0xE01234); Packet.clrICAO();
+          Packet.calcAddrParity();
+          Position[PosPtr].Encode(Packet);
+          Packet.setAcftType(0x1); Packet.clrPrivate();
+          Packet.Encrypt();
+          Packet.setFEC();          
+          sp1_msg.msg_data   = (uint32_t)&Packet.Header;
+          sp1_msg.msg_len    = OGN_PKT_LEN;
+          sp1_msg.msg_opcode = SP1_SEND_OGN_PKT;
+          sp1_msg.src_id     = GPS_USART_SRC_ID;
+          xQueueHandle* sp1_task_queue = Get_SP1Que();
+          xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
         }
       }
       PosPtr = (PosPtr+1)&3; Position[PosPtr].Clear();
