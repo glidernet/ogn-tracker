@@ -54,6 +54,7 @@ static OGN_Packet  Packet;
       { int RefPtr = (PosPtr+2)&3;
         if(Position[RefPtr].isValid())
         { Position[PosPtr].calcDifferences(Position[RefPtr]); // measure climb/turn rates
+                                                               // take only short delta-time ?
           Packet.setAddress(0xE01234); Packet.clrICAO();
           Packet.calcAddrParity();
           Position[PosPtr].Encode(Packet);
