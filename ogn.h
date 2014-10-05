@@ -397,10 +397,12 @@ class OgnPosition
      Out[Len++]='/'; Len+=Format_UnsDec(Out+Len, HDOP, 2, 1);
      Out[Len++]='/'; Len+=Format_UnsDec(Out+Len, VDOP, 2, 1);
      // Len+=sprintf(Out+Len," [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
+     Out[Len++]=' ';
      Out[Len++]='['; Len+=Format_SignDec(Out+Len, Latitude/60, 6, 4);
      Out[Len++]=','; Len+=Format_SignDec(Out+Len, Longitude/60, 7, 4);
      Out[Len++]=']'; Out[Len++]='d'; Out[Len++]='e'; Out[Len++]='g';
-     Out[Len++]=' '; Len+=Format_UnsDec(Out+Len, Altitude, 4, 1); Out[Len++]='m';
+     Out[Len++]=' '; Len+=Format_SignDec(Out+Len, Altitude, 4, 1); Out[Len++]='m';
+     Out[Len++]='/'; Len+=Format_SignDec(Out+Len, GeoidSeparation, 4, 1); Out[Len++]='m';
      // Len+=sprintf(Out+Len, " %4.1fkt %05.1fdeg", 0.01*Speed, 0.01*Heading);
      Out[Len++]=' '; Len+=Format_UnsDec(Out+Len, Speed/10  , 2, 1); Out[Len++]='k'; Out[Len++]='t';
      Out[Len++]=' '; Len+=Format_UnsDec(Out+Len, Heading/10, 4, 1); Out[Len++]='d'; Out[Len++]='e'; Out[Len++]='g';
