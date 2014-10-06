@@ -76,10 +76,12 @@ LDSCRIPT   = arm-gcc-link.ld
 CC_OBJ     = $(CC_SRC:.c=.o)
 CPP_OBJ    = $(CPP_SRC:.cpp=.o)
 
-CC_OPT     = -mcpu=cortex-m3 -mthumb -Wall -O2 -g -ffunction-sections -std=c99
-CPP_OPT    = -mcpu=cortex-m3 -mthumb -Wall -O2 -g -ffunction-sections
+CPU_OPT    = -mcpu=cortex-m3 -mthumb
 
-LNK_OPT    = -mcpu=cortex-m3 -mthumb -msoft-float -nostartfiles -O2 -g -Wl,--gc-sections --specs=nano.specs --specs=nosys.specs -Wl,-Map=main.map -T$(LDSCRIPT)
+CC_OPT     = $(CPU_OPT) -Wall -O2 -g -ffunction-sections -std=c99
+CPP_OPT    = $(CPU_OPT) -Wall -O2 -g -ffunction-sections
+
+LNK_OPT    = -mcpu=cortex-m3 -mthumb -nostartfiles -O2 -g -Wl,--gc-sections --specs=nano.specs --specs=nosys.specs -Wl,-Map=main.map -T$(LDSCRIPT)
 
 all:	main.hex main.bin main.dmp
 

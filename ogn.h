@@ -38,7 +38,7 @@ class OGN_Packet          // Packet structure for the OGN tracker
          Packet[ByteIdx++]=Word; Word>>=8; }
      }
      return 26; }
-   int recvBytes(uint8_t *Packet)                  // get bytes from an RF packet and make the OGN_Packet
+   int recvBytes(const uint8_t *Packet)             // get bytes from an RF packet and make the OGN_Packet
    { int ByteIdx=0; uint32_t *WordPtr=&Header;
      for(int WordIdx=0; WordIdx<7; WordIdx++)
      { uint32_t Word=0;
@@ -48,10 +48,20 @@ class OGN_Packet          // Packet structure for the OGN tracker
        WordPtr[WordIdx]=Word;
      }
      return 26; }
+   int calcErrorPattern(uint8_t *ErrPatt, const uint8_t *Packet)
+   { int ByteIdx=0; uint32_t *WordPtr=&Header;
+     for(int WordIdx=0; WordIdx<7; WordIdx++)
+     { uint32_t Word=WordPtr[WordIdx];
+       for(int Idx=0; Idx<4; Idx++)
+       { if(ByteIdx>=26) break;
+         ErrPatt[ByteIdx]=Packet[ByteIdx]^Word; ByteIdx++;
+         Word>>=8; }
+     }
+     return 26; }
 
    void Dump(void) const
    { printf("%08lX: %08lX %08lX %08lX %08lX [%08lX %04lX] (%d)\n",
-             Header, Position[0], Position[1], Position[2], Position[3], FEC[0], FEC[1], checkFEC() ); }
+             (long int)Header, (long int)Position[0], (long int)Position[1], (long int)Position[2], (long int)Position[3], (long int)FEC[0], (long int)FEC[1], (int)checkFEC() ); }
 
    void DumpBytes(void) const
    { uint8_t Data[26]; sendBytes(Data);
@@ -60,10 +70,10 @@ class OGN_Packet          // Packet structure for the OGN tracker
      printf(" (%d)\n", LDPC_Check(Data)); }
 
    void Print(void) const
-   { printf("%06lX%c R%c %c%01lX %c", getAddress(), isICAO()?'I':' ', '0'+getRelayed(), isPrivate()?'p':' ', getAcftType(), isEmergency()?'E':' ');
-     printf("%ld/%ldD/%4.1f %02ldsec: [%+10.6f, %+10.6f]deg %ldm %3.1fkt %05.1fdeg %+4.1fm/s %+4.1fdeg/s\n",
-            getFixQuality(), getFixMode()+2, 0.1*(10+DecodeDOP()), getTime(),
-            0.0001/60*DecodeLatitude(), 0.0001/60*DecodeLongitude(), DecodeAltitude(),
+   { printf("%06lX%c R%c %c%01X %c", (long int)getAddress(), isICAO()?'I':' ', '0'+getRelayed(), isPrivate()?'p':' ', (int)getAcftType(), isEmergency()?'E':' ');
+     printf("%d/%dD/%4.1f %02dsec: [%+10.6f, %+10.6f]deg %ldm %3.1fkt %05.1fdeg %+4.1fm/s %+4.1fdeg/s\n",
+            (int)getFixQuality(), (int)getFixMode()+2, 0.1*(10+DecodeDOP()), (int)getTime(),
+            0.0001/60*DecodeLatitude(), 0.0001/60*DecodeLongitude(), (long int)DecodeAltitude(),
             0.2*DecodeSpeed(), 0.1*DecodeHeading(), 0.1*DecodeClimbRate(), 0.1*DecodeTurnRate() ); }
 
    OGN_Packet() { Clear(); }
@@ -369,7 +379,7 @@ class OgnPosition
    int PrintTime(char *Out)     const { return sprintf(Out, "%02d:%02d:%02d.%03d", Hour, Min, Sec, FracSec ); }
 
    void Print(void) const
-   { printf("Time/Date = "); PrintDateTime(); printf(" = %10ld.%03dsec\n", UnixTime, FracSec);
+   { printf("Time/Date = "); PrintDateTime(); printf(" = %10ld.%03dsec\n", (long int)UnixTime, FracSec);
      printf("FixQuality=%d: %d satellites HDOP=%3.1f\n", FixQuality, Satellites, 0.1*HDOP);
      printf("Lat/Lon/Alt = [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m\n", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
      printf("Speed/Heading = %4.2fkt %06.2fdeg\n", 0.01*Speed, 0.01*Heading);
@@ -377,7 +387,7 @@ class OgnPosition
 
    int Print(char *Out) const
    { int Len=0;
-     Len+=sprintf(Out+Len, "Time/Date = "); Len+=PrintDateTime(Out+Len); Len+=sprintf(Out+Len, " = %10ld.%03dsec\n", UnixTime, FracSec);
+     Len+=sprintf(Out+Len, "Time/Date = "); Len+=PrintDateTime(Out+Len); Len+=sprintf(Out+Len, " = %10ld.%03dsec\n", (long int)UnixTime, FracSec);
      Len+=sprintf(Out+Len, "FixQuality=%d: %d satellites HDOP=%3.1f\n", FixQuality, Satellites, 0.1*HDOP);
      Len+=sprintf(Out+Len, "Lat/Lon/Alt = [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m\n", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
      Len+=sprintf(Out+Len, "Speed/Heading = %4.2fkt %06.2fdeg\n", 0.01*Speed, 0.01*Heading);
