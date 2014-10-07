@@ -355,9 +355,13 @@ class OgnPosition
 
    void Clear(void)
    { FixQuality=0; FixMode=0; PDOP=0; HDOP=0; VDOP=0; UnixTime=0;
+     setDefaultDate(); setDefaultTime();
      Altitude=0; Latitude=0; Longitude=0;
      Speed=0; Heading=0; ClimbRate=0; TurnRate=0; Temperature=0;
      DayTimeGGA=(-1); DayTimeRMC=(-1); }
+
+   void setDefaultDate() { Year=2000; Month=1; Day=1; }
+   void setDefaultTime() { Hour=0; Min=0; Sec=0; }
 
    bool isComplete(void) const                       // have both RMC and GGA sentences been received and for same time ?
    { if((DayTimeGGA<0) || (DayTimeRMC<0) ) return 0;
@@ -380,6 +384,7 @@ class OgnPosition
 
    void Print(void) const
    { printf("Time/Date = "); PrintDateTime(); printf(" = %10ld.%03dsec\n", (long int)UnixTime, FracSec);
+     printf("FixQuality/Mode=%d/%d: %d satellites DOP/H/V=%3.1f/%3.1f/%3.1f\n", FixQuality, FixMode, Satellites, 0.1*PDOP, 0.1*HDOP, 0.1*VDOP);
      printf("FixQuality=%d: %d satellites HDOP=%3.1f\n", FixQuality, Satellites, 0.1*HDOP);
      printf("Lat/Lon/Alt = [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m\n", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
      printf("Speed/Heading = %4.2fkt %06.2fdeg\n", 0.01*Speed, 0.01*Heading);
@@ -388,7 +393,7 @@ class OgnPosition
    int Print(char *Out) const
    { int Len=0;
      Len+=sprintf(Out+Len, "Time/Date = "); Len+=PrintDateTime(Out+Len); Len+=sprintf(Out+Len, " = %10ld.%03dsec\n", (long int)UnixTime, FracSec);
-     Len+=sprintf(Out+Len, "FixQuality=%d: %d satellites HDOP=%3.1f\n", FixQuality, Satellites, 0.1*HDOP);
+     Len+=sprintf(Out+Len, "FixQuality/Mode=%d/%d: %d satellites DOP/H/V=%3.1f/%3.1f/%3.1f\n", FixQuality, FixMode, Satellites, 0.1*PDOP, 0.1*HDOP, 0.1*VDOP);
      Len+=sprintf(Out+Len, "Lat/Lon/Alt = [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m\n", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
      Len+=sprintf(Out+Len, "Speed/Heading = %4.2fkt %06.2fdeg\n", 0.01*Speed, 0.01*Heading);
      return Len; }
@@ -430,7 +435,7 @@ class OgnPosition
      return 0; }
 
    int ReadGGA(NMEA_RxMsg &RxMsg)
-   { if(RxMsg.Parms!=14) return -1;
+   { if( (RxMsg.Parms!=14) && (RxMsg.Parms!=15) ) return -1; // should be 14, but Condor outputs one more comma for GPGGA
      DayTimeGGA = ReadTime((const char *)RxMsg.ParmPtr(0));
      FixQuality =ReadDec1(*RxMsg.ParmPtr(5)); if(FixQuality<0) FixQuality=0;
      Satellites=ReadDec2((const char *)RxMsg.ParmPtr(6)); if(Satellites<0) Satellites=0;
@@ -444,7 +449,8 @@ class OgnPosition
 
    int ReadGGA(const char *GGA)
    { if(memcmp(GGA, "$GPGGA", 6)!=0) return -1;                   // check if the right sequence
-     uint8_t Index[20]; if(IndexNMEA(Index, GGA)!=15) return -2;  // index parameters and check the sum
+     uint8_t Index[20]; int Parms=IndexNMEA(Index, GGA);          // index parameters and check the sum
+     if( (Parms!=15) && (Parms!=16) ) return -2;
 
      DayTimeGGA = ReadTime(GGA+Index[1]);
 
@@ -459,7 +465,7 @@ class OgnPosition
      ReadGeoidSepar(GGA[Index[12]], GGA+Index[11]);
 
      // printf("ReadGGA() OK\n");
-     return 0; }
+     return 1; }
 
    int ReadGSA(NMEA_RxMsg &RxMsg)
    { if(RxMsg.Parms!=17) return -1;
@@ -482,7 +488,8 @@ class OgnPosition
    int ReadRMC(NMEA_RxMsg &RxMsg)
    { if(RxMsg.Parms!=12) return -1;
      DayTimeRMC = ReadTime((const char *)RxMsg.ParmPtr(0));
-     if(ReadDate((const char *)RxMsg.ParmPtr(8))>=0) UnixTime=CalcTime();
+     if(ReadDate((const char *)RxMsg.ParmPtr(8))<0) setDefaultDate();
+     UnixTime=CalcTime();
      ReadLatitude(*RxMsg.ParmPtr(3), (const char *)RxMsg.ParmPtr(2));
      ReadLongitude(*RxMsg.ParmPtr(5), (const char *)RxMsg.ParmPtr(4));
      ReadSpeed((const char *)RxMsg.ParmPtr(6));
@@ -493,7 +500,8 @@ class OgnPosition
    { if(memcmp(RMC, "$GPRMC", 6)!=0) return -1;                   // check if the right sequence
      uint8_t Index[20]; if(IndexNMEA(Index, RMC)!=13) return -2;  // index parameters and check the sum
      DayTimeRMC = ReadTime(RMC+Index[1]);
-     if(ReadDate(RMC+Index[9])>=0) UnixTime=CalcTime();
+     if(ReadDate(RMC+Index[9])<0) setDefaultDate();
+     UnixTime=CalcTime();
      ReadLatitude( RMC[Index[4]], RMC+Index[3]);
      ReadLongitude(RMC[Index[6]], RMC+Index[5]);
      ReadSpeed(RMC+Index[7]);
