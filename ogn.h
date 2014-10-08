@@ -466,7 +466,7 @@ class OgnPosition
      return 1; }
 
    int ReadGSA(NMEA_RxMsg &RxMsg)
-   { if(RxMsg.Parms!=17) return -1;
+   { if(RxMsg.Parms<17) return -1;
      FixMode =ReadDec1(*RxMsg.ParmPtr(1)); if(FixMode<0) FixMode=0;                       // fix mode
      ReadPDOP((const char *)RxMsg.ParmPtr(14));                                           // total dilution of precision
      ReadHDOP((const char *)RxMsg.ParmPtr(15));                                           // horizontal dilution of precision
@@ -475,7 +475,7 @@ class OgnPosition
 
    int ReadGSA(const char *GSA)
    { if(memcmp(GSA, "$GPGSA", 6)!=0) return -1;                                           // check if the right sequence
-     uint8_t Index[20]; if(IndexNMEA(Index, GSA)<18) return -2;                           // index parameters and check the sum
+     uint8_t Index[20]; if(IndexNMEA(Index, GSA)<17) return -2;                           // index parameters and check the sum
      FixMode =ReadDec1(GSA[Index[1]]); if(FixMode<0) FixMode=0;
      ReadPDOP(GSA+Index[14]);
      ReadHDOP(GSA+Index[15]);
