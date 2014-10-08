@@ -17,12 +17,12 @@
 class OGN_Packet          // Packet structure for the OGN tracker
 { public:
 
-   uint32_t Header;       // address:24, spare:2, flags: ICAO, encrypt, relay, emergency, parity
+   uint32_t Header;       // Address:24, AddrType:2, AddrParity, flags: relay, emergency, encrypt
 
    uint32_t Position[4];  // 0: FixQual:2, Time:6, Lat:24
                           // 1: FixMode:1, Baro:1, DOP:6,  Lon:24
                           // 2: TurnRate:8, Speed:10, Alt: 14
-                          // 3: Temp:8, Type:4, Private:1 Climb:9, Heading:10
+                          // 3: Temperature:8, AcftType:4, Private:1 Climb:9, Heading:10
 
    uint32_t FEC[2];       // Gallager code: 48 check bits for 160 user bits
 
@@ -70,7 +70,7 @@ class OGN_Packet          // Packet structure for the OGN tracker
      printf(" (%d)\n", LDPC_Check(Data)); }
 
    void Print(void) const
-   { printf("%06lX%c R%c %c%01X %c", (long int)getAddress(), isICAO()?'I':' ', '0'+getRelayed(), isPrivate()?'p':' ', (int)getAcftType(), isEmergency()?'E':' ');
+   { printf("%06lX:%c R%c %c%01X %c", (long int)getAddress(), '0'+getAddrType(), '0'+getRelayCount(), isPrivate()?'p':' ', (int)getAcftType(), isEmergency()?'E':' ');
      printf("%d/%dD/%4.1f %02dsec: [%+10.6f, %+10.6f]deg %ldm %3.1fkt %05.1fdeg %+4.1fm/s %+4.1fdeg/s\n",
             (int)getFixQuality(), (int)getFixMode()+2, 0.1*(10+DecodeDOP()), (int)getTime(),
             0.0001/60*DecodeLatitude(), 0.0001/60*DecodeLongitude(), (long int)DecodeAltitude(),
@@ -114,11 +114,9 @@ class OGN_Packet          // Packet structure for the OGN tracker
    uint8_t getRelayCount(void) const { return (Header>>28)&0x03; } // how many time the packet has been relayed
    void    setRelayCount(uint8_t Count) { Header = (Header&0xCFFFFFFF) | ((uint32_t)(Count&0x03)<<28); }
 
-   bool goodAddrParity(void) const  { return ((Count1s(Header&0x0FFFFFFF)&1)==0); }  // Address parity should be EVEN
-   void calcAddrParity(void)        { if(!goodAddrParity()) Header ^= 0x08000000; }  // if not correct parity, flip the parity bit
 
-   uint8_t getRelayed(void) const { return (Header>>25)&0x03; }    // 0=direct, 1=relayed OGN, 2=relayed FLARM, 3=reception report
-   void    setRelayed(uint8_t Type) { Header = (Header&0xF9FFFFFF) | ((uint32_t)(Type&0x03)<<25); }
+//   uint8_t getRelayed(void) const { return (Header>>25)&0x03; }    // 0=direct, 1=relayed OGN, 2=relayed FLARM, 3=reception report
+//   void    setRelayed(uint8_t Type) { Header = (Header&0xF9FFFFFF) | ((uint32_t)(Type&0x03)<<25); }
 
 //   bool  isRelayed(void)   const  { return Header &  0x04000000; } // has been heard and is being relayed 
 //   void setRelayed(void)          {        Header |= 0x04000000; } // to track aircrafts at low altitudes or in difficult terrains
@@ -128,9 +126,17 @@ class OGN_Packet          // Packet structure for the OGN tracker
 //   void setRelayFLARM(void)       {        Header |= 0x02000000; } // if tracker is receives position from a FLARM unit
 //   void clrRelayFLARM(void)       {        Header &= 0xFDFFFFFF; }
 
-   bool  isICAO(void) const       { return Header &  0x01000000; } // address is ICAO assigned
-   void setICAO(void)             {        Header |= 0x01000000; }
-   void clrICAO(void)             {        Header &= 0xFEFFFFFF; }
+//   bool  isICAO(void) const       { return Header &  0x01000000; } // address is ICAO assigned
+//   void setICAO(void)             {        Header |= 0x01000000; }
+//   void clrICAO(void)             {        Header &= 0xFEFFFFFF; }
+
+   // bit #23 if free for now
+
+   bool goodAddrParity(void) const  { return ((Count1s(Header&0x07FFFFFF)&1)==0); }  // Address parity should be EVEN
+   void calcAddrParity(void)        { if(!goodAddrParity()) Header ^= 0x04000000; }  // if not correct parity, flip the parity bit
+
+   uint8_t getAddrType(void) const   { return (Header>>24)&0x03; } // Address type: 0 = Random, 1 = ICAO, 2 = FLARM, 3 = OGN
+   void    setAddrType(uint8_t Type) { Header = (Header&0xFCFFFFFF) | ((uint32_t)(Type&0x03)<<24); }
 
    uint32_t getAddress(void) const { return Header&0x00FFFFFF; }
    void setAddress(uint32_t Address) { Header = (Header&0xFF000000) | (Address&0x00FFFFFF); }
@@ -322,32 +328,32 @@ class OGN_Packet          // Packet structure for the OGN tracker
 class OgnPosition
 { public:
    int FixQuality;              // 0 = none, 1 = GPS, 2 = Differential GPS (can be WAAS)
-   int FixMode;                 // 1 = none, 2 = 2-D, 3 = 3-D
-   int Satellites;
+   int FixMode;                 // 0 = not set (from GSA) 1 = none, 2 = 2-D, 3 = 3-D
+   int Satellites;              // number of active satellites
 
-   int Year, Month, Day;      // Date from GPS
-   int Hour, Min, Sec;        // Time-of-day (UTC) from GPS
-   int FracSec;               // [1/1000 sec] some GPS-es give second fraction with the time-of-day
-   uint32_t UnixTime;         // [sec] UNIX time (calc. from the above)
+   int Year, Month, Day;        // Date from GPS
+   int Hour, Min, Sec;          // Time-of-day (UTC) from GPS
+   int mSec;                    // [1/1000 sec] some GPS-es give second fraction with the time-of-day
+   uint32_t UnixTime;           // [sec] UNIX time (calculated from the above)
 
-   int32_t Altitude;            // [0.1 meter]
-   int32_t GeoidSeparation;     // [0.1 meter]
+   int32_t Altitude;            // [0.1 meter] height above Geoid (sea level)
+   int32_t GeoidSeparation;     // [0.1 meter] difference between Geoid and Ellipsoid 
    int32_t Latitude;            // [0.0001/60 deg] about 0.018m accuracy, to convert to FLARM units mult by. 5/3
    int32_t Longitude;           // [0.0001/60 deg]
-   int32_t PDOP;                // [0.1]
-   int32_t HDOP;                // [0.1]
-   int32_t VDOP;                // [0.1]
+   int32_t PDOP;                // [0.1] dilution of precision
+   int32_t HDOP;                // [0.1] horizontal dilution of precision
+   int32_t VDOP;                // [0.1] vertical dilution of precision
 
-   int32_t Speed;               // [0.01 knot]
-   int32_t Heading;             // [0.01 deg]
+   int32_t Speed;               // [0.01 knot] speed-over-ground
+   int32_t Heading;             // [0.01 deg]  heading-over-ground
 
    int32_t ClimbRate;           // [0.1 meter/sec)
    int32_t TurnRate;            // [0.1 deg/sec]
 
    int32_t Temperature;         // [0.1 degC]
 
-   int32_t DayTimeGGA;          // [sec]
-   int32_t DayTimeRMC;          // [sec]
+   int32_t DayTimeGGA;          // [sec]  time-of-day from the $GPGGA
+   int32_t DayTimeRMC;          // [sec]  time-of-day form the $GPRMC
 
   public:
 
@@ -356,7 +362,7 @@ class OgnPosition
    void Clear(void)
    { FixQuality=0; FixMode=0; PDOP=0; HDOP=0; VDOP=0; UnixTime=0;
      setDefaultDate(); setDefaultTime();
-     Altitude=0; Latitude=0; Longitude=0;
+     Latitude=0; Longitude=0; Altitude=0; GeoidSeparation=0;
      Speed=0; Heading=0; ClimbRate=0; TurnRate=0; Temperature=0;
      DayTimeGGA=(-1); DayTimeRMC=(-1); }
 
@@ -376,14 +382,14 @@ class OgnPosition
      if(Satellites<=0) return 0;
      return 1; }
 
-   void PrintDateTime(void) const { printf("%02d.%02d.%04d %02d:%02d:%06.3f", Day, Month, Year, Hour, Min, Sec+0.001*FracSec ); }
-   void PrintTime(void)     const { printf("%02d:%02d:%06.3f", Hour, Min, Sec+0.001*FracSec ); }
+   void PrintDateTime(void) const { printf("%02d.%02d.%04d %02d:%02d:%06.3f", Day, Month, Year, Hour, Min, Sec+0.001*mSec ); }
+   void PrintTime(void)     const { printf("%02d:%02d:%06.3f", Hour, Min, Sec+0.001*mSec ); }
 
-   int PrintDateTime(char *Out) const { return sprintf(Out, "%02d.%02d.%04d %02d:%02d:%02d.%03d", Day, Month, Year, Hour, Min, Sec, FracSec ); }
-   int PrintTime(char *Out)     const { return sprintf(Out, "%02d:%02d:%02d.%03d", Hour, Min, Sec, FracSec ); }
+   int PrintDateTime(char *Out) const { return sprintf(Out, "%02d.%02d.%04d %02d:%02d:%02d.%03d", Day, Month, Year, Hour, Min, Sec, mSec ); }
+   int PrintTime(char *Out)     const { return sprintf(Out, "%02d:%02d:%02d.%03d", Hour, Min, Sec, mSec ); }
 
    void Print(void) const
-   { printf("Time/Date = "); PrintDateTime(); printf(" = %10ld.%03dsec\n", (long int)UnixTime, FracSec);
+   { printf("Time/Date = "); PrintDateTime(); printf(" = %10ld.%03dsec\n", (long int)UnixTime, mSec);
      printf("FixQuality/Mode=%d/%d: %d satellites DOP/H/V=%3.1f/%3.1f/%3.1f\n", FixQuality, FixMode, Satellites, 0.1*PDOP, 0.1*HDOP, 0.1*VDOP);
      printf("FixQuality=%d: %d satellites HDOP=%3.1f\n", FixQuality, Satellites, 0.1*HDOP);
      printf("Lat/Lon/Alt = [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m\n", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
@@ -392,7 +398,7 @@ class OgnPosition
 
    int Print(char *Out) const
    { int Len=0;
-     Len+=sprintf(Out+Len, "Time/Date = "); Len+=PrintDateTime(Out+Len); Len+=sprintf(Out+Len, " = %10ld.%03dsec\n", (long int)UnixTime, FracSec);
+     Len+=sprintf(Out+Len, "Time/Date = "); Len+=PrintDateTime(Out+Len); Len+=sprintf(Out+Len, " = %10ld.%03dsec\n", (long int)UnixTime, mSec);
      Len+=sprintf(Out+Len, "FixQuality/Mode=%d/%d: %d satellites DOP/H/V=%3.1f/%3.1f/%3.1f\n", FixQuality, FixMode, Satellites, 0.1*PDOP, 0.1*HDOP, 0.1*VDOP);
      Len+=sprintf(Out+Len, "Lat/Lon/Alt = [%+10.6f,%+10.6f]deg %+3.1f(%+3.1f)m\n", 0.0001/60*Latitude, 0.0001/60*Longitude, 0.1*Altitude, 0.1*GeoidSeparation);
      Len+=sprintf(Out+Len, "Speed/Heading = %4.2fkt %06.2fdeg\n", 0.01*Speed, 0.01*Heading);
@@ -435,78 +441,68 @@ class OgnPosition
      return 0; }
 
    int ReadGGA(NMEA_RxMsg &RxMsg)
-   { if( (RxMsg.Parms!=14) && (RxMsg.Parms!=15) ) return -1; // should be 14, but Condor outputs one more comma for GPGGA
-     DayTimeGGA = ReadTime((const char *)RxMsg.ParmPtr(0));
-     FixQuality =ReadDec1(*RxMsg.ParmPtr(5)); if(FixQuality<0) FixQuality=0;
-     Satellites=ReadDec2((const char *)RxMsg.ParmPtr(6)); if(Satellites<0) Satellites=0;
-     // printf("FixQuality=%d: %d satellites\n", FixQuality, Satellites);
-     ReadHDOP((const char *)RxMsg.ParmPtr(7));
-     ReadLatitude(*RxMsg.ParmPtr(2), (const char *)RxMsg.ParmPtr(1));
-     ReadLongitude(*RxMsg.ParmPtr(4), (const char *)RxMsg.ParmPtr(3));
-     ReadAltitude(*RxMsg.ParmPtr(9), (const char *)RxMsg.ParmPtr(8));
-     ReadGeoidSepar(*RxMsg.ParmPtr(11), (const char *)RxMsg.ParmPtr(10));
+   { if(RxMsg.Parms<14) return -1;                                                        // no less than 14 paramaters
+     DayTimeGGA = ReadTime((const char *)RxMsg.ParmPtr(0));                               // time-of-day
+     FixQuality =ReadDec1(*RxMsg.ParmPtr(5)); if(FixQuality<0) FixQuality=0;              // fix quality
+     Satellites=ReadDec2((const char *)RxMsg.ParmPtr(6)); if(Satellites<0) Satellites=0;  // number of satellites
+     ReadHDOP((const char *)RxMsg.ParmPtr(7));                                            // horizontal dilution of precision
+     ReadLatitude(*RxMsg.ParmPtr(2), (const char *)RxMsg.ParmPtr(1));                     // Latitude
+     ReadLongitude(*RxMsg.ParmPtr(4), (const char *)RxMsg.ParmPtr(3));                    // Longitude
+     ReadAltitude(*RxMsg.ParmPtr(9), (const char *)RxMsg.ParmPtr(8));                     // Altitude
+     ReadGeoidSepar(*RxMsg.ParmPtr(11), (const char *)RxMsg.ParmPtr(10));                 // Geoid separation
      return 1; }
 
    int ReadGGA(const char *GGA)
-   { if(memcmp(GGA, "$GPGGA", 6)!=0) return -1;                   // check if the right sequence
-     uint8_t Index[20]; int Parms=IndexNMEA(Index, GGA);          // index parameters and check the sum
-     if( (Parms!=15) && (Parms!=16) ) return -2;
-
-     DayTimeGGA = ReadTime(GGA+Index[1]);
-
-     FixQuality =ReadDec1(GGA[Index[6]]); if(FixQuality<0) FixQuality=0;
-     Satellites=ReadDec2(GGA+Index[7]); if(Satellites<0) Satellites=0;
-     // printf("FixQuality=%d: %d satellites\n", FixQuality, Satellites);
-     ReadHDOP(GGA+Index[8]);
-
-     ReadLatitude( GGA[Index[3]], GGA+Index[2]);
-     ReadLongitude(GGA[Index[5]], GGA+Index[4]);
-     ReadAltitude(GGA[Index[10]], GGA+Index[9]);
-     ReadGeoidSepar(GGA[Index[12]], GGA+Index[11]);
-
-     // printf("ReadGGA() OK\n");
+   { if(memcmp(GGA, "$GPGGA", 6)!=0) return -1;                                           // check if the right sequence
+     uint8_t Index[20]; if(IndexNMEA(Index, GGA)<14) return -2;                           // index parameters and check the sum
+     DayTimeGGA = ReadTime(GGA+Index[0]);                                                 // time-of-day
+     FixQuality =ReadDec1(GGA[Index[5]]); if(FixQuality<0) FixQuality=0;                  // fix quality
+     Satellites=ReadDec2(GGA+Index[6]); if(Satellites<0) Satellites=0;                    // number of satellites
+     ReadHDOP(GGA+Index[7]);                                                              // horizontal dilution of precision
+     ReadLatitude( GGA[Index[2]], GGA+Index[1]);                                          // Latitude
+     ReadLongitude(GGA[Index[4]], GGA+Index[3]);                                          // Longitude
+     ReadAltitude(GGA[Index[9]], GGA+Index[8]);                                           // Altitude
+     ReadGeoidSepar(GGA[Index[11]], GGA+Index[10]);                                       // Geoid separation
      return 1; }
 
    int ReadGSA(NMEA_RxMsg &RxMsg)
    { if(RxMsg.Parms!=17) return -1;
-     FixMode =ReadDec1(*RxMsg.ParmPtr(1)); if(FixMode<0) FixMode=0;
-     ReadPDOP((const char *)RxMsg.ParmPtr(14));
-     ReadHDOP((const char *)RxMsg.ParmPtr(15));
-     ReadVDOP((const char *)RxMsg.ParmPtr(16));
+     FixMode =ReadDec1(*RxMsg.ParmPtr(1)); if(FixMode<0) FixMode=0;                       // fix mode
+     ReadPDOP((const char *)RxMsg.ParmPtr(14));                                           // total dilution of precision
+     ReadHDOP((const char *)RxMsg.ParmPtr(15));                                           // horizontal dilution of precision
+     ReadVDOP((const char *)RxMsg.ParmPtr(16));                                           // vertical dilution of precision
      return 1; }
 
    int ReadGSA(const char *GSA)
-   { if(memcmp(GSA, "$GPGSA", 6)!=0) return -1;                   // check if the right sequence
-     uint8_t Index[20]; if(IndexNMEA(Index, GSA)!=18) return -2;  // index parameters and check the sum
-     FixMode =ReadDec1(GSA[Index[2]]); if(FixMode<0) FixMode=0;
-     ReadPDOP(GSA+Index[15]);
-     ReadHDOP(GSA+Index[16]);
-     ReadVDOP(GSA+Index[17]);
-     // printf("ReadGSA() OK\n");
+   { if(memcmp(GSA, "$GPGSA", 6)!=0) return -1;                                           // check if the right sequence
+     uint8_t Index[20]; if(IndexNMEA(Index, GSA)<18) return -2;                           // index parameters and check the sum
+     FixMode =ReadDec1(GSA[Index[1]]); if(FixMode<0) FixMode=0;
+     ReadPDOP(GSA+Index[14]);
+     ReadHDOP(GSA+Index[15]);
+     ReadVDOP(GSA+Index[16]);
      return 1; }
 
    int ReadRMC(NMEA_RxMsg &RxMsg)
-   { if(RxMsg.Parms!=12) return -1;
-     DayTimeRMC = ReadTime((const char *)RxMsg.ParmPtr(0));
-     if(ReadDate((const char *)RxMsg.ParmPtr(8))<0) setDefaultDate();
-     UnixTime=CalcTime();
-     ReadLatitude(*RxMsg.ParmPtr(3), (const char *)RxMsg.ParmPtr(2));
-     ReadLongitude(*RxMsg.ParmPtr(5), (const char *)RxMsg.ParmPtr(4));
-     ReadSpeed((const char *)RxMsg.ParmPtr(6));
-     ReadHeading((const char *)RxMsg.ParmPtr(7));
+   { if(RxMsg.Parms<12) return -1;                                                        // no less than 12 parameters
+     DayTimeRMC = ReadTime((const char *)RxMsg.ParmPtr(0));                               // time-of-day
+     if(ReadDate((const char *)RxMsg.ParmPtr(8))<0) setDefaultDate();                     // date
+     if(DayTimeRMC>=0) UnixTime=CalcUnixTime();                                           // calculate Unix Time from Date and Time
+     ReadLatitude(*RxMsg.ParmPtr(3), (const char *)RxMsg.ParmPtr(2));                     // Latitude
+     ReadLongitude(*RxMsg.ParmPtr(5), (const char *)RxMsg.ParmPtr(4));                    // Longitude
+     ReadSpeed((const char *)RxMsg.ParmPtr(6));                                           // Speed
+     ReadHeading((const char *)RxMsg.ParmPtr(7));                                         // Heading
      return 1; }
 
    int ReadRMC(const char *RMC)
    { if(memcmp(RMC, "$GPRMC", 6)!=0) return -1;                   // check if the right sequence
-     uint8_t Index[20]; if(IndexNMEA(Index, RMC)!=13) return -2;  // index parameters and check the sum
-     DayTimeRMC = ReadTime(RMC+Index[1]);
-     if(ReadDate(RMC+Index[9])<0) setDefaultDate();
-     UnixTime=CalcTime();
-     ReadLatitude( RMC[Index[4]], RMC+Index[3]);
-     ReadLongitude(RMC[Index[6]], RMC+Index[5]);
-     ReadSpeed(RMC+Index[7]);
-     ReadHeading(RMC+Index[8]);
-     // printf("ReadRMC() OK\n");
+     uint8_t Index[20]; if(IndexNMEA(Index, RMC)<12) return -2;   // index parameters and check the sum
+     DayTimeRMC = ReadTime(RMC+Index[0]);
+     if(ReadDate(RMC+Index[8])<0) setDefaultDate();
+     if(DayTimeRMC>=0) UnixTime=CalcUnixTime();
+     ReadLatitude( RMC[Index[3]], RMC+Index[2]);
+     ReadLongitude(RMC[Index[5]], RMC+Index[4]);
+     ReadSpeed(RMC+Index[6]);
+     ReadHeading(RMC+Index[7]);
      return 1; }
 
    int calcDifferences(OgnPosition &RefPos) // calculate climb rate and turn ratewith an earlier reference position
@@ -526,8 +522,7 @@ class OgnPosition
                                 else Packet.setFixMode(0);
      Packet.EncodeDOP(PDOP-10);
      int ShortTime=Sec;
-     if(FracSec>500)
-     { ShortTime+=1; if(ShortTime>=60) ShortTime-=60; }
+     if(mSec>=500) { ShortTime+=1; if(ShortTime>=60) ShortTime-=60; }
      Packet.setTime(ShortTime);
      Packet.EncodeLatitude(Latitude);
      Packet.EncodeLongitude(Longitude);
@@ -603,8 +598,8 @@ class OgnPosition
      if(Value[6]=='.')
      { int32_t Int, Mult;
        if(ReadFloat(Int, Mult, Value+6)>0)
-       { // printf("FracSec=%d/%d\n", Int, Mult);
-         FracSec=Scale(Int, Mult, 1000); }
+       { // printf("mSec=%d/%d\n", Int, Mult);
+         mSec=Scale(Int, Mult, 1000); }
      }
      return Hour*3600+Min*60+Sec; }
 
@@ -615,13 +610,14 @@ class OgnPosition
      if(Year>=70) Year+=1900; else Year+=2000;
      return 0; }
 
-   time_t CalcTime(void) const
+   time_t CalcUnixTime(void) const
    { struct tm TM;
-     // printf("CalcTime(): Date=%02d.%02d.%04d, Time=%02d.%02d.%06.3f", Day, Month, Year, Hour, Min, Sec+0.001*FracSec);
+     // printf("CalcTime(): Date=%02d.%02d.%04d, Time=%02d.%02d.%06.3f", Day, Month, Year, Hour, Min, Sec+0.001*mSec);
      TM.tm_hour = Hour; TM.tm_min = Min; TM.tm_sec = Sec;
      TM.tm_mday = Day; TM.tm_mon = Month-1; TM.tm_year = Year-1900;
      time_t Time = internal_timegm(&TM);
      // printf(" => %10d\n", Time);
+     if(mSec>=500) Time+=1;
      return Time; }
 
    int32_t static Scale(int32_t Value, int32_t Mult, int32_t DestMult)
@@ -636,7 +632,7 @@ class OgnPosition
    { if(Seq[0]!='$') return -1;
      if(Seq[6]!=',') return -1;
      uint8_t Check=Seq[1]^Seq[2]^Seq[3]^Seq[4]^Seq[5]^Seq[6];
-     Index[0]=1; Index[1]=7; int Params=2; int Ptr;
+     Index[0]=7; int Params=1; int Ptr;
      for(Ptr=7; ; )
      { char ch=Seq[Ptr++]; if(ch<' ') return -1;
        if(ch=='*') break;
@@ -752,7 +748,7 @@ class OgnPosition
      int day_of_year = days_from_1jan(year,month,day);
      int days_since_epoch = days_from_1970(year) + day_of_year;
 
-     time_t seconds_in_day = 3600 * 24;
+     const time_t seconds_in_day = 3600 * 24;
      time_t result = seconds_in_day * days_since_epoch + 3600 * t->tm_hour + 60 * t->tm_min + t->tm_sec;
 
      return result; }
