@@ -18,3 +18,9 @@ Software
 Currently SW is developed using:
 - CooCox CoIDE: http://www.coocox.org/CooCox_CoIDE.htm
 - GNU Tools for ARM Embedded Processors: https://launchpad.net/gcc-arm-embedded/
+- standalone makefile is as well available
+
+Status
+======
+Two prototype trackers are transmitting and are being received by OGN station.
+

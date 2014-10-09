@@ -23,7 +23,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.0.1\r\n";
+static const char * const pcVersion = "0.0.2";
 /* -------- functions -------- */
 
 /**
@@ -85,7 +85,8 @@ static portBASE_TYPE prvVerCommand( char *pcWriteBuffer,
                              size_t xWriteBufferLen,
                              const char *pcCommandString )
 {
-   strcpy((char*)pcWriteBuffer, pcVersion);
+   uint32_t *ID = (uint32_t*)0x1FF80050;
+   sprintf(pcWriteBuffer, "Soft. version: %s\r\nMCU ID: %08lX %08lX %08lX\r\n", pcVersion, ID[0], ID[1], ID[2]);
    return pdFALSE;
 }
 
@@ -438,14 +439,6 @@ static const CLI_Command_Definition_t ResetCommand =
     0
 };
 
-static const CLI_Command_Definition_t VerCommand =
-{
-    "ver",
-    "ver: version number\r\n",
-    prvVerCommand,
-    0
-};
-
 static const CLI_Command_Definition_t SPI1SendCommand =
 {
     "spi1",
@@ -462,6 +455,14 @@ static const CLI_Command_Definition_t SP1SendPacketCommand =
     1
 };
 
+
+static const CLI_Command_Definition_t VerCommand =
+{
+    "ver",
+    "ver: version number and MCU ID\r\n",
+    prvVerCommand,
+    0
+};
 
 /**
   * @brief  Function registers all console commands.
