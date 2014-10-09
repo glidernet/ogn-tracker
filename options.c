@@ -187,35 +187,19 @@ void SetAcftID(uint32_t new_value)
   * @retval void* - should be casted to appr. type.
   */
 void* GetOption(option_types opt_code)
-{
-   void* ret_val = NULL;
-
-   switch (opt_code)
-   { case OPT_CONS_SPEED: { ret_val = GetConsSpeed(); break; }
-     case OPT_GPS_SPEED:  { ret_val = GetGPSSpeed();  break; }
-     case OPT_ACFT_ID:    { ret_val = GetAcftID();    break; }
-     default: break;
-   }
-   return ret_val;
-}
+{ void* ret_val = NULL;
+  switch (opt_code)
+  { case OPT_CONS_SPEED: { ret_val = GetConsSpeed(); break; }
+    case OPT_GPS_SPEED:  { ret_val = GetGPSSpeed();  break; }
+    case OPT_ACFT_ID:    { ret_val = GetAcftID();    break; }
+    default: break; }
+  return ret_val; }
 
 void SetOption(option_types opt_code, void* value)
-{
-   switch (opt_code)
-   {
-     case OPT_CONS_SPEED:
-     {
-        SetConsSpeed(*(uint32_t*) value);
-        break;
-     }
-
-     case OPT_GPS_SPEED:
-     {
-        SetGPSSpeed(*(uint32_t*) value);
-        break;
-     }
-     default:
-        break;
-   }
+{ switch (opt_code)
+  { case OPT_CONS_SPEED: { SetConsSpeed(*(uint32_t*) value); break; }
+    case OPT_GPS_SPEED:  { SetGPSSpeed (*(uint32_t*) value); break; }
+    case OPT_ACFT_ID:    { SetAcftID   (*(uint32_t*) value); break; }
+    default: break; }
 }
 
