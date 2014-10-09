@@ -16,6 +16,7 @@ typedef struct
    uint8_t   version;
    uint32_t  console_speed;
    uint32_t  gps_speed;
+   uint32_t  AcftID;
 } options_str;
 
 /* -------- variables -------- */
@@ -33,6 +34,7 @@ void ResetOptions(void)
    options.version       = OPTIONS_VER;
    options.console_speed = 4800;
    options.gps_speed     = 9600;
+   options.AcftID        = 0x00000000;
 }
 
 /**
@@ -166,6 +168,18 @@ void SetGPSSpeed(uint32_t new_value)
    WriteBlock(OFFSETOF(options_str, gps_speed), sizeof(options.gps_speed));
 }
 
+uint32_t* GetAcftID(void)
+{
+   return &options.AcftID;
+}
+
+void SetAcftID(uint32_t new_value)
+{
+   options.AcftID = new_value;
+   WriteBlock(OFFSETOF(options_str, AcftID), sizeof(options.AcftID));
+}
+
+
 /* ------------------------------------------------------ */
 /**
   * @brief  Entry point function for accessing option values.
@@ -177,21 +191,10 @@ void* GetOption(option_types opt_code)
    void* ret_val = NULL;
 
    switch (opt_code)
-   {
-      case OPT_CONS_SPEED:
-      {
-         ret_val = GetConsSpeed();
-         break;
-      }
-
-      case OPT_GPS_SPEED:
-      {
-         ret_val = GetGPSSpeed();
-         break;
-      }
-
-      default:
-         break;
+   { case OPT_CONS_SPEED: { ret_val = GetConsSpeed(); break; }
+     case OPT_GPS_SPEED:  { ret_val = GetGPSSpeed();  break; }
+     case OPT_ACFT_ID:    { ret_val = GetAcftID();    break; }
+     default: break;
    }
    return ret_val;
 }

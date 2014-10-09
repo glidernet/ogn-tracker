@@ -141,6 +141,17 @@ static portBASE_TYPE prvSetConsSpeedCommand( char *pcWriteBuffer,
    return pdFALSE;
 }
 
+static portBASE_TYPE prvSetAcftIDCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ BaseType_t  param_len;
+  long int    NewAcftID;
+  const char *param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
+  if( param && (sscanf(param, "%08lX", &NewAcftID)==1) )
+  { SetOption(OPT_GPS_SPEED, &NewAcftID); }
+  return pdFALSE; }
+
+
 /**
   * @brief  Command set_gps_speed: sets GPS UART speed.
   * @param  CLI template
@@ -254,6 +265,22 @@ static portBASE_TYPE prvGPSSpeedCommand( char *pcWriteBuffer,
    }
    return pdFALSE;
 }
+
+/**
+  * @brief  Command acft_id: prints aircraft identification.
+  * @param  CLI template
+  * @retval CLI template
+  */
+static portBASE_TYPE prvAcftIDCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ uint32_t AcftID   = *(uint32_t*)GetOption(OPT_ACFT_ID);
+  uint32_t Address  =  AcftID     &0x00FFFFFF;
+  uint8_t  AddrType = (AcftID>>24)&0x03;
+  uint8_t  AcftType = (AcftID>>26)&0x1F;
+  uint8_t  Private  = (AcftID>>31)&0x01;
+  sprintf(pcWriteBuffer, "Aicraft ID: %08lX = %c%02d:%0d:%06lX\r\n", AcftID, Private?'p':' ', AcftType, AddrType, Address);
+  return pdFALSE; }
 
 /**
   * @brief  Command gps_time: prints GPS UTC time.
@@ -407,6 +434,15 @@ static const CLI_Command_Definition_t GPSSpeedCommand =
     0
 };
 
+/* -------- additional command constants -------- */
+static const CLI_Command_Definition_t AcftIDCommand =
+{
+    "acft_id",
+    "acft_id: aircraft identification\r\n",
+    prvAcftIDCommand,
+    0
+};
+
 static const CLI_Command_Definition_t GPSTimeCommand =
 {
     "gps_time",
@@ -428,6 +464,14 @@ static const CLI_Command_Definition_t SetGPSSpeedCommand =
     "set_gps_speed",
     "set_gps_speed: set GPS USART speed: 4800|9600\r\n",
     prvSetGPSSpeedCommand,
+    1
+};
+
+static const CLI_Command_Definition_t SetAcftIDCommand =
+{
+    "set_acft_id",
+    "set_acft_id: set aircraft identification\r\n",
+    prvSetAcftIDCommand,
     1
 };
 
@@ -474,11 +518,13 @@ void RegisterCommands(void)
    /* The commands are displayed in help in the order provided here */
    FreeRTOS_CLIRegisterCommand(&ConsSpeedCommand);
    FreeRTOS_CLIRegisterCommand(&GPSSpeedCommand);
+   FreeRTOS_CLIRegisterCommand(&AcftIDCommand);
    FreeRTOS_CLIRegisterCommand(&GPSTimeCommand);
    FreeRTOS_CLIRegisterCommand(&GPSPosCommand);
    FreeRTOS_CLIRegisterCommand(&ResetCommand);
    FreeRTOS_CLIRegisterCommand(&SetConsSpeedCommand);
    FreeRTOS_CLIRegisterCommand(&SetGPSSpeedCommand);
+   FreeRTOS_CLIRegisterCommand(&SetAcftIDCommand);
    FreeRTOS_CLIRegisterCommand(&SP1SendPacketCommand);
    FreeRTOS_CLIRegisterCommand(&SPI1SendCommand);
    FreeRTOS_CLIRegisterCommand(&VerCommand);
