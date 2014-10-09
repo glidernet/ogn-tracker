@@ -55,12 +55,23 @@ static OGN_Packet  Packet;
         if(Position[RefPtr].isValid())
         { int Delta=Position[PosPtr].calcDifferences(Position[RefPtr]); // measure climb/turn rates
           if((Delta>0)&&(Delta<=5))
-          { Packet.setAddress(0xE01234); Packet.setAddrType(3); Packet.calcAddrParity();
+          { uint32_t AcftID   = *(uint32_t*)GetOption(OPT_ACFT_ID);
+            uint32_t Address  =  AcftID     &0x00FFFFFF;
+            uint8_t  AddrType = (AcftID>>24)&0x03;
+            uint8_t  AcftType = (AcftID>>26)&0x1F;
+            uint8_t  Private  = (AcftID>>31)&0x01;
+
+            Packet.setAddress(Address); Packet.setAddrType(AddrType); Packet.calcAddrParity();
             Packet.setRelayCount(0);
+
             Position[PosPtr].Encode(Packet);
-            Packet.setAcftType(0x1); Packet.clrPrivate();
+            Packet.setAcftType(AcftType);
+            if(Private) Packet.setPrivate();
+                   else Packet.clrPrivate();
+
             Packet.Encrypt();
             Packet.setFEC();
+
             sp1_msg.msg_data   = (uint32_t)&Packet.Header;
             sp1_msg.msg_len    = OGN_PKT_LEN;
             sp1_msg.msg_opcode = SP1_SEND_OGN_PKT;

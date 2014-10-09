@@ -34,7 +34,7 @@ void ResetOptions(void)
    options.version       = OPTIONS_VER;
    options.console_speed = 4800;
    options.gps_speed     = 9600;
-   options.AcftID        = 0x00000000;
+   options.AcftID        = 0x00E00000;
 }
 
 /**
