@@ -141,6 +141,11 @@ static portBASE_TYPE prvSetConsSpeedCommand( char *pcWriteBuffer,
    return pdFALSE;
 }
 
+/**
+  * @brief  Command set_acft_id: sets the aircraft identification
+  * @param  CLI template
+  * @retval CLI template
+  */
 static portBASE_TYPE prvSetAcftIDCommand( char *pcWriteBuffer,
                              size_t xWriteBufferLen,
                              const char *pcCommandString )
@@ -148,7 +153,7 @@ static portBASE_TYPE prvSetAcftIDCommand( char *pcWriteBuffer,
   long int    NewAcftID;
   const char *param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
   if( param && (sscanf(param, "%08lX", &NewAcftID)==1) )
-  { SetOption(OPT_GPS_SPEED, &NewAcftID); }
+  { SetOption(OPT_ACFT_ID, &NewAcftID); }
   return pdFALSE; }
 
 
