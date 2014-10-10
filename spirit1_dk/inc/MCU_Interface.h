@@ -82,7 +82,11 @@ extern "C" {
 /** @defgroup SPI_Exported_Constants    SPI Exported Constants
  * @{
  */
-
+typedef enum
+{
+   SPI1_WRONG_BAND = 1,
+   SPI1_WRONG_SYNC_LEN 
+} spi1_err_types; 
 /**
  * @}
  */
@@ -110,6 +114,7 @@ StatusBytes SPI1ReadRegisters(uint8_t cRegAddress, uint8_t cNbBytes, uint8_t* pc
 StatusBytes SPI1CommandStrobes(uint8_t cCommandCode);
 StatusBytes SPI1WriteFifo(uint8_t cNbBytes, uint8_t* pcBuffer);
 StatusBytes SPI1ReadFifo(uint8_t cNbBytes, uint8_t* pcBuffer);
+void		SpiritReportError(spi1_err_types code); 
 
 #define SpiritSpiWriteRegisters(cRegAddress, cNbBytes, pcBuffer)       SPI1WriteRegisters(cRegAddress, cNbBytes, pcBuffer)
 #define SpiritSpiReadRegisters(cRegAddress, cNbBytes, pcBuffer)        SPI1ReadRegisters(cRegAddress, cNbBytes, pcBuffer)

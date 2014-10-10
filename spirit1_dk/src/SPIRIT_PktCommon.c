@@ -448,6 +448,10 @@ void SpiritPktCommonSetSyncxWord(PktSyncX xSyncX ,  uint8_t cSyncWord)
     case PKT_SYNC_WORD_4:
       tempRegAddress=SYNC4_BASE;
       break;
+	default:
+	  tempRegAddress = 0;
+	  SpiritReportError(SPI1_WRONG_SYNC_LEN);
+	  break;
   }
 
   /* Writes value on the selected register */
@@ -481,6 +485,10 @@ uint8_t SpiritPktCommonGetSyncxWord(PktSyncX xSyncX)
     case PKT_SYNC_WORD_4:
       tempRegAddress=SYNC4_BASE;
       break;
+	default:
+	  tempRegAddress = 0;
+	  SpiritReportError(SPI1_WRONG_SYNC_LEN);
+	  break;
   }
 
   /* Reads the selected register value */
@@ -508,7 +516,7 @@ void SpiritPktCommonSetSyncWords(uint32_t lSyncWords, PktSyncLength xSyncLength)
   /* Split the 32-bit value in 4 8-bit values */
   for(uint8_t i=0 ; i<4 ; i++)
   {
-    if(i<3-xSyncLength>>1)
+    if(i<((3-xSyncLength)>>1))
     {
       tempRegValue[i]=0;
     }

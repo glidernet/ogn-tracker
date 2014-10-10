@@ -106,6 +106,17 @@ xQueueHandle* Get_SP1Que()
    return &xQueueSP1;
 }
 
+/**
+* @brief  Function handles Spirit1 DK errors.
+* @param  SPI1 library error code
+* @retval None
+*/
+void SpiritReportError(spi1_err_types code)
+{
+	/* should report error and block */
+	for (;;) {}
+}
+
 StatusBytes SPI1WriteRegisters(uint8_t cRegAddress, uint8_t cNbBytes, uint8_t* pcBuffer)
 {
    uint8_t i;

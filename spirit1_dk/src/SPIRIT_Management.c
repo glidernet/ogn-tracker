@@ -96,6 +96,11 @@ void SpiritManagementSetFrequencyBase(uint32_t lFBase)
   {
     band = VERY_LOW_BAND;
   }
+  else
+  {
+    band = 0;
+    SpiritReportError(SPI1_WRONG_BAND);
+  }
   
   int32_t FOffset  = SpiritRadioGetFrequencyOffset();
   uint32_t lChannelSpace  = SpiritRadioGetChannelSpace();

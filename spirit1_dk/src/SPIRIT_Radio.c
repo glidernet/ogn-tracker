@@ -1,4 +1,4 @@
-/**
+	/**
 * @file    SPIRIT_Radio.c
 * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
 * @version V3.0.1
@@ -341,6 +341,11 @@ void SpiritRadioGetInfo(SRadioInit* pxSRadioInitStruct)
   {
     band = VERY_LOW_BAND;
   }
+  else
+  {
+    band = 0;
+    SpiritReportError(SPI1_WRONG_BAND);
+  }
   
   /* Computes the synth word */
   uint32_t synthWord = (uint32_t)((((uint32_t)(anaRadioRegArray[0]&0x1F))<<21)+(((uint32_t)(anaRadioRegArray[1]))<<13)+\
@@ -492,6 +497,11 @@ uint8_t SpiritRadioSearchWCP(uint32_t lFc)
   else if(IS_FREQUENCY_BAND_VERY_LOW(lFc))
   {
     BFactor = VERY_LOW_BAND_FACTOR;
+  }
+  else 
+  {
+    BFactor = 0; 
+	SpiritReportError(SPI1_WRONG_BAND);
   }
   
   /* Calculates the VCO frequency VCOFreq = lFc*B */
@@ -865,6 +875,11 @@ void SpiritRadioSetFrequencyBase(uint32_t lFBase)
   {
     band = VERY_LOW_BAND;
   }
+  else
+  {
+    band = 0;
+    SpiritReportError(SPI1_WRONG_BAND);
+  }
   
   int32_t FOffset  = SpiritRadioGetFrequencyOffset();
   uint32_t lChannelSpace  = SpiritRadioGetChannelSpace();
@@ -1078,7 +1093,6 @@ void SpiritRadioSearchDatarateME(uint32_t lDatarate, uint8_t* pcM, uint8_t* pcE)
 void SpiritRadioSearchChannelBwME(uint32_t lBandwidth, uint8_t* pcM, uint8_t* pcE)
 {
   volatile SpiritBool find = S_FALSE;
-  volatile SpiritBool findUp = S_FALSE;
   int8_t i=44, i_tmp;
   int8_t start = 0;
   int8_t end = 89;
@@ -1108,7 +1122,6 @@ void SpiritRadioSearchChannelBwME(uint32_t lBandwidth, uint8_t* pcM, uint8_t* pc
       if(lBandwidth<=(uint32_t)((s_vectnBandwidth26M[i-1]*lChfltFactor)/2600))
       {
         find = S_TRUE;
-        findUp = S_TRUE;
       }
       else
       {
