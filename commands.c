@@ -16,6 +16,8 @@
 
 /* -------- defines -------- */
 #define SPI_DATA_LEN 256
+#define ACFT_ID_LEN    4
+
 /* -------- variables -------- */
 uint8_t SPI1_tx_data[SPI_DATA_LEN];
 uint8_t SPI1_rx_data[SPI_DATA_LEN];
@@ -150,10 +152,36 @@ static portBASE_TYPE prvSetAcftIDCommand( char *pcWriteBuffer,
                              size_t xWriteBufferLen,
                              const char *pcCommandString )
 { BaseType_t  param_len;
-  long int    NewAcftID;
+  uint8_t     NewAcftID[ACFT_ID_LEN], i;
   const char *param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
-  if( param && (sscanf(param, "%08lX", &NewAcftID)==1) )
-  { SetOption(OPT_ACFT_ID, &NewAcftID); }
+  if(param)
+  { 
+     /* check number of provided hex values */
+	 if (param_len != 2*ACFT_ID_LEN)
+     {
+       sprintf(pcWriteBuffer, "Error: provide %d bytes.\r\n", ACFT_ID_LEN);
+       return pdFALSE;
+     }
+
+     /* check provided hex values */
+     for (i=0; i<param_len; i++)
+     {
+       if (get_hex_val(param[i]) == -1)
+       {
+           sprintf(pcWriteBuffer, "Error: provide hex values only.\r\n");
+           return pdFALSE;
+       }
+     }
+
+     /* convert string to array */
+     for (i=0; i<param_len; i=i+2)
+     {
+	   /* reverse for STM32 endianness */
+       NewAcftID[ACFT_ID_LEN-1-(i>>1)] = get_hex_str_val(&param[i]);
+     }
+     SetOption(OPT_ACFT_ID, NewAcftID);
+     sprintf(pcWriteBuffer, "New Acft ID set.\r\n");
+  }
   return pdFALSE; }
 
 
