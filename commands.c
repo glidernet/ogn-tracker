@@ -200,12 +200,12 @@ static portBASE_TYPE prvGPSSpeedCommand( char *pcWriteBuffer,
 // ---------------------------------------------------------------------------------------------------------------------------
 
 static int PrintAcftID(char *Output, uint32_t AcftID)         // Print and decode 32-bit aircraft ID
-{ // static const char *AddrTypeName[4] = { "RND", "ICAO", "FLARM", "OGN" };
+{ static const char *AddrTypeName[4] = { "RND", "ICAO", "FLARM", "OGN" };
   uint32_t Address  =  AcftID     &0x00FFFFFF;                // Address: 24 bits
   uint8_t  AddrType = (AcftID>>24)&0x03;                      // AddrType: 2 bits => 0=random, 1=ICAO, 2=FLARM, 3=OGN
   uint8_t  AcftType = (AcftID>>26)&0x1F;                      // AcftType: 5 bits => 1=glider, 2=towing aircraft, 3=helicopter, 4=parachute, 5=drop-plane, 6=para-glider, 7=hang-glider, 8=powered airplane, 9=jet aircraft, 10=UFO, 11=baloon, 12=airship, 13=UAV/drone
   uint8_t  Private  = (AcftID>>31)&0x01;                      // Private:  1 bit  => 1=do not show on displays and maps
-  return sprintf(Output, "Aicraft ID: %08lX = %c%02d:%d:%06lX\r\n", AcftID, Private?'p':' ', AcftType, AddrType, Address); }
+  return sprintf(Output, "Aicraft ID: %08lX = %c%02d:%s:%06lX\r\n", AcftID, Private?'p':' ', AcftType, AddrTypeName[AddrType], Address); }
 
 /**
   * @brief  Command acft_id: prints aircraft identification.
