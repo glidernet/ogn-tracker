@@ -8,7 +8,8 @@ typedef enum
 {
    OPT_CONS_SPEED = 1,
    OPT_GPS_SPEED,
-   OPT_ACFT_ID
+   OPT_ACFT_ID,
+   OPT_TX_POWER
 } option_types;
 
 #ifdef __cplusplus
