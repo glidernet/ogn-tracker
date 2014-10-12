@@ -36,7 +36,7 @@ void ResetOptions(void)
 { options.version       = OPTIONS_VER;
   options.console_speed = 4800;         // [bps]
   options.gps_speed     = 9600;         // [bps]
-  options.AcftID        = 0x07000000;
+  options.AcftID        = 0x07000000 | ((*(uint32_t*)0x1FF80050)&0x00FFFFFF); // set the address to the unique-ID of the CPU
   options.TxPower       = 10.0;         // [dBm]
   options.XtalCorr      =    0;         // [ppm]
   options.FreqOfs       =    0;         // [Hz]
