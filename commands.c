@@ -216,9 +216,6 @@ static portBASE_TYPE prvTxPowerCommand( char *pcWriteBuffer,
 
 // ---------------------------------------------------------------------------------------------------------------------------
 
-static int PrintXtalCorr(char *Output, int16_t XtalCorr)
-{ return sprintf(Output, "XtalCorr = %+d ppm\r\n", (int)XtalCorr); }
-
 static portBASE_TYPE prvXtalCorrCommand( char *pcWriteBuffer,
                              size_t xWriteBufferLen,
                              const char *pcCommandString )
@@ -229,14 +226,11 @@ static portBASE_TYPE prvXtalCorrCommand( char *pcWriteBuffer,
     int16_t XtalCorr=strtol(param, &end, 10);
     if(end && ((*end)==0) && (XtalCorr>=(-50)) && (XtalCorr<=50) )
     { SetOption(OPT_XTAL_CORR, &XtalCorr);
-      PrintXtalCorr(pcWriteBuffer, XtalCorr); }
-  } else { PrintXtalCorr(pcWriteBuffer, *(int16_t *)GetOption(OPT_XTAL_CORR) ); }
+      sprintf(pcWriteBuffer, "XtalCorr = %+d ppm (after a reset)\r\n", (int)XtalCorr); }
+  } else { sprintf(pcWriteBuffer, "XtalCorr = %+d ppm\r\n", *(int16_t *)GetOption(OPT_XTAL_CORR) ); }
   return pdFALSE; }
 
 // ---------------------------------------------------------------------------------------------------------------------------
-
-static int PrintFreqOfs(char *Output, int32_t FreqOfs)
-{ return sprintf(Output, "FreqOfs = %+ld Hz\r\n", FreqOfs); }
 
 static portBASE_TYPE prvFreqOfsCommand( char *pcWriteBuffer,
                              size_t xWriteBufferLen,
@@ -248,8 +242,8 @@ static portBASE_TYPE prvFreqOfsCommand( char *pcWriteBuffer,
     int32_t FreqOfs=strtol(param, &end, 10);
     if(end && ((*end)==0) && (FreqOfs>=(-25000)) && (FreqOfs<=25000) )
     { SetOption(OPT_FREQ_OFS, &FreqOfs);
-      PrintFreqOfs(pcWriteBuffer, FreqOfs); }
-  } else { PrintFreqOfs(pcWriteBuffer, *(int32_t *)GetOption(OPT_FREQ_OFS) ); }
+      sprintf(pcWriteBuffer, "FreqOfs = %+ld Hz (after a reset)\r\n", FreqOfs); }
+  } else { sprintf(pcWriteBuffer, "FreqOfs = %+ld Hz\r\n", *(int32_t *)GetOption(OPT_FREQ_OFS) ); }
   return pdFALSE; }
 
 // ---------------------------------------------------------------------------------------------------------------------------
