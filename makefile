@@ -19,6 +19,8 @@ CC_SRC    += usart.c
 CC_SRC    += console.c
 CC_SRC    += commands.c
 CC_SRC    += cir_buf.c 
+CC_SRC    += control.c
+CC_SRC    += hpt_timer.c
 CC_SRC    += cmsis_lib/Source/stm32l1xx_usart.c
 CC_SRC    += cmsis_lib/Source/stm32l1xx_gpio.c
 CC_SRC    += cmsis_lib/Source/stm32l1xx_flash.c
@@ -61,6 +63,8 @@ H_SRC     += ogn.h
 H_SRC     += ldpc.h
 H_SRC     += bitcount.h
 H_SRC     += nmea.h
+H_SRC     += control.h
+H_SRC     += hpt_timer.h
 
 CPP_SRC    = gps.cpp
 
