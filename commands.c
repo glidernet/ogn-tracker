@@ -265,7 +265,7 @@ static portBASE_TYPE prvSetTxPowerCommand( char *pcWriteBuffer,
     if(end && ((*end)==0) && (TxPower>=(-30.0)) && (TxPower<=14.0) )
     { SetOption(OPT_TX_POWER, &TxPower);
       PrintTxPower(pcWriteBuffer, TxPower); }
-  }
+  } // else { PrintTxPower(pcWriteBuffer, *(float *)GetOption(OPT_TX_POWER) ); }
   return pdFALSE; }
 
 // ---------------------------------------------------------------------------------------------------------------------------

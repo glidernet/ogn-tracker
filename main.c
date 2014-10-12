@@ -74,10 +74,12 @@ int main(void)
    xTaskCreate(vTaskGPS,       (char *)"GPS",     1024, NULL, tskIDLE_PRIORITY+2, NULL);
    xTaskCreate(vTaskSP1,       (char *)"SP1",     1024, NULL, tskIDLE_PRIORITY+3, NULL);
 
-	vTaskStartScheduler();
-	return 0;
+   vTaskStartScheduler();
+   return 0;
 }
 
+void vApplicationIdleHook(void) // when RTOS is idle: should call "sleep until an interrupt"
+{ }
 
 #ifdef  USE_FULL_ASSERT
 

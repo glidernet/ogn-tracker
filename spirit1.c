@@ -9,6 +9,8 @@
 #include "MCU_Interface.h"
 #include "SPIRIT_Config.h"
 
+#include "options.h"
+
 /* -------- defines -------- */
 #define SPIRIT1_PKT_LEN   56 /* 2*2 bytes of sync end + 2*26 OGN packet */
 
@@ -260,7 +262,7 @@ void Spirit1_Config(void)
 * @param  None
 * @retval None
 */
-void SpiritNotPresent(void)
+void static SpiritNotPresent(void)
 {
    GPIO_InitTypeDef GPIO_InitStructure;
 
@@ -287,12 +289,14 @@ void SpiritNotPresent(void)
 * @param  None
 * @retval None
 */
-void SpiritTXConf(void)
+void static SpiritTXConf(float TxPower)
 {
    /* Spirit Radio set power */
-   SpiritRadioSetPALeveldBm(0, -10.0F);
+   SpiritRadioSetPALeveldBm(0, TxPower);
    SpiritRadioSetPALevelMaxIndex(0);
 }
+
+void static SpiritTxPower(float TxPower) { SpiritRadioSetPALeveldBm(0, TxPower); }
 
 /**
 * @brief  Send OGN packet.
@@ -347,7 +351,7 @@ void vTaskSP1(void* pvParameters)
    SpiritPktBasicSetPayloadLength(SPIRIT1_PKT_LEN);
 
    /* Set TX parameters */
-   SpiritTXConf();
+   SpiritTXConf(*(float *)GetOption(OPT_TX_POWER));
 
    /* Create queue for SP1 task messages received */
    xQueueSP1 = xQueueCreate(10, sizeof(task_message));
@@ -358,6 +362,7 @@ void vTaskSP1(void* pvParameters)
       switch (msg.msg_opcode)
       {
          case SP1_SEND_OGN_PKT:
+            SpiritTxPower(*(float *)GetOption(OPT_TX_POWER));
             SpiritSendOGNPacket((uint8_t*)msg.msg_data, msg.msg_len);
             break;
          default:
