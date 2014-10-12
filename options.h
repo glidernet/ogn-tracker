@@ -9,7 +9,9 @@ typedef enum
    OPT_CONS_SPEED = 1,
    OPT_GPS_SPEED,
    OPT_ACFT_ID,
-   OPT_TX_POWER
+   OPT_TX_POWER,
+   OPT_XTAL_CORR,
+   OPT_FREQ_OFS
 } option_types;
 
 #ifdef __cplusplus

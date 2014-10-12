@@ -241,7 +241,7 @@ static portBASE_TYPE prvSetAcftIDCommand( char *pcWriteBuffer,
 
 // ---------------------------------------------------------------------------------------------------------------------------
 
-int PrintTxPower(char *Output, float TxPower)
+static int PrintTxPower(char *Output, float TxPower)
 { int Neg=0; if(TxPower<0) { Neg=1; TxPower=(-TxPower); }
   int Int = (int)floor(TxPower);
   int Frac = (int)floor((TxPower-Int)*10);
@@ -266,6 +266,56 @@ static portBASE_TYPE prvSetTxPowerCommand( char *pcWriteBuffer,
     { SetOption(OPT_TX_POWER, &TxPower);
       PrintTxPower(pcWriteBuffer, TxPower); }
   } // else { PrintTxPower(pcWriteBuffer, *(float *)GetOption(OPT_TX_POWER) ); }
+  return pdFALSE; }
+
+// ---------------------------------------------------------------------------------------------------------------------------
+
+static int PrintXtalCorr(char *Output, int16_t XtalCorr)
+{ return sprintf(Output, "XtalCorr = %+d ppm\r\n", (int)XtalCorr); }
+
+static portBASE_TYPE prvXtalCorrCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ PrintXtalCorr(pcWriteBuffer, *(int16_t *)GetOption(OPT_XTAL_CORR) );
+  return pdFALSE; }
+
+static portBASE_TYPE prvSetXtalCorrCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ BaseType_t  param_len;
+  const char *param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
+  if(param)
+  { char *end;
+    int16_t XtalCorr=strtol(param, &end, 10);
+    if(end && ((*end)==0) && (XtalCorr>=(-50)) && (XtalCorr<=50) )
+    { SetOption(OPT_XTAL_CORR, &XtalCorr);
+      PrintXtalCorr(pcWriteBuffer, XtalCorr); }
+  } // else { PrintXtalCorr(pcWriteBuffer, *(int16_t *)GetOption(OPT_XTAL_CORR) ); }
+  return pdFALSE; }
+
+// ---------------------------------------------------------------------------------------------------------------------------
+
+static int PrintFreqOfs(char *Output, int32_t FreqOfs)
+{ return sprintf(Output, "FreqOfs = %+ld Hz\r\n", FreqOfs); }
+
+static portBASE_TYPE prvFreqOfsCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ PrintFreqOfs(pcWriteBuffer, *(int32_t *)GetOption(OPT_FREQ_OFS) );
+  return pdFALSE; }
+
+static portBASE_TYPE prvSetFreqOfsCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ BaseType_t  param_len;
+  const char *param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
+  if(param)
+  { char *end;
+    int32_t FreqOfs=strtol(param, &end, 10);
+    if(end && ((*end)==0) && (FreqOfs>=(-25000)) && (FreqOfs<=25000) )
+    { SetOption(OPT_FREQ_OFS, &FreqOfs);
+      PrintFreqOfs(pcWriteBuffer, FreqOfs); }
+  } // else { PrintFreqOfs(pcWriteBuffer, *(int32_t *)GetOption(OPT_FREQ_OFS) ); }
   return pdFALSE; }
 
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -420,6 +470,12 @@ static const CLI_Command_Definition_t SetAcftIDCommand     = { "set_acft_id",   
 static const CLI_Command_Definition_t TxPowerCommand       = { "tx_power",       "tx_power: RF transmitter power [dBm]\r\n",    prvTxPowerCommand,       0 };
 static const CLI_Command_Definition_t SetTxPowerCommand    = { "set_tx_power",   "set_tx_power: set transm. power [dBm].\r\n",  prvSetTxPowerCommand,    1 };
 
+static const CLI_Command_Definition_t XtalCorrCommand       = { "xtal_corr",       "xtal_corr: crystal frequency correction [ppm]\r\n",    prvXtalCorrCommand,       0 };
+static const CLI_Command_Definition_t SetXtalCorrCommand    = { "set_xtal_corr",   "set_xtal_corr: set Xtal freq. correction [ppm].\r\n",  prvSetXtalCorrCommand,    1 };
+
+static const CLI_Command_Definition_t FreqOfsCommand       = { "freq_ofs",       "freq_ofs: RF frequency correction [Hz]\r\n",    prvFreqOfsCommand,       0 };
+static const CLI_Command_Definition_t SetFreqOfsCommand    = { "set_freq_ofs",   "set_freq_ofs: set freq. correction [Hz].\r\n",  prvSetFreqOfsCommand,    1 };
+
 
 /**
   * @brief  Function registers all console commands.
@@ -449,6 +505,12 @@ void RegisterCommands(void)
 
    FreeRTOS_CLIRegisterCommand(&TxPowerCommand);
    FreeRTOS_CLIRegisterCommand(&SetTxPowerCommand);
+
+   FreeRTOS_CLIRegisterCommand(&XtalCorrCommand);
+   FreeRTOS_CLIRegisterCommand(&SetXtalCorrCommand);
+
+   FreeRTOS_CLIRegisterCommand(&FreqOfsCommand);
+   FreeRTOS_CLIRegisterCommand(&SetFreqOfsCommand);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------

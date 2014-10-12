@@ -14,10 +14,12 @@
 typedef struct
 {
    uint8_t   version;
-   uint32_t  console_speed;
-   uint32_t  gps_speed;
+   uint32_t  console_speed;    // [bps]
+   uint32_t  gps_speed;        // [bps]
    uint32_t  AcftID;
-   float     TxPower;
+   float     TxPower;          // [dBm]
+   int16_t   XtalCorr;         // [ppm]
+   int32_t   FreqOfs;          // [Hz]
 } options_str;
 
 /* -------- variables -------- */
@@ -35,7 +37,9 @@ void ResetOptions(void)
   options.console_speed = 4800;         // [bps]
   options.gps_speed     = 9600;         // [bps]
   options.AcftID        = 0x07000000;
-  options.TxPower       = 10.0;         // 10dBm
+  options.TxPower       = 10.0;         // [dBm]
+  options.XtalCorr      =    0;         // [ppm]
+  options.FreqOfs       =    0;         // [Hz]
 }
 
 /**
@@ -147,6 +151,20 @@ void SetTxPower(float new_value)
 { options.TxPower = new_value;
   WriteBlock(OFFSETOF(options_str, TxPower), sizeof(options.TxPower)); }
 
+int16_t *GetXtalCorr(void)
+{ return &options.XtalCorr; }
+
+void SetXtalCorr(int16_t new_value)
+{ options.XtalCorr = new_value;
+  WriteBlock(OFFSETOF(options_str, XtalCorr), sizeof(options.XtalCorr)); }
+
+int32_t *GetFreqOfs(void)
+{ return &options.FreqOfs; }
+
+void SetFreqOfs(int32_t new_value)
+{ options.FreqOfs = new_value;
+  WriteBlock(OFFSETOF(options_str, FreqOfs), sizeof(options.FreqOfs)); }
+
 /* ------------------------------------------------------ */
 /**
   * @brief  Entry point function for accessing option values.
@@ -160,6 +178,8 @@ void* GetOption(option_types opt_code)
     case OPT_GPS_SPEED:  { ret_val = GetGPSSpeed();  break; }
     case OPT_ACFT_ID:    { ret_val = GetAcftID();    break; }
     case OPT_TX_POWER:   { ret_val = GetTxPower();   break; }
+    case OPT_XTAL_CORR:  { ret_val = GetXtalCorr();  break; }
+    case OPT_FREQ_OFS:   { ret_val = GetFreqOfs();   break; }
     default: break; }
   return ret_val; }
 
@@ -169,6 +189,8 @@ void SetOption(option_types opt_code, void* value)
     case OPT_GPS_SPEED:  { SetGPSSpeed (*(uint32_t *) value); break; }
     case OPT_ACFT_ID:    { SetAcftID   (*(uint32_t *) value); break; }
     case OPT_TX_POWER:   { SetTxPower  (*(float    *) value); break; }
+    case OPT_XTAL_CORR:  { SetXtalCorr (*(int16_t  *) value); break; }
+    case OPT_FREQ_OFS:   { SetFreqOfs  (*(int32_t  *) value); break; }
     default: break; }
 }
 

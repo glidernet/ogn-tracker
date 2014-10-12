@@ -52,7 +52,7 @@ uint8_t SPR_SPI_BufferRX[SPR_SPI_MAX_REG_NUM+SPR_SPI_HDR_LEN];
 */
 SRadioInit xRadioInit = {
    0,         // Xtal Offset
-   867.990e6, // Base Frequency
+   868.000e6, // Base Frequency
    100e3,     // Channel space
    4,         // Channel number
    GFSK_BT05, // Modulation select
@@ -342,6 +342,8 @@ void vTaskSP1(void* pvParameters)
    SpiritRadioSetXtalFrequency(26e6);
    SpiritGeneralSetSpiritVersion(SPIRIT_VERSION_3_0);
 
+   xRadioInit.nXtalOffsetPpm  = *(int16_t *)GetOption(OPT_XTAL_CORR);
+   xRadioInit.lFrequencyBase += *(int32_t *)GetOption(OPT_FREQ_OFS);
    SpiritRadioInit(&xRadioInit);
 
    /* Spirit Packet config */
