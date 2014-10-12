@@ -118,83 +118,46 @@ static uint32_t valid_serial_speed[6] = { 4800, 9600, 19200, 38400, 57600, 11520
   * @param  CLI template
   * @retval CLI template
   */
-static portBASE_TYPE prvSetConsSpeedCommand( char *pcWriteBuffer,
+static portBASE_TYPE prvConsSpeedCommand( char *pcWriteBuffer,
                              size_t xWriteBufferLen,
                              const char *pcCommandString )
 { const char* param;
   BaseType_t  param_len;
   param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
-  int32_t speed=atol(param);
-  int i;
-  for(i=0; i<6; i++)
-  { if(speed==valid_serial_speed[i]) break; }
-  if(i==6) { sprintf(pcWriteBuffer, "Incorrect speed\r\n"); return pdFALSE; }
-  SetOption(OPT_CONS_SPEED, &speed);
-  sprintf(pcWriteBuffer, "New console speed set to %ld, please reset CPU.\r\n", speed);
+  if(param)
+  { int32_t speed=atol(param);
+    int i;
+    for(i=0; i<6; i++)
+    { if(speed==valid_serial_speed[i]) break; }
+    if(i==6) { sprintf(pcWriteBuffer, "Incorrect speed\r\n"); return pdFALSE; }
+    SetOption(OPT_CONS_SPEED, &speed);
+    sprintf(pcWriteBuffer, "Console UART speed: %ld bps (after a reset)\r\n", speed);
+  } else { sprintf(pcWriteBuffer, "Console UART speed: %ld bps\r\n", *(uint32_t *)GetOption(OPT_CONS_SPEED)); }
+
   return pdFALSE; }
+
+// ---------------------------------------------------------------------------------------------------------------------------
 
 /**
   * @brief  Command set_gps_speed: sets GPS UART speed.
   * @param  CLI template
   * @retval CLI template
   */
-static portBASE_TYPE prvSetGPSSpeedCommand( char *pcWriteBuffer,
+static portBASE_TYPE prvGPSSpeedCommand( char *pcWriteBuffer,
                              size_t xWriteBufferLen,
                              const char *pcCommandString )
 { const char* param;
   BaseType_t  param_len;
   param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
-  int32_t speed=atol(param);
-  int i;
-  for(i=0; i<6; i++)
-  { if(speed==valid_serial_speed[i]) break; }
-  if(i==6) { sprintf(pcWriteBuffer, "Incorrect speed\r\n"); return pdFALSE; }
-  SetOption(OPT_GPS_SPEED, &speed);
-  sprintf(pcWriteBuffer, "New GPS speed set to %ld, please reset CPU.\r\n", speed);
-  return pdFALSE; }
-
-/**
-  * @brief  Command cons_speed: prints console UART speed.
-  * @param  CLI template
-  * @retval CLI template
-  */
-static portBASE_TYPE prvConsSpeedCommand( char *pcWriteBuffer,
-                             size_t xWriteBufferLen,
-                             const char *pcCommandString )
-{ uint32_t* cons_speed = (uint32_t*)GetOption(OPT_CONS_SPEED);
-  if (cons_speed)
-  { uint32_t speed = (*cons_speed);
+  if(param)
+  { int32_t speed=atol(param);
     int i;
     for(i=0; i<6; i++)
-    { if(speed == valid_serial_speed[i])
-      { sprintf(pcWriteBuffer, "%ld\r\n", speed); break; }
-    }
-    if(i==6) sprintf(pcWriteBuffer, "Invalid console speed.\r\n");
-  }
-  else
-  { sprintf(pcWriteBuffer, "Invalid parameter.\r\n"); }
-  return pdFALSE; }
-
-/**
-  * @brief  Command gps_speed: prints GPS UART speed.
-  * @param  CLI template
-  * @retval CLI template
-  */
-static portBASE_TYPE prvGPSSpeedCommand( char *pcWriteBuffer,
-                             size_t xWriteBufferLen,
-                             const char *pcCommandString )
-{ uint32_t* gps_speed = (uint32_t*)GetOption(OPT_GPS_SPEED);
-  if (gps_speed)
-  { uint32_t speed = (*gps_speed);
-    int i;
-    for(i=0; i<6; i++)
-    { if(speed == valid_serial_speed[i])
-      { sprintf(pcWriteBuffer, "%ld\r\n", speed); break; }
-    }
-    if(i==6) sprintf(pcWriteBuffer, "Invalid GPS speed.\r\n");
-  }
-  else
-  { sprintf(pcWriteBuffer, "Invalid parameter.\r\n"); }
+    { if(speed==valid_serial_speed[i]) break; }
+    if(i==6) { sprintf(pcWriteBuffer, "Incorrect speed\r\n"); return pdFALSE; }
+    SetOption(OPT_GPS_SPEED, &speed);
+    sprintf(pcWriteBuffer, "GPS URAT speed: %ld bps (after a reset)\r\n", speed);
+  } else { sprintf(pcWriteBuffer, "GPS UART speed: %ld bps\r\n", *(uint32_t *)GetOption(OPT_GPS_SPEED)); }
   return pdFALSE; }
 
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -208,22 +171,11 @@ static int PrintAcftID(char *Output, uint32_t AcftID)         // Print and decod
   return sprintf(Output, "Aicraft ID: %08lX = %c%02d:%s:%06lX\r\n", AcftID, Private?'p':' ', AcftType, AddrTypeName[AddrType], Address); }
 
 /**
-  * @brief  Command acft_id: prints aircraft identification.
-  * @param  CLI template
-  * @retval CLI template
-  */
-static portBASE_TYPE prvAcftIDCommand( char *pcWriteBuffer,
-                             size_t xWriteBufferLen,
-                             const char *pcCommandString )
-{ PrintAcftID(pcWriteBuffer, *(uint32_t *)GetOption(OPT_ACFT_ID) );
-  return pdFALSE; }
-
-/**
   * @brief  Command set_acft_id: sets the aircraft identification
   * @param  CLI template
   * @retval CLI template
   */
-static portBASE_TYPE prvSetAcftIDCommand( char *pcWriteBuffer,
+static portBASE_TYPE prvAcftIDCommand( char *pcWriteBuffer,
                              size_t xWriteBufferLen,
                              const char *pcCommandString )
 { BaseType_t  param_len;
@@ -236,7 +188,7 @@ static portBASE_TYPE prvSetAcftIDCommand( char *pcWriteBuffer,
       PrintAcftID(pcWriteBuffer, ID); }
     else
     { sprintf(pcWriteBuffer, "Invalid argument, must be 32-bit hex number\r\n"); }
-  }
+  } else { PrintAcftID(pcWriteBuffer, *(uint32_t *)GetOption(OPT_ACFT_ID) ); }
   return pdFALSE; }
 
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -251,12 +203,6 @@ static int PrintTxPower(char *Output, float TxPower)
 static portBASE_TYPE prvTxPowerCommand( char *pcWriteBuffer,
                              size_t xWriteBufferLen,
                              const char *pcCommandString )
-{ PrintTxPower(pcWriteBuffer, *(float *)GetOption(OPT_TX_POWER) );
-  return pdFALSE; }
-
-static portBASE_TYPE prvSetTxPowerCommand( char *pcWriteBuffer,
-                             size_t xWriteBufferLen,
-                             const char *pcCommandString )
 { BaseType_t  param_len;
   const char *param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
   if(param)
@@ -265,7 +211,7 @@ static portBASE_TYPE prvSetTxPowerCommand( char *pcWriteBuffer,
     if(end && ((*end)==0) && (TxPower>=(-30.0)) && (TxPower<=14.0) )
     { SetOption(OPT_TX_POWER, &TxPower);
       PrintTxPower(pcWriteBuffer, TxPower); }
-  } // else { PrintTxPower(pcWriteBuffer, *(float *)GetOption(OPT_TX_POWER) ); }
+  } else { PrintTxPower(pcWriteBuffer, *(float *)GetOption(OPT_TX_POWER) ); }
   return pdFALSE; }
 
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -276,12 +222,6 @@ static int PrintXtalCorr(char *Output, int16_t XtalCorr)
 static portBASE_TYPE prvXtalCorrCommand( char *pcWriteBuffer,
                              size_t xWriteBufferLen,
                              const char *pcCommandString )
-{ PrintXtalCorr(pcWriteBuffer, *(int16_t *)GetOption(OPT_XTAL_CORR) );
-  return pdFALSE; }
-
-static portBASE_TYPE prvSetXtalCorrCommand( char *pcWriteBuffer,
-                             size_t xWriteBufferLen,
-                             const char *pcCommandString )
 { BaseType_t  param_len;
   const char *param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
   if(param)
@@ -290,7 +230,7 @@ static portBASE_TYPE prvSetXtalCorrCommand( char *pcWriteBuffer,
     if(end && ((*end)==0) && (XtalCorr>=(-50)) && (XtalCorr<=50) )
     { SetOption(OPT_XTAL_CORR, &XtalCorr);
       PrintXtalCorr(pcWriteBuffer, XtalCorr); }
-  } // else { PrintXtalCorr(pcWriteBuffer, *(int16_t *)GetOption(OPT_XTAL_CORR) ); }
+  } else { PrintXtalCorr(pcWriteBuffer, *(int16_t *)GetOption(OPT_XTAL_CORR) ); }
   return pdFALSE; }
 
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -301,12 +241,6 @@ static int PrintFreqOfs(char *Output, int32_t FreqOfs)
 static portBASE_TYPE prvFreqOfsCommand( char *pcWriteBuffer,
                              size_t xWriteBufferLen,
                              const char *pcCommandString )
-{ PrintFreqOfs(pcWriteBuffer, *(int32_t *)GetOption(OPT_FREQ_OFS) );
-  return pdFALSE; }
-
-static portBASE_TYPE prvSetFreqOfsCommand( char *pcWriteBuffer,
-                             size_t xWriteBufferLen,
-                             const char *pcCommandString )
 { BaseType_t  param_len;
   const char *param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
   if(param)
@@ -315,7 +249,7 @@ static portBASE_TYPE prvSetFreqOfsCommand( char *pcWriteBuffer,
     if(end && ((*end)==0) && (FreqOfs>=(-25000)) && (FreqOfs<=25000) )
     { SetOption(OPT_FREQ_OFS, &FreqOfs);
       PrintFreqOfs(pcWriteBuffer, FreqOfs); }
-  } // else { PrintFreqOfs(pcWriteBuffer, *(int32_t *)GetOption(OPT_FREQ_OFS) ); }
+  } else { PrintFreqOfs(pcWriteBuffer, *(int32_t *)GetOption(OPT_FREQ_OFS) ); }
   return pdFALSE; }
 
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -450,31 +384,22 @@ static portBASE_TYPE prvSP1SendPacketCommand( char *pcWriteBuffer,
 
 // ---------------------------------------------------------------------------------------------------------------------------
 
-static const CLI_Command_Definition_t VerCommand           = { "ver",            "ver: version number and MCU ID\r\n",          prvVerCommand,           0 };
-static const CLI_Command_Definition_t ResetCommand         = { "reset",          "reset: CPU reset\r\n",                        prvResetCommand,         0 };
+static const CLI_Command_Definition_t VerCommand           = { "ver",            "ver: version number and MCU ID\r\n",           prvVerCommand,           0 };
+static const CLI_Command_Definition_t ResetCommand         = { "reset",          "reset: CPU reset\r\n",                         prvResetCommand,         0 };
 
-static const CLI_Command_Definition_t ConsSpeedCommand     = { "cons_speed",     "cons_speed: console USART speed\r\n",         prvConsSpeedCommand,     0 };
-static const CLI_Command_Definition_t SetConsSpeedCommand  = { "set_cons_speed", "set_cons_speed: set console USART speed\r\n", prvSetConsSpeedCommand,  1 };
-static const CLI_Command_Definition_t GPSSpeedCommand      = { "gps_speed",      "gps_speed: GPS USART speed\r\n",              prvGPSSpeedCommand,      0 };
-static const CLI_Command_Definition_t SetGPSSpeedCommand   = { "set_gps_speed",  "set_gps_speed: set GPS USART speed\r\n",      prvSetGPSSpeedCommand,   1 };
+static const CLI_Command_Definition_t SPI1SendCommand      = { "spi1",           "spi1 hex_vals: send data over SPI1\r\n",       prvSPI1SendCommand,      1 };
+static const CLI_Command_Definition_t SP1SendPacketCommand = { "sp1_pkt",        "sp1_pkt 26xhex: send OGN packet\r\n",          prvSP1SendPacketCommand, 1 };
 
-static const CLI_Command_Definition_t SPI1SendCommand      = { "spi1",           "spi1 hex_vals: send data over SPI1\r\n",      prvSPI1SendCommand,      1 };
-static const CLI_Command_Definition_t SP1SendPacketCommand = { "sp1_pkt",        "sp1_pkt 26xhex: send OGN packet\r\n",         prvSP1SendPacketCommand, 1 };
+static const CLI_Command_Definition_t GPSTimeCommand       = { "gps_time",       "gps_time: GPS UTC Time\r\n",                   prvGPSTimeCommand,   0 };
+static const CLI_Command_Definition_t GPSPosCommand        = { "gps_pos",        "gps_pos: GPS Time & Position\r\n",             prvGPSPosCommand,    0 };
 
-static const CLI_Command_Definition_t GPSTimeCommand       = { "gps_time",       "gps_time: GPS UTC Time\r\n",                  prvGPSTimeCommand,       0 };
-static const CLI_Command_Definition_t GPSPosCommand        = { "gps_pos",        "gps_pos: GPS Time & Position\r\n",            prvGPSPosCommand,        0 };
+static const CLI_Command_Definition_t ConsSpeedCommand     = { "cons_speed",   "cons_speed: console USART speed\r\n",            prvConsSpeedCommand, -1 };
+static const CLI_Command_Definition_t GPSSpeedCommand      = { "gps_speed",    "gps_speed: GPS USART speed\r\n",                 prvGPSSpeedCommand,  -1 };
 
-static const CLI_Command_Definition_t AcftIDCommand        = { "acft_id",        "acft_id: aircraft identification\r\n",        prvAcftIDCommand,        0 };
-static const CLI_Command_Definition_t SetAcftIDCommand     = { "set_acft_id",    "set_acft_id: set aircraft ident.\r\n",        prvSetAcftIDCommand,     1 };
-
-static const CLI_Command_Definition_t TxPowerCommand       = { "tx_power",       "tx_power: RF transmitter power [dBm]\r\n",    prvTxPowerCommand,       0 };
-static const CLI_Command_Definition_t SetTxPowerCommand    = { "set_tx_power",   "set_tx_power: set transm. power [dBm].\r\n",  prvSetTxPowerCommand,    1 };
-
-static const CLI_Command_Definition_t XtalCorrCommand       = { "xtal_corr",       "xtal_corr: crystal frequency correction [ppm]\r\n",    prvXtalCorrCommand,       0 };
-static const CLI_Command_Definition_t SetXtalCorrCommand    = { "set_xtal_corr",   "set_xtal_corr: set Xtal freq. correction [ppm].\r\n",  prvSetXtalCorrCommand,    1 };
-
-static const CLI_Command_Definition_t FreqOfsCommand       = { "freq_ofs",       "freq_ofs: RF frequency correction [Hz]\r\n",    prvFreqOfsCommand,       0 };
-static const CLI_Command_Definition_t SetFreqOfsCommand    = { "set_freq_ofs",   "set_freq_ofs: set freq. correction [Hz].\r\n",  prvSetFreqOfsCommand,    1 };
+static const CLI_Command_Definition_t AcftIDCommand        = { "acft_id",      "acft_id:  aircraft identification\r\n",          prvAcftIDCommand,    -1 };
+static const CLI_Command_Definition_t TxPowerCommand       = { "tx_power",     "tx_power: transmitter power level [dBm].\r\n",   prvTxPowerCommand,   -1 };
+static const CLI_Command_Definition_t XtalCorrCommand      = { "xtal_corr",    "xtal_corr: Crystal freq. correction [ppm].\r\n", prvXtalCorrCommand,  -1 };
+static const CLI_Command_Definition_t FreqOfsCommand       = { "freq_ofs",     "freq_ofs:  RF frequency offset [Hz].\r\n",       prvFreqOfsCommand,   -1 };
 
 
 /**
@@ -489,10 +414,7 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&ResetCommand);
 
    FreeRTOS_CLIRegisterCommand(&ConsSpeedCommand);
-   FreeRTOS_CLIRegisterCommand(&SetConsSpeedCommand);
-
    FreeRTOS_CLIRegisterCommand(&GPSSpeedCommand);
-   FreeRTOS_CLIRegisterCommand(&SetGPSSpeedCommand);
 
    FreeRTOS_CLIRegisterCommand(&SP1SendPacketCommand);
    FreeRTOS_CLIRegisterCommand(&SPI1SendCommand);
@@ -501,16 +423,9 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&GPSPosCommand);
 
    FreeRTOS_CLIRegisterCommand(&AcftIDCommand);
-   FreeRTOS_CLIRegisterCommand(&SetAcftIDCommand);
-
    FreeRTOS_CLIRegisterCommand(&TxPowerCommand);
-   FreeRTOS_CLIRegisterCommand(&SetTxPowerCommand);
-
    FreeRTOS_CLIRegisterCommand(&XtalCorrCommand);
-   FreeRTOS_CLIRegisterCommand(&SetXtalCorrCommand);
-
    FreeRTOS_CLIRegisterCommand(&FreqOfsCommand);
-   FreeRTOS_CLIRegisterCommand(&SetFreqOfsCommand);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------

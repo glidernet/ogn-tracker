@@ -12,7 +12,7 @@
 #include "options.h"
 
 /* -------- defines -------- */
-#define SPIRIT1_PKT_LEN   56 /* 2*2 bytes of sync end + 2*26 OGN packet */
+#define SPIRIT1_PKT_LEN     (2*(2+26)) // two bytes to complete the SYNC, 26 data bytes and times two because we emulate Manchester encoding
 
 #define SPR_SPI_MAX_REG_NUM  0xFF
 #define SPR_SPI_HDR_LEN      2
@@ -53,8 +53,8 @@ uint8_t SPR_SPI_BufferRX[SPR_SPI_MAX_REG_NUM+SPR_SPI_HDR_LEN];
 SRadioInit xRadioInit = {
    0,         // Xtal Offset
    868.000e6, // Base Frequency
-   100e3,     // Channel space
-   4,         // Channel number
+   100e3,     // Channel spacing (could be
+   4,         // Channel number: the frequency is 868.0+4*0.1 = 868.4MHz
    GFSK_BT05, // Modulation select
    100e3,     // Data rate
    51e3,      // Freq Deviation
@@ -67,10 +67,10 @@ SRadioInit xRadioInit = {
 PktBasicInit xBasicInit={
   PKT_PREAMBLE_LENGTH_02BYTES,
   PKT_SYNC_LENGTH_3BYTES,
-  0x6655A596,      /* sync word */
-  PKT_LENGTH_FIX,  /* pkt len type */
+  0x6655A596,      // sync word = the first two bytes with Macnhester encoding emulation
+  PKT_LENGTH_FIX,  // fixed length packet
   7,               /* length width */
-  PKT_NO_CRC,      /* no CRC fields */
+  PKT_NO_CRC,      // no CRC fields - we make the error checking and correcting code
   PKT_CONTROL_LENGTH_0BYTES,
   S_DISABLE,       /* no address field */
   S_DISABLE,       /* no FEC */
@@ -80,7 +80,7 @@ PktBasicInit xBasicInit={
 /* Spirit1 Manchester encoding simulation */
 /* 0 encoded as 1->0 transition */
 /* 1 encoded as 0->1 transition */
-const uint8_t hex_2_manch_encoding[0x10] =
+const uint8_t hex_2_manch_encoding[0x10] =         // lookup table for 4-bit nibbles
 {
    0xAA, /* hex: 0, bin: 0000, manch: 10101010 */
    0xA9, /* hex: 1, bin: 0001, manch: 10101001 */
