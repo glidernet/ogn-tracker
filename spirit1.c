@@ -330,6 +330,7 @@ void SpiritSendOGNPacket(uint8_t* pkt_data, uint8_t pkt_len)
 void vTaskSP1(void* pvParameters)
 {
    task_message msg;
+   TickType_t SlotStart=0, Now;
 
    Spirit1ExitShutdown();
 
@@ -364,10 +365,17 @@ void vTaskSP1(void* pvParameters)
       switch (msg.msg_opcode)
       {
          case SP1_SEND_OGN_PKT:             // a request to send a packet
+            Now = xTaskGetTickCount();
+            if(Now>=SlotStart)
+            { TickType_t Delta = Now-SlotStart;
+              while(Delta>=1000) { SlotStart+=1000; Delta-=1000; }
+              if(Delta>=800) vTaskDelay(1000-Delta);                // wait up to 200ms for the time slot
+            }
             SpiritTxPower(*(float *)GetOption(OPT_TX_POWER));
             SpiritSendOGNPacket((uint8_t*)msg.msg_data, msg.msg_len);
             break;
          case SP1_GPS_FIRST_NMEA:           // a signal that the GPS started the transmission (about 0.3sec after a PPS)
+            SlotStart=msg.msg_data;
             break;
          default:
             break;
