@@ -12,13 +12,14 @@ extern "C" {
 #endif
 
 /* this will be moved - it is not connected with SP1 hardware */
-#define OGN_PKT_LEN       26
-#define OGN_PKT_SYNC      0x0AF3656C
+#define OGN_PKT_LEN       26           // OGN packet has 26 bytes of data
+#define OGN_PKT_SYNC      0x0AF3656C   // OGN packet starts with these four bytes
 
 /* --- Spirit task opcodes --- */
 typedef enum
 {
-   SP1_SEND_OGN_PKT = 1   /* Send packet in OGN format */
+   SP1_SEND_OGN_PKT   = 1,  // Send packet in OGN format
+   SP1_GPS_FIRST_NMEA = 2   // GPS got the first NMEA sentence in a transmission (a cheap replacement for PPS)
 }sp1_opcode_types;
 
 /* --- SPIRIT1 related functions --- */

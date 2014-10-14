@@ -34,6 +34,7 @@
 #include "gps.h"
 #include "options.h"
 #include "spirit1.h"
+#include "control.h"
 
 /** @addtogroup Template_Project
   * @{
@@ -51,6 +52,7 @@ void prvSetupHardware(void)
    Console_Config();
    GPS_Config();
    Spirit1_Config();
+   Control_Config();
 }
 
 /**
@@ -58,7 +60,7 @@ void prvSetupHardware(void)
   * @param  None
   * @retval None
   */
-
+  
 int main(void)
 {
   /*!< At this stage the microcontroller clock setting is already configured, 
@@ -69,10 +71,11 @@ int main(void)
      */ 
    InitOptions();
    prvSetupHardware();
-
+      
    xTaskCreate(vTaskConsole,   (char *)"Console", 1024, NULL, tskIDLE_PRIORITY+1, NULL);
    xTaskCreate(vTaskGPS,       (char *)"GPS",     1024, NULL, tskIDLE_PRIORITY+2, NULL);
    xTaskCreate(vTaskSP1,       (char *)"SP1",     1024, NULL, tskIDLE_PRIORITY+3, NULL);
+   xTaskCreate(vTaskControl,   (char *)"Control", 1024, NULL, tskIDLE_PRIORITY+4, NULL);
 
    vTaskStartScheduler();
    return 0;
