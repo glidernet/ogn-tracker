@@ -8,8 +8,6 @@
 #include "messages.h"
 #include "cir_buf.h"
 
-#include "spirit1.h"
-
 /* -------- defines -------- */
 
 /* USART2 GPIO pins */
@@ -91,41 +89,41 @@ void USART2_IRQHandler(void)
    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
-void USART3_IRQHandler(void)   // USART3 is connected to the GPS receiver
-{ task_message msg;
-  static TickType_t LastNMEA = 0;
-  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+void USART3_IRQHandler(void)
+{
+   uint8_t rs_data;
+   task_message msg;
 
-  if(USART_GetITStatus(USART3, USART_IT_RXNE) == SET)         // UART receiver not empty ?
-  { uint8_t rs_data = USART_ReceiveData(USART3);              // get a new character from USART
-    if (rs_data == '$') usart3_rx_buf_pos = 0;                // if '$' then
-    { usart3_rx_buf_pos = 0;                                  // start to record the NMEA sentence
-      TickType_t Now = xTaskGetTickCountFromISR();            // get the system timer
-      if((Now-LastNMEA)>=200)                                 // if at least 200ms break since last NMEA
-      { msg.msg_data     = Now;
-        msg.msg_len      = 1;
-        msg.msg_opcode   = SP1_GPS_FIRST_NMEA;
-        msg.src_id       = GPS_USART_SRC_ID;
-        xQueueHandle* sp1_task_queue = Get_SP1Que();
-        xQueueSendFromISR(*sp1_task_queue, &msg, &xHigherPriorityTaskWoken); // send the message to the Spitir1 task
+   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
+   /* USART in mode Receiver --------------------------------------------------*/
+   if(USART_GetITStatus(USART3, USART_IT_RXNE) == SET)
+   {
+      rs_data = USART_ReceiveData(USART3);
+      if (rs_data == '$') usart3_rx_buf_pos = 0;
+
+      usart3_rx_buf[usart3_rx_buf_pos++] = rs_data;
+      if (rs_data == '\n')
+      {
+         if (usart3_rx_buf[0] == '$')
+         {
+            /* Found valid NMEA sequence */
+            if (usart3_queue)
+            {
+               /* End sequence */
+               usart3_rx_buf[usart3_rx_buf_pos] = '\0';
+
+               msg.msg_data = (uint32_t)cir_put_data(usart3_cir_buf, usart3_rx_buf, usart3_rx_buf_pos+1);
+               msg.msg_len  = usart3_rx_buf_pos;
+               msg.src_id   = GPS_USART_SRC_ID;
+               xQueueSendFromISR(*usart3_queue, &msg, &xHigherPriorityTaskWoken);
+            }
+         }
+         usart3_rx_buf_pos = 0;
       }
-      LastNMEA=Now; }
-    usart3_rx_buf[usart3_rx_buf_pos++] = rs_data;             // keep recording character in the buffer (no check for buffer overrun ?)
-    if (rs_data == '\n')                                      // if a newline
-    { if (usart3_rx_buf[0] == '$')                            // and the first character is '$' then found valid NMEA sequence
-      { if (usart3_queue)
-        { usart3_rx_buf[usart3_rx_buf_pos] = '\0';            // terminate the string with a NULL character
-          msg.msg_data = (uint32_t)cir_put_data(usart3_cir_buf, usart3_rx_buf, usart3_rx_buf_pos+1);
-          msg.msg_len  = usart3_rx_buf_pos;
-          msg.src_id   = GPS_USART_SRC_ID;
-          xQueueSendFromISR(*usart3_queue, &msg, &xHigherPriorityTaskWoken); // send the message to the GPS task
-        }
-      }
-      usart3_rx_buf_pos = 0;                                  // mark buffer as empty
-    }
-    if (usart3_rx_buf_pos >= USART3_RX_BUF_SIZE) usart3_rx_buf_pos = 0; // protection against buffer overrun - but is it fully effective ?
-  }
-  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+      if (usart3_rx_buf_pos >= USART3_RX_BUF_SIZE) usart3_rx_buf_pos = 0;
+   }
+   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 /* -------- functions -------- */

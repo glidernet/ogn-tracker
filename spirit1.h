@@ -19,7 +19,6 @@ extern "C" {
 typedef enum
 {
    SP1_SEND_OGN_PKT   = 1,  // Send packet in OGN format
-   SP1_GPS_FIRST_NMEA = 2   // GPS got the first NMEA sentence in a transmission (a cheap replacement for PPS)
 }sp1_opcode_types;
 
 /* --- SPIRIT1 related functions --- */
