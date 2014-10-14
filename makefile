@@ -85,7 +85,7 @@ CPU_OPT    = -mcpu=cortex-m3 -mthumb
 CC_OPT     = $(CPU_OPT) -Wall -O2 -g -ffunction-sections -std=c99
 CPP_OPT    = $(CPU_OPT) -Wall -O2 -g -ffunction-sections
 
-LNK_OPT    = -mcpu=cortex-m3 -mthumb -nostartfiles -O2 -g -Wl,--gc-sections --specs=nano.specs --specs=nosys.specs -Wl,-Map=main.map -T$(LDSCRIPT)
+LNK_OPT    = $(CPU_OPT) -nostartfiles -O2 -g -Wl,--gc-sections --specs=nano.specs --specs=nosys.specs -Wl,-Map=main.map -T$(LDSCRIPT)
 
 all:	main.hex main.bin main.dmp
 

@@ -363,9 +363,11 @@ void vTaskSP1(void* pvParameters)
       xQueueReceive(xQueueSP1, &msg, portMAX_DELAY);
       switch (msg.msg_opcode)
       {
-         case SP1_SEND_OGN_PKT:
+         case SP1_SEND_OGN_PKT:             // a request to send a packet
             SpiritTxPower(*(float *)GetOption(OPT_TX_POWER));
             SpiritSendOGNPacket((uint8_t*)msg.msg_data, msg.msg_len);
+            break;
+         case SP1_GPS_FIRST_NMEA:           // a signal that the GPS started the transmission (about 0.3sec after a PPS)
             break;
          default:
             break;
