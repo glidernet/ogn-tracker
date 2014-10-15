@@ -20,13 +20,16 @@ xQueueHandle  control_que;
 /* interrupt for raising GPS_PPS line */
 void EXTI9_5_IRQHandler(void)
 {
-     
+   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+   
    if(EXTI_GetITStatus(EXTI_Line6) != RESET)
    {
       /* Clear the EXTI line 6 pending bit */
       EXTI_ClearITPendingBit(EXTI_Line6); 
-      HPT_Restart();      
+      xHigherPriorityTaskWoken = HPT_RestartFromISR();      
    }
+   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+   
 }
 /* -------- functions -------- */
 

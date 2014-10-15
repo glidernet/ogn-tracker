@@ -30,7 +30,7 @@ typedef struct
 /* -------- functions -------- */
 void HPT_Config(void);
 void HPT_Start(HPT_Event* hpt_table);
-void HPT_Restart(void);
+BaseType_t HPT_RestartFromISR(void);
 
 #ifdef __cplusplus
 }

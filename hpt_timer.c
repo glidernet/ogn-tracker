@@ -32,12 +32,38 @@ void HPT_Restart(void)
     if (current_hpt_table)
     {
        xTimerChangePeriod(xHPTimer, current_hpt_table[0].time, 0);
-       /* mark information about event number that are awaited*/
+       /* mark information about event number that is awaited*/
        event_awaited = 0;
        /* start the timer */
        xTimerStart(xHPTimer, 0);
     }
 }
+
+/**
+* @brief  Restart the current HPT table called from ISR.
+* @param  None
+* @retval None
+*/
+BaseType_t HPT_RestartFromISR(void)
+{
+    BaseType_t xHigherPriorityTaskWokenCP = pdFALSE;
+    BaseType_t xHigherPriorityTaskWokenR  = pdFALSE;
+    
+    if (current_hpt_table)
+    {
+       xTimerChangePeriodFromISR(xHPTimer, current_hpt_table[0].time, &xHigherPriorityTaskWokenCP);
+       /* mark information about event number that is awaited*/
+       event_awaited = 0;
+       /* start the timer */
+       xTimerStartFromISR(xHPTimer, &xHigherPriorityTaskWokenR);
+    }
+    if ((xHigherPriorityTaskWokenCP!=pdFALSE) || (xHigherPriorityTaskWokenR!=pdFALSE))
+        return pdTRUE;
+    else
+        return pdFALSE;
+    
+}
+
 
 /**
 * @brief  High Precision Timer Callback.
@@ -100,7 +126,7 @@ void HPT_Start(HPT_Event* hpt_table)
    current_hpt_table = hpt_table;
    /* set timer expiration to first event in table */
    xTimerChangePeriod(xHPTimer, hpt_table[0].time, 0);
-   /* mark information about event number that are awaited*/
+   /* mark information about event number that is awaited*/
    event_awaited = 0;
    /* start the timer */
    xTimerStart(xHPTimer, 0);
