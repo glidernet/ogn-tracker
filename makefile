@@ -21,6 +21,7 @@ CC_SRC    += commands.c
 CC_SRC    += cir_buf.c 
 CC_SRC    += control.c
 CC_SRC    += hpt_timer.c
+CC_SRC    += gps.c
 CC_SRC    += cmsis_lib/Source/stm32l1xx_usart.c
 CC_SRC    += cmsis_lib/Source/stm32l1xx_gpio.c
 CC_SRC    += cmsis_lib/Source/stm32l1xx_flash.c
@@ -67,8 +68,9 @@ H_SRC     += bitcount.h
 H_SRC     += nmea.h
 H_SRC     += control.h
 H_SRC     += hpt_timer.h
+H_SRC     += ogn_lib.h
 
-CPP_SRC    = gps.cpp
+CPP_SRC   = ogn_lib.cpp
 
 DEFS       = -DSTM32L1XX_XL -DUSE_STDPERIPH_DRIVER
 

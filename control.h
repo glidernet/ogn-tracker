@@ -11,6 +11,7 @@ extern "C" {
 
 void Control_Config(void);
 void vTaskControl(void* pvParameters);
+xQueueHandle* Get_ControlQue();
 
 #ifdef __cplusplus
 }

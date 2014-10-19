@@ -13,6 +13,7 @@
 #include <string.h>
 #include <math.h>
 
+#include "ogn_lib.h"
 #include "options.h"
 #include "messages.h"
 #include "spi.h"

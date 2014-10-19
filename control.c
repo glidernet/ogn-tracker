@@ -7,6 +7,8 @@
 #include <queue.h>
 #include "messages.h"
 #include "hpt_timer.h"
+#include "ogn_lib.h"
+#include "spirit1.h"
 
 /* -------- defines -------- */
 #define MAX_HPT_TABLE_LEN  8
@@ -32,6 +34,10 @@ void EXTI9_5_IRQHandler(void)
    
 }
 /* -------- functions -------- */
+xQueueHandle* Get_ControlQue()
+{
+   return &control_que;
+}
 
 /**
 * @brief  Configures the High Precision Timer Table.
@@ -41,12 +47,20 @@ void EXTI9_5_IRQHandler(void)
 uint8_t Create_HPT_Table(HPT_Event* hpt_table_arr)
 {
    uint8_t pos = 0;
-   hpt_table_arr[pos].time    = HPT_MS(0);
+   hpt_table_arr[pos].time    = HPT_MS(200);
    hpt_table_arr[pos].opcode  = HPT_GPIO_UP;
    pos++;
    
-   hpt_table_arr[pos].time    = HPT_MS(50);
+   hpt_table_arr[pos].time    = HPT_MS(500);
+   hpt_table_arr[pos].opcode  = HPT_SEND_PKT;
+   pos++;
+   
+   hpt_table_arr[pos].time    = HPT_MS(700);
    hpt_table_arr[pos].opcode  = HPT_GPIO_DOWN;
+   pos++;
+   
+   hpt_table_arr[pos].time    = HPT_MS(900);
+   hpt_table_arr[pos].opcode  = HPT_PREPARE_PKT;
    pos++;
 	
    hpt_table_arr[pos].time    = HPT_MS(1000);
@@ -98,7 +112,8 @@ void Control_Config(void)
 void vTaskControl(void* pvParameters)
 {  
    NVIC_InitTypeDef NVIC_InitStructure;
-   task_message msg;
+   task_message msg, sp1_msg;
+   uint8_t* pkt_data = NULL;
    
    control_que = xQueueCreate(10, sizeof(task_message));
    Create_HPT_Table(hpt_table);
@@ -114,5 +129,25 @@ void vTaskControl(void* pvParameters)
    for(;;)
    {
       xQueueReceive(control_que, &msg, portMAX_DELAY);
+      switch (msg.msg_opcode)
+      {
+         case HPT_PREPARE_PKT:             
+            pkt_data = OGN_PreparePacket();
+            break;
+            
+         case HPT_SEND_PKT:             
+            if (pkt_data)
+            {   
+                sp1_msg.msg_data   = (uint32_t)pkt_data;
+                sp1_msg.msg_len    = OGN_PKT_LEN;
+                sp1_msg.msg_opcode = SP1_SEND_OGN_PKT;
+                sp1_msg.src_id     = CONTROL_SRC_ID;
+                xQueueHandle* sp1_task_queue = Get_SP1Que();
+                xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
+            }
+            break;
+         default:
+            break;
+      }
    }
 }

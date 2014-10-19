@@ -17,7 +17,9 @@ typedef enum
    HPT_END      = 1, /* End the table */
    HPT_RESTART,      /* Restart the table */
    HPT_GPIO_UP,      /* Test GPIO up */
-   HPT_GPIO_DOWN     /* Test GPIO down */
+   HPT_GPIO_DOWN,    /* Test GPIO down */
+   HPT_PREPARE_PKT,  /* Prepare OGN packet */
+   HPT_SEND_PKT,     /* Prepare OGN packet */
 } htp_opcodes;
 
 /* -------- structures ------- */

@@ -6,6 +6,8 @@
 #include <semphr.h>
 #include <queue.h>
 #include <timers.h>
+#include "control.h"
+#include "messages.h"
 
 //#define HPT_DEBUG 1
 
@@ -73,6 +75,8 @@ BaseType_t HPT_RestartFromISR(void)
 void vHPTimerCallback(TimerHandle_t pxTimer)
 {
     uint8_t new_event_scheduled = 0;
+    xQueueHandle* ctrl_que;
+    task_message  ctrl_msg;
     switch (current_hpt_table[event_awaited].opcode)
     {
         case HPT_END:
@@ -97,6 +101,28 @@ void vHPTimerCallback(TimerHandle_t pxTimer)
             #ifdef HPT_DEBUG
             Console_Send("HPT_GPIO_DOWN\r\n",0);
             #endif
+            break;
+        case HPT_PREPARE_PKT:            
+            #ifdef HPT_DEBUG
+            Console_Send("HPT_PREPARE_PKT\r\n",0);
+            #endif
+            ctrl_que = Get_ControlQue();
+            ctrl_msg.msg_data   = 0;
+            ctrl_msg.msg_len    = 0;
+            ctrl_msg.msg_opcode = HPT_PREPARE_PKT;
+            ctrl_msg.src_id     = 0;
+            xQueueSend(*ctrl_que, &ctrl_msg, portMAX_DELAY);
+            break;
+        case HPT_SEND_PKT:            
+            #ifdef HPT_DEBUG
+            Console_Send("HPT_SEND_PKT\r\n",0);
+            #endif
+            ctrl_que = Get_ControlQue();
+            ctrl_msg.msg_data   = 0;
+            ctrl_msg.msg_len    = 0;
+            ctrl_msg.msg_opcode = HPT_SEND_PKT;
+            ctrl_msg.src_id     = 0;
+            xQueueSend(*ctrl_que, &ctrl_msg, portMAX_DELAY);
             break;
         default:
             break;

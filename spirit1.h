@@ -11,10 +11,6 @@
 extern "C" {
 #endif
 
-/* this will be moved - it is not connected with SP1 hardware */
-#define OGN_PKT_LEN       26           // OGN packet has 26 bytes of data
-#define OGN_PKT_SYNC      0x0AF3656C   // OGN packet starts with these four bytes
-
 /* --- Spirit task opcodes --- */
 typedef enum
 {
