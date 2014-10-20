@@ -11,7 +11,7 @@
 #include "spirit1.h"
 
 /* -------- defines -------- */
-#define MAX_HPT_TABLE_LEN  8
+#define MAX_HPT_TABLE_LEN  16
 /* -------- variables -------- */
 HPT_Event hpt_table[MAX_HPT_TABLE_LEN];
 
@@ -47,8 +47,10 @@ xQueueHandle* Get_ControlQue()
 uint8_t Create_HPT_Table(HPT_Event* hpt_table_arr)
 {
    uint8_t pos = 0;
+   
    hpt_table_arr[pos].time    = HPT_MS(200);
-   hpt_table_arr[pos].opcode  = HPT_GPIO_UP;
+   hpt_table_arr[pos].opcode  = HPT_SP1_CHANNEL;
+   hpt_table_arr[pos].data1   = 4;  
    pos++;
    
    hpt_table_arr[pos].time    = HPT_MS(500);
@@ -56,10 +58,15 @@ uint8_t Create_HPT_Table(HPT_Event* hpt_table_arr)
    pos++;
    
    hpt_table_arr[pos].time    = HPT_MS(700);
-   hpt_table_arr[pos].opcode  = HPT_GPIO_DOWN;
+   hpt_table_arr[pos].opcode  = HPT_SP1_CHANNEL;
+   hpt_table_arr[pos].data1   = 2;  
    pos++;
    
    hpt_table_arr[pos].time    = HPT_MS(900);
+   hpt_table_arr[pos].opcode  = HPT_SEND_PKT;
+   pos++;
+   
+   hpt_table_arr[pos].time    = HPT_MS(950);
    hpt_table_arr[pos].opcode  = HPT_PREPARE_PKT;
    pos++;
 	
@@ -136,7 +143,6 @@ void vTaskControl(void* pvParameters)
             break;
 
          case HPT_SEND_PKT:
-            pkt_data = OGN_PreparePacket(); // I had to add this, otherwise it would not transmit ? HPT_PREPARE_PKT is not called ?
             if (pkt_data)
             {
                 sp1_msg.msg_data   = (uint32_t)pkt_data;

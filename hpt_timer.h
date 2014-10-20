@@ -19,14 +19,16 @@ typedef enum
    HPT_GPIO_UP,      /* Test GPIO up */
    HPT_GPIO_DOWN,    /* Test GPIO down */
    HPT_PREPARE_PKT,  /* Prepare OGN packet */
-   HPT_SEND_PKT,     /* Prepare OGN packet */
+   HPT_SEND_PKT,     /* Send OGN packet */
+   HPT_SP1_CHANNEL,  /* Switch SP1 to selected channel */   
 } htp_opcodes;
 
 /* -------- structures ------- */
 typedef struct
 {
-   uint32_t    time;
-   htp_opcodes opcode;
+   uint32_t     time;
+   htp_opcodes  opcode;
+   uint32_t     data1;
 } HPT_Event;
 
 /* -------- functions -------- */

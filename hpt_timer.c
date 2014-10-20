@@ -8,6 +8,7 @@
 #include <timers.h>
 #include "control.h"
 #include "messages.h"
+#include "spirit1.h"
 
 //#define HPT_DEBUG 1
 
@@ -75,54 +76,75 @@ BaseType_t HPT_RestartFromISR(void)
 void vHPTimerCallback(TimerHandle_t pxTimer)
 {
     uint8_t new_event_scheduled = 0;
-    xQueueHandle* ctrl_que;
+    xQueueHandle* dest_que;
     task_message  ctrl_msg;
+    uint32_t      data1;
+    
+    data1 = current_hpt_table[event_awaited].data1;
+    
     switch (current_hpt_table[event_awaited].opcode)
     {
         case HPT_END:
             xTimerStop(xHPTimer, 0);
             new_event_scheduled = 1;
             break;
+            
         case HPT_RESTART:
             #ifdef HPT_DEBUG
-            Console_Send("HPT_RESTART\r\n",0);
+            Console_Send("--HPT_RESTART--\r\n",0);
             #endif
             HPT_Restart();
             new_event_scheduled = 1;
             break;
+            
         case HPT_GPIO_UP:
             GPIO_SetBits(GPIOC, GPIO_Pin_5);
             #ifdef HPT_DEBUG
             Console_Send("HPT_GPIO_UP\r\n",0);
             #endif
             break;
+            
         case HPT_GPIO_DOWN:
             GPIO_ResetBits(GPIOC, GPIO_Pin_5);
             #ifdef HPT_DEBUG
             Console_Send("HPT_GPIO_DOWN\r\n",0);
             #endif
             break;
+            
         case HPT_PREPARE_PKT:            
             #ifdef HPT_DEBUG
             Console_Send("HPT_PREPARE_PKT\r\n",0);
             #endif
-            ctrl_que = Get_ControlQue();
+            dest_que = Get_ControlQue();
             ctrl_msg.msg_data   = 0;
             ctrl_msg.msg_len    = 0;
             ctrl_msg.msg_opcode = HPT_PREPARE_PKT;
             ctrl_msg.src_id     = 0;
-            xQueueSend(*ctrl_que, &ctrl_msg, portMAX_DELAY);
+            xQueueSend(*dest_que, &ctrl_msg, portMAX_DELAY);
             break;
+            
         case HPT_SEND_PKT:            
             #ifdef HPT_DEBUG
             Console_Send("HPT_SEND_PKT\r\n",0);
             #endif
-            ctrl_que = Get_ControlQue();
+            dest_que = Get_ControlQue();
             ctrl_msg.msg_data   = 0;
             ctrl_msg.msg_len    = 0;
             ctrl_msg.msg_opcode = HPT_SEND_PKT;
             ctrl_msg.src_id     = 0;
-            xQueueSend(*ctrl_que, &ctrl_msg, portMAX_DELAY);
+            xQueueSend(*dest_que, &ctrl_msg, portMAX_DELAY);
+            break;
+            
+        case HPT_SP1_CHANNEL:            
+            #ifdef HPT_DEBUG
+            Console_Send("HPT_SP1_CHANNEL\r\n",0);
+            #endif
+            dest_que = Get_SP1Que();
+            ctrl_msg.msg_data   = data1;
+            ctrl_msg.msg_len    = 0;
+            ctrl_msg.msg_opcode = SP1_CHG_CHANNEL;
+            ctrl_msg.src_id     = 0;
+            xQueueSend(*dest_que, &ctrl_msg, portMAX_DELAY);
             break;
         default:
             break;

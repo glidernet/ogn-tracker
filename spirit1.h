@@ -15,6 +15,7 @@ extern "C" {
 typedef enum
 {
    SP1_SEND_OGN_PKT   = 1,  // Send packet in OGN format
+   SP1_CHG_CHANNEL,         // Change active channel
 }sp1_opcode_types;
 
 /* --- SPIRIT1 related functions --- */

@@ -367,6 +367,9 @@ void vTaskSP1(void* pvParameters)
             SpiritTxPower(*(float *)GetOption(OPT_TX_POWER));
             SpiritSendOGNPacket((uint8_t*)msg.msg_data, msg.msg_len);
             break;
+         case SP1_CHG_CHANNEL:             // a request to change active channel
+            SpiritRadioSetChannel(msg.msg_data);
+            break;
          default:
             break;
       }
