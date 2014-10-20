@@ -115,4 +115,5 @@ clean:
 	rm -f main.elf main.map main.hex main.bin main.dmp $(CC_OBJ) $(CPP_OBJ) *.o
 
 arch:
-	tar cvzf OGN_Proto.tgz makefile *.h *.c *.cpp *.ld free_rtos free_rtos_cli cmsis cmsis_boot cmsis_lib
+	tar cvzf OGN_Proto.tgz makefile *.h *.c *.cpp *.ld free_rtos free_rtos_cli cmsis cmsis_boot cmsis_lib spirit1_dk
+

@@ -130,10 +130,12 @@ class OGN_Packet          // Packet structure for the OGN tracker
 //   void setICAO(void)             {        Header |= 0x01000000; }
 //   void clrICAO(void)             {        Header &= 0xFEFFFFFF; }
 
-   // bit #23 if free for now
+   bool goodAddrParity(void) const  { return ((Count1s(Header&0x0FFFFFFF)&1)==0); }  // Address parity should be EVEN
+   void calcAddrParity(void)        { if(!goodAddrParity()) Header ^= 0x08000000; }  // if not correct parity, flip the parity bit
 
-   bool goodAddrParity(void) const  { return ((Count1s(Header&0x07FFFFFF)&1)==0); }  // Address parity should be EVEN
-   void calcAddrParity(void)        { if(!goodAddrParity()) Header ^= 0x04000000; }  // if not correct parity, flip the parity bit
+   bool  isMeteo(void) const  { return Header &  0x04000000; } // this is a meteo station: sends wind speed,/direction, pressure, temperatue and humidity
+   void setMeteo(void)        {        Header |= 0x04000000; }
+   void clrMeteo(void)        {        Header &= 0xFBFFFFFF; }
 
    uint8_t getAddrType(void) const   { return (Header>>24)&0x03; } // Address type: 0 = Random, 1 = ICAO, 2 = FLARM, 3 = OGN
    void    setAddrType(uint8_t Type) { Header = (Header&0xFCFFFFFF) | ((uint32_t)(Type&0x03)<<24); }
