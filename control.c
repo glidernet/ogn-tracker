@@ -110,34 +110,35 @@ void Control_Config(void)
 * @retval None
 */
 void vTaskControl(void* pvParameters)
-{  
+{
    NVIC_InitTypeDef NVIC_InitStructure;
    task_message msg, sp1_msg;
    uint8_t* pkt_data = NULL;
-   
+
    control_que = xQueueCreate(10, sizeof(task_message));
    Create_HPT_Table(hpt_table);
    HPT_Start(hpt_table);
-   
+
    /* enable GPS PPS input lines interrupts */
    NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = configGPS_PPS_INTERRUPT_PRIORITY;
    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
    NVIC_Init(&NVIC_InitStructure);
-   
+
    for(;;)
    {
       xQueueReceive(control_que, &msg, portMAX_DELAY);
       switch (msg.msg_opcode)
       {
-         case HPT_PREPARE_PKT:             
+         case HPT_PREPARE_PKT:
             pkt_data = OGN_PreparePacket();
             break;
-            
-         case HPT_SEND_PKT:             
+
+         case HPT_SEND_PKT:
+            pkt_data = OGN_PreparePacket(); // I had to add this, otherwise it would not transmit ? HPT_PREPARE_PKT is not called ?
             if (pkt_data)
-            {   
+            {
                 sp1_msg.msg_data   = (uint32_t)pkt_data;
                 sp1_msg.msg_len    = OGN_PKT_LEN;
                 sp1_msg.msg_opcode = SP1_SEND_OGN_PKT;

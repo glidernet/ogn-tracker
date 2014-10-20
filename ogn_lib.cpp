@@ -27,16 +27,6 @@ uint8_t OGN_Init(void)
 void OGN_SetAcftID(uint32_t id)
 { AcftID = id; }
 
-uint32_t OGN_GetPosition(char *Output)
-{ xSemaphoreTake(xOgnPosMutex, portMAX_DELAY);
-  int Ptr=PosPtr; if(Output) Output[0]=0;
-  if(!Position[Ptr].isComplete())
-  { Ptr = (Ptr-1)&3; if(!Position[Ptr].isComplete()) return 0; }
-  if(Output) Position[Ptr].PrintLine(Output);
-  uint32_t Time=Position[Ptr].UnixTime;
-  xSemaphoreGive(xOgnPosMutex);
-  return Time; }
-
 
 int OGN_Parse_NMEA(const char* str, uint8_t len)                   // process NMEA from the GPS
 { xSemaphoreTake(xOgnPosMutex, portMAX_DELAY);
@@ -44,7 +34,7 @@ int OGN_Parse_NMEA(const char* str, uint8_t len)                   // process NM
   int Ret=Position[PosPtr].ReadNMEA(str); if(Ret<=0) goto Exit;    // return 0, when no useful NMEA (or negative when bad NMEA)
   if(!Position[PosPtr].isComplete())       { Ret=1;  goto Exit; }  // return 1, when position is not yet complete, but the NMEA was useful
   if(!Position[PosPtr].isValid())          { Ret=2;  goto Exit; }  // return 2, when position is complete, but not valid (no GPS fix)
-  PrevPtr=(PosPtr+2)&3; Delta=0;
+  PrevPtr=(PosPtr+2)&3; Delta=0;                                   // current position is complete and valid: look two position earlier
   if(Position[PrevPtr].isValid())
   { Delta=Position[PosPtr].calcDifferences(Position[PrevPtr]); }
   else
@@ -56,25 +46,33 @@ int OGN_Parse_NMEA(const char* str, uint8_t len)                   // process NM
   xSemaphoreGive(xOgnPosMutex);
   return Ret; }
 
-uint8_t* OGN_PreparePacket(void)
+uint32_t OGN_GetPosition(char *Output)
 { xSemaphoreTake(xOgnPosMutex, portMAX_DELAY);
-  int Ptr = (PosPtr-1)&3;
-  uint8_t* ret_data = 0;
-  if(Position[Ptr].isValid())
-  { uint32_t Address  =  AcftID     &0x00FFFFFF;
+  int Ptr = (PosPtr+3)&3; if(Output) Output[0]=0;
+  if(Position[Ptr].isComplete())
+  { if(Output) Position[Ptr].PrintLine(Output); }
+  uint32_t Time=Position[Ptr].UnixTime;
+  xSemaphoreGive(xOgnPosMutex);
+  return Time; }
+
+uint8_t* OGN_PreparePacket(void)                                   // Prepare OGN packet
+{ xSemaphoreTake(xOgnPosMutex, portMAX_DELAY);
+  int Ptr = (PosPtr+3)&3; uint8_t* ret_data = 0;                   // get the frame just before the currect pointer
+  if(Position[Ptr].isValid())                                      // is it valid ? (GPS lock ?)
+  { uint32_t Address  =  AcftID     &0x00FFFFFF;                   // split ID into elements
     uint8_t  AddrType = (AcftID>>24)&0x03;
     uint8_t  AcftType = (AcftID>>26)&0x1F;
     uint8_t  Private  = (AcftID>>31)&0x01;
 
     Packet.setAddress(Address); Packet.setAddrType(AddrType); Packet.clrMeteo(); Packet.calcAddrParity();
     Packet.clrEmergency(); Packet.clrEncrypted(); Packet.setRelayCount(0);
-    Position[Ptr].Encode(Packet);
-    Packet.setAcftType(AcftType);
-    if(Private) Packet.setPrivate();
+    Position[Ptr].Encode(Packet);                                   // encode position into the packet
+    Packet.setAcftType(AcftType);                                   // set aircraft type
+    if(Private) Packet.setPrivate();                                // set private/stealth flag
            else Packet.clrPrivate();
-    Packet.Encrypt();
-    Packet.setFEC();            
-    ret_data = (uint8_t*)&Packet.Header; }                          // works only with little-endian CPU
+    Packet.Encrypt();                                               // hash the data
+    Packet.setFEC();                                                // compute the parity checks
+    ret_data = (uint8_t*)&Packet.Header; }                          // get pointer to packet bytes: works only with little-endian CPU
   xSemaphoreGive(xOgnPosMutex);
   return ret_data; }
 
