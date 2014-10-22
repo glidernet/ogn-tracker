@@ -340,7 +340,7 @@ typedef struct
  * @{
  */
 #define F_OFFSET_DIVIDER           262144             /*!< 2^18 factor dividing fxo in foffset formula */
-#define PPM_FACTOR                 1e6                /*!< 10^6 factor to use with Xtal_offset_ppm */
+#define PPM_FACTOR                 1000000            /*!< 10^6 factor to use with Xtal_offset_ppm <= but should be int, not double (Pawel Jalocha) */
 
 
 #define F_OFFSET_LOWER_LIMIT(F_Xo)			((-(int32_t)F_Xo)/F_OFFSET_DIVIDER*2048)

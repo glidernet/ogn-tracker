@@ -157,7 +157,8 @@ void SpiritRadioInit(SRadioInit* pxSRadioInitStruct)
   uint8_t value = 0xA0; SpiritSpiWriteRegisters(0x9F, 1, &value);
   
   /* Calculates the offset respect to RF frequency and according to xtal_ppm parameter: (xtal_ppm*FBase)/10^6 */
-  FOffsetTmp = (int32_t)((pxSRadioInitStruct->nXtalOffsetPpm*pxSRadioInitStruct->lFrequencyBase)/PPM_FACTOR);
+  /* FOffsetTmp = (int32_t)((pxSRadioInitStruct->nXtalOffsetPpm*pxSRadioInitStruct->lFrequencyBase)/PPM_FACTOR); <= original */
+  FOffsetTmp = (int32_t)( (pxSRadioInitStruct->nXtalOffsetPpm*(int32_t)(pxSRadioInitStruct->lFrequencyBase>>6)) ) / (PPM_FACTOR>>6); /* <= correct by Pawel Jalocha, 22-OCT-2014 to correct overflow that easily occures - should be safe to +/-100ppm */
   
   /* Check the parameters */
   s_assert_param(IS_FREQUENCY_BAND(pxSRadioInitStruct->lFrequencyBase));
@@ -201,14 +202,15 @@ void SpiritRadioInit(SRadioInit* pxSRadioInitStruct)
      SpiritRefreshStatus();
     }while(g_xStatus.MC_STATE!=MC_STATE_READY);
   }
-  
+
   /* Calculates the FC_OFFSET parameter and cast as signed int: FOffsetTmp = (Fxtal/2^18)*FC_OFFSET */
-  xtalOffsetFactor = (FOffsetTmp*FBASE_DIVIDER)/s_lXtalFrequency;
+  xtalOffsetFactor = (int32_t)(FOffsetTmp*FBASE_DIVIDER)/s_lXtalFrequency;
   anaRadioRegArray[2] = (uint8_t)((((uint16_t)xtalOffsetFactor)>>8)&0x0F);
   anaRadioRegArray[3] = (uint8_t)(xtalOffsetFactor);
   
   /* Calculates the channel space factor */
-  anaRadioRegArray[0] =((uint32_t)pxSRadioInitStruct->nChannelSpace<<9)/(s_lXtalFrequency>>6)+1;
+  /* anaRadioRegArray[0] =((uint32_t)pxSRadioInitStruct->nChannelSpace<<9)/(s_lXtalFrequency>>6)+1; <= original */
+  anaRadioRegArray[0] =(((uint32_t)pxSRadioInitStruct->nChannelSpace<<9)+(s_lXtalFrequency>>7))/(s_lXtalFrequency>>6); /* <= corrected by Pawel Jalocha, 22-OCT-2014 for more precision on channel spacing */
   
   SpiritManagementWaTRxFcMem(pxSRadioInitStruct->lFrequencyBase);
   
