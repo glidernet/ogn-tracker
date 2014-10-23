@@ -156,9 +156,9 @@ void SpiritRadioInit(SRadioInit* pxSRadioInitStruct)
   /* Workaround for Vtune */
   uint8_t value = 0xA0; SpiritSpiWriteRegisters(0x9F, 1, &value);
   
-  /* Calculates the offset respect to RF frequency and according to xtal_ppm parameter: (xtal_ppm*FBase)/10^6 */
+  /* Calculates the offset [Hz] respect to RF frequency and according to xtal_ppm parameter: (xtal_ppm*FBase)/10^6 */
   /* FOffsetTmp = (int32_t)((pxSRadioInitStruct->nXtalOffsetPpm*pxSRadioInitStruct->lFrequencyBase)/PPM_FACTOR); <= original */
-  FOffsetTmp = (int32_t)( (pxSRadioInitStruct->nXtalOffsetPpm*(int32_t)(pxSRadioInitStruct->lFrequencyBase>>6)) ) / (PPM_FACTOR>>6); /* <= correct by Pawel Jalocha, 22-OCT-2014 to correct overflow that easily occures - should be safe to +/-100ppm */
+  FOffsetTmp = (int32_t)( (pxSRadioInitStruct->nXtalOffsetPpm*(int32_t)(pxSRadioInitStruct->lFrequencyBase>>6)) ) / (int32_t)(PPM_FACTOR>>6); /* <= correct by Pawel Jalocha, 22-OCT-2014 to correct overflow that easily occures - should be safe to +/-100ppm */
   
   /* Check the parameters */
   s_assert_param(IS_FREQUENCY_BAND(pxSRadioInitStruct->lFrequencyBase));
@@ -203,10 +203,10 @@ void SpiritRadioInit(SRadioInit* pxSRadioInitStruct)
     }while(g_xStatus.MC_STATE!=MC_STATE_READY);
   }
 
-  /* Calculates the FC_OFFSET parameter and cast as signed int: FOffsetTmp = (Fxtal/2^18)*FC_OFFSET */
-  xtalOffsetFactor = (int32_t)(FOffsetTmp*FBASE_DIVIDER)/s_lXtalFrequency;
-  anaRadioRegArray[2] = (uint8_t)((((uint16_t)xtalOffsetFactor)>>8)&0x0F);
-  anaRadioRegArray[3] = (uint8_t)(xtalOffsetFactor);
+  /* Calculates the FC_OFFSET parameter and cast as signed int: FOffsetTmp = (Fxtal/2^18)*FC_OFFSET - page 83 of the datasheet: http://www.st.com/st-web-ui/static/active/en/resource/technical/document/datasheet/DM00047607.pdf */
+  xtalOffsetFactor = (int32_t)(FOffsetTmp*((int32_t)FBASE_DIVIDER>>6))/(int32_t)(s_lXtalFrequency>>6); /* <= corrected to reduce the chance for an overflow: Pawel Jalocha, 22-OCT-2014 */
+  anaRadioRegArray[2] = ((xtalOffsetFactor>>8)&0x0F);         /*        ^                            */
+  anaRadioRegArray[3] = ( xtalOffsetFactor    &0xFF);         /*       here - this was the trick to make it work, but I don't know why would the division go wrong otherwise ? */
   
   /* Calculates the channel space factor */
   /* anaRadioRegArray[0] =((uint32_t)pxSRadioInitStruct->nChannelSpace<<9)/(s_lXtalFrequency>>6)+1; <= original */
