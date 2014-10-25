@@ -1,9 +1,12 @@
-#include "gps.h"
+#include <stdio.h>
 #include <stm32l1xx.h>
 #include <FreeRTOS.h>
 #include <FreeRTOS_CLI.h>
 #include <task.h>
 #include <semphr.h>
+
+#include "gps.h"
+
 #include "usart.h"
 #include "messages.h"
 #include "cir_buf.h"
@@ -12,11 +15,14 @@
 #include "spirit1.h"
 #include "ogn_lib.h"
 
+// #define GPS_DEBUG
+
 /* -------- defines ---------- */
 /* -------- variables -------- */
 /* circular buffer for NMEA messages */
 cir_buf_str* nmea_buffer;
 xQueueHandle gps_que;
+
 
 /* -------- functions -------- */
 /**
@@ -27,23 +33,19 @@ xQueueHandle gps_que;
 
 // static SemaphoreHandle_t xGpsPosMutex = 0;
 
-uint32_t GPS_GetPosition(char *Output)
-{ 
-    uint32_t Time;
-    // xSemaphoreTake(xGpsPosMutex, portMAX_DELAY);
-    Time = OGN_GetPosition(Output);
-    // xSemaphoreGive(xGpsPosMutex);
-    return Time; 
-}
+uint32_t GPS_GetPosition(char *Output) { return OGN_GetPosition(Output); }
 
 void Handle_NMEA_String(const char* str, uint8_t len)
 {
-    // xSemaphoreTake(xGpsPosMutex, portMAX_DELAY);
-    OGN_Parse_NMEA(str, len);
-    // xSemaphoreGive(xGpsPosMutex);
-   
-    return; 
-}
+#ifdef GPS_DEBUG
+  static char DebugStr[120];
+  int Ret=OGN_Parse_NMEA(str, len);
+  sprintf(DebugStr, "NMEA:%6.6s[%2d] => %d\r\n", str, len, Ret);
+  Console_Send(DebugStr, 0);
+#else
+  OGN_Parse_NMEA(str, len);
+#endif
+  return; }
 
 /**
 * @brief  Configures the GPS Task Peripherals.

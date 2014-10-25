@@ -1,4 +1,3 @@
-#include "hpt_timer.h"
 #include <stm32l1xx.h>
 #include <FreeRTOS.h>
 #include <FreeRTOS_CLI.h>
@@ -6,11 +5,15 @@
 #include <semphr.h>
 #include <queue.h>
 #include <timers.h>
+
+#include "hpt_timer.h"
+
+#include "console.h"
 #include "control.h"
 #include "messages.h"
 #include "spirit1.h"
 
-//#define HPT_DEBUG 1
+// #define HPT_DEBUG
 
 /* -------- defines -------- */
 #define HPT_TIMER_ID  1
@@ -22,9 +25,10 @@ HPT_Event*    current_hpt_table;
 /* -------- interrupt handlers -------- */
 /* -------- functions -------- */
 
-#ifdef HPT_DEBUG
-extern void Console_Send(const char* str, char block);
-#endif
+// #ifdef HPT_DEBUG
+// extern void Console_Send(const char* str, char block);
+// #endif
+
 /**
 * @brief  Restart the current HPT table.
 * @param  None

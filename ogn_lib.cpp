@@ -46,11 +46,16 @@ int OGN_Parse_NMEA(const char* str, uint8_t len)                   // process NM
   xSemaphoreGive(xOgnPosMutex);
   return Ret; }
 
-uint32_t OGN_GetPosition(char *Output)
+uint32_t OGN_GetPosition(char *Output)                             // print into a string current position and other GPS data
 { xSemaphoreTake(xOgnPosMutex, portMAX_DELAY);
-  int Ptr = (PosPtr+3)&3; if(Output) Output[0]=0;
+  int Ptr=PosPtr; if(Output) Output[0]=0;
   if(Position[Ptr].isComplete())
   { if(Output) Position[Ptr].PrintLine(Output); }
+  else
+  { Ptr = (Ptr+3)&3;
+  if(Position[Ptr].isComplete())
+  { if(Output) Position[Ptr].PrintLine(Output); }
+  }
   uint32_t Time=Position[Ptr].UnixTime;
   xSemaphoreGive(xOgnPosMutex);
   return Time; }

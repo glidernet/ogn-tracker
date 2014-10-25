@@ -1,4 +1,3 @@
-#include "console.h"
 #include <stm32l1xx.h>
 #include <FreeRTOS.h>
 #include <FreeRTOS_CLI.h>
@@ -6,6 +5,9 @@
 #include <semphr.h>
 #include <queue.h>
 #include <string.h>
+
+#include "console.h"
+
 #include "messages.h"
 #include "usart.h"
 #include "commands.h"

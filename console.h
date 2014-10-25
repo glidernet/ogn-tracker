@@ -15,6 +15,8 @@ void vTaskConsole(void* pvParameters);
 void Console_SetNMEABuf(cir_buf_str* handle);
 void Console_SetGPSQue(xQueueHandle* handle);
 
+void Console_Send(const char* str, char block);
+
 #ifdef __cplusplus
 }
 #endif
