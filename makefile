@@ -30,6 +30,7 @@ CC_SRC    += cmsis_lib/Source/stm32l1xx_dma.c
 CC_SRC    += cmsis_lib/Source/stm32l1xx_spi.c
 CC_SRC    += cmsis_lib/Source/stm32l1xx_exti.c
 CC_SRC    += cmsis_lib/Source/stm32l1xx_syscfg.c
+CC_SRC    += cmsis_lib/Source/stm32l1xx_iwdg.c
 CC_SRC    += cmsis_lib/Source/misc.c
 CC_SRC    += cmsis_boot/Startup/startup_stm32l1xx_hd.c
 CC_SRC    += cmsis_boot/system_stm32l1xx.c

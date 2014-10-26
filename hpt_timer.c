@@ -13,7 +13,7 @@
 #include "messages.h"
 #include "spirit1.h"
 
-// #define HPT_DEBUG
+//#define HPT_DEBUG
 
 /* -------- defines -------- */
 #define HPT_TIMER_ID  1
@@ -24,10 +24,6 @@ HPT_Event*    current_hpt_table;
 
 /* -------- interrupt handlers -------- */
 /* -------- functions -------- */
-
-// #ifdef HPT_DEBUG
-// extern void Console_Send(const char* str, char block);
-// #endif
 
 /**
 * @brief  Restart the current HPT table.
@@ -149,6 +145,13 @@ void vHPTimerCallback(TimerHandle_t pxTimer)
             ctrl_msg.msg_opcode = SP1_CHG_CHANNEL;
             ctrl_msg.src_id     = 0;
             xQueueSend(*dest_que, &ctrl_msg, portMAX_DELAY);
+            break;
+            
+        case HPT_IWDG_RELOAD:            
+            #ifdef HPT_DEBUG
+            Console_Send("HPT_IWDG_RELOAD\r\n",0);
+            #endif
+            IWDG_ReloadCounter();
             break;
         default:
             break;

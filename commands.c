@@ -32,7 +32,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.0.2";
+static const char * const pcVersion = "0.0.3";
 /* -------- functions -------- */
 
 /**
@@ -377,6 +377,38 @@ static portBASE_TYPE prvSP1SendPacketCommand( char *pcWriteBuffer,
    return pdFALSE;
 }
 
+static portBASE_TYPE prvIWDGDisCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ 
+    BaseType_t  param_len;
+    uint8_t iwdg_dis = 0;
+    const char* param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
+    if(param)
+    {  
+       if (!strcmp(param, "en"))
+       {
+           iwdg_dis = 0;
+       }
+       else if (!strcmp(param, "dis"))
+       {
+           iwdg_dis = 1;
+       }
+       SetOption(OPT_IWDG, &iwdg_dis);
+    } 
+    
+    iwdg_dis = *(uint8_t *)GetOption(OPT_IWDG);
+    if (!iwdg_dis)
+    {
+        sprintf(pcWriteBuffer, "IWDG enabled\r\n");
+    }
+    else
+    {
+        sprintf(pcWriteBuffer, "IWDG disabled\r\n");
+    }
+    return pdFALSE;
+}
+  
 // ---------------------------------------------------------------------------------------------------------------------------
 
 static const CLI_Command_Definition_t VerCommand           = { "ver",            "ver: version number and MCU ID\r\n",           prvVerCommand,           0 };
@@ -395,6 +427,7 @@ static const CLI_Command_Definition_t AcftIDCommand        = { "acft_id",      "
 static const CLI_Command_Definition_t TxPowerCommand       = { "tx_power",     "tx_power: transmitter power level [dBm].\r\n",   prvTxPowerCommand,   -1 };
 static const CLI_Command_Definition_t XtalCorrCommand      = { "xtal_corr",    "xtal_corr: Crystal freq. correction [ppm].\r\n", prvXtalCorrCommand,  -1 };
 static const CLI_Command_Definition_t FreqOfsCommand       = { "freq_ofs",     "freq_ofs:  RF frequency offset [Hz].\r\n",       prvFreqOfsCommand,   -1 };
+static const CLI_Command_Definition_t IWDGDisCommand       = { "iwdg",         "iwdg on/off: control ind. watchdog\r\n",            prvIWDGDisCommand,   -1 };
 
 
 /**
@@ -421,6 +454,7 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&TxPowerCommand);
    FreeRTOS_CLIRegisterCommand(&XtalCorrCommand);
    FreeRTOS_CLIRegisterCommand(&FreqOfsCommand);
+   FreeRTOS_CLIRegisterCommand(&IWDGDisCommand);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------

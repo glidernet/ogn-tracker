@@ -20,7 +20,8 @@ typedef enum
    HPT_GPIO_DOWN,    /* Test GPIO down */
    HPT_PREPARE_PKT,  /* Prepare OGN packet */
    HPT_SEND_PKT,     /* Send OGN packet */
-   HPT_SP1_CHANNEL,  /* Switch SP1 to selected channel */   
+   HPT_SP1_CHANNEL,  /* Switch SP1 to selected channel */ 
+   HPT_IWDG_RELOAD   /* Reload Independent Watchdog */   
 } htp_opcodes;
 
 /* -------- structures ------- */

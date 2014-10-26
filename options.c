@@ -20,6 +20,7 @@ typedef struct
    float     TxPower;          // [dBm]
    int16_t   XtalCorr;         // [ppm]
    int32_t   FreqOfs;          // [Hz]
+   uint8_t   IWDGDis;          // [0 - IWDG enabled ]
 } options_str;
 
 /* -------- variables -------- */
@@ -40,6 +41,7 @@ void ResetOptions(void)
   options.TxPower       = 10.0;         // [dBm]
   options.XtalCorr      =    0;         // [ppm]
   options.FreqOfs       =    0;         // [Hz]
+  options.IWDGDis       =    0;         // [IWDG enabled]
 }
 
 /**
@@ -164,6 +166,13 @@ int32_t *GetFreqOfs(void)
 void SetFreqOfs(int32_t new_value)
 { options.FreqOfs = new_value;
   WriteBlock(OFFSETOF(options_str, FreqOfs), sizeof(options.FreqOfs)); }
+  
+uint8_t* GetIWDGDis(void)
+{ return &options.IWDGDis; }
+
+void SetIWDGDis(int32_t new_value)
+{ options.IWDGDis = new_value;
+  WriteBlock(OFFSETOF(options_str, IWDGDis), sizeof(options.IWDGDis)); }
 
 /* ------------------------------------------------------ */
 /**
@@ -180,6 +189,7 @@ void* GetOption(option_types opt_code)
     case OPT_TX_POWER:   { ret_val = GetTxPower();   break; }
     case OPT_XTAL_CORR:  { ret_val = GetXtalCorr();  break; }
     case OPT_FREQ_OFS:   { ret_val = GetFreqOfs();   break; }
+    case OPT_IWDG:       { ret_val = GetIWDGDis();   break; }
     default: break; }
   return ret_val; }
 
@@ -191,6 +201,7 @@ void SetOption(option_types opt_code, void* value)
     case OPT_TX_POWER:   { SetTxPower  (*(float    *) value); break; }
     case OPT_XTAL_CORR:  { SetXtalCorr (*(int16_t  *) value); break; }
     case OPT_FREQ_OFS:   { SetFreqOfs  (*(int32_t  *) value); break; }
+    case OPT_IWDG:       { SetIWDGDis  (*(uint8_t  *) value); break; }
     default: break; }
 }
 

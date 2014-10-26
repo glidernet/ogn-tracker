@@ -11,7 +11,8 @@ typedef enum
    OPT_ACFT_ID,
    OPT_TX_POWER,
    OPT_XTAL_CORR,
-   OPT_FREQ_OFS
+   OPT_FREQ_OFS,
+   OPT_IWDG
 } option_types;
 
 #ifdef __cplusplus

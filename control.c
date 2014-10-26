@@ -9,6 +9,7 @@
 #include "hpt_timer.h"
 #include "ogn_lib.h"
 #include "spirit1.h"
+#include "options.h"
 
 /* -------- defines -------- */
 #define MAX_HPT_TABLE_LEN  16
@@ -66,6 +67,10 @@ uint8_t Create_HPT_Table(HPT_Event* hpt_table_arr)
    hpt_table_arr[pos].opcode  = HPT_SEND_PKT;
    pos++;
    
+   hpt_table_arr[pos].time    = HPT_MS(925);
+   hpt_table_arr[pos].opcode  = HPT_IWDG_RELOAD;
+   pos++;
+   
    hpt_table_arr[pos].time    = HPT_MS(950);
    hpt_table_arr[pos].opcode  = HPT_PREPARE_PKT;
    pos++;
@@ -78,6 +83,29 @@ uint8_t Create_HPT_Table(HPT_Event* hpt_table_arr)
    
 }
 
+/**
+* @brief  Configures Independent Watchdog IWDG.
+* @param  None
+* @retval None
+*/
+void IWDG_Config(void)
+{
+    uint8_t iwdg_dis = *(uint8_t *)GetOption(OPT_IWDG);
+    
+    if (!iwdg_dis)
+    {    
+        /* Enable write access to IWDG_PR and IWDG_RLR registers */
+        IWDG_WriteAccessCmd(IWDG_WriteAccess_Enable);
+        /* IWDG Clock: 40kHz/64 */
+        IWDG_SetPrescaler(IWDG_Prescaler_64);
+        /* Configure the IWDG counter value - 6 second at /64 prescaler*/
+        IWDG_SetReload(0xfff);
+        /* Reload Counter */
+        IWDG_ReloadCounter();
+        /* Enable IWDG */
+        IWDG_Enable();
+    }
+}
 /**
 * @brief  Configures the Control Task Peripherals.
 * @param  None
@@ -106,7 +134,8 @@ void Control_Config(void)
    EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
    EXTI_InitStructure.EXTI_LineCmd = ENABLE;
    EXTI_Init(&EXTI_InitStructure);
-
+    
+   IWDG_Config();
    HPT_Config();
 
 }

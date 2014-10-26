@@ -26,6 +26,7 @@
 /* Console task queue */
 xQueueHandle  console_que;
 static const char * const pcWelcomeMessage = "\r\nOGN Tracker Console.\r\n";
+static const char * const pcIWDGMessage = "IWDG reset!\r\n";
 /* Console NMEA sentence storage */
 char nmea_sentence[MAX_NMEA_SENTENCE];
 uint8_t nmea_sent_len;
@@ -195,8 +196,13 @@ void vTaskConsole(void* pvParameters)
 
    USART_Cmd(USART2, ENABLE);
 
-   Console_Send(pcWelcomeMessage, 0);
-
+   Console_Send(pcWelcomeMessage, 1);  
+   if (RCC_GetFlagStatus(RCC_FLAG_IWDGRST) != RESET)
+   {
+      Console_Send(pcIWDGMessage, 1);
+      RCC_ClearFlag();
+   }
+   
    console_mode = CONSOLE_SENTENCE_MODE;
 
    for(;;)
