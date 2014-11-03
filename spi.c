@@ -32,8 +32,10 @@
 #define SPI1_CE_SOURCE        GPIO_PinSource4
 
 /* -------- variables -------- */
-/* Semaphore used for SPI1 transfers synchronization */
+/* Semaphores used for SPI1 transfers synchronization */
 static SemaphoreHandle_t xSPI1Semaphore;
+static SemaphoreHandle_t xSPI1SemaphoreB;
+
 
 static DMA_InitTypeDef  DMA_InitTX;
 static DMA_InitTypeDef  DMA_InitRX;
@@ -55,10 +57,7 @@ void DMA1_Channel2_IRQHandler(void)
       /* Disable the DMA channels */
       DMA_Cmd(DMA_SPI1_RX_CH, DISABLE);
 
-      /* Set CE line after transfer */
-      GPIO_SetBits(SPI1_CE_GPIO_PORT, SPI1_CE_PIN);
-
-      xSemaphoreGiveFromISR(xSPI1Semaphore, &xHigherPriorityTaskWoken);
+      xSemaphoreGiveFromISR(xSPI1SemaphoreB, &xHigherPriorityTaskWoken);
       portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
    }
 }
@@ -206,7 +205,8 @@ void SPI1_Config(void)
    DMA_InitRX.DMA_MemoryBaseAddr     = 0;
 
    xSPI1Semaphore = xSemaphoreCreateMutex();
-
+   xSPI1SemaphoreB = xSemaphoreCreateBinary();
+   
    /* Enable the SPI1 */
    SPI_Cmd(SPI1, ENABLE);
 
@@ -234,8 +234,11 @@ void SPI1_Send(uint8_t* data_tx, uint8_t* data_rx, uint8_t len)
    /* Enable the DMA channels */
    DMA_Cmd(DMA_SPI1_TX_CH, ENABLE);
    DMA_Cmd(DMA_SPI1_RX_CH, ENABLE);
-
-   /* Take access to SPI1 - will block until transfer finish */
-   xSemaphoreTake(xSPI1Semaphore, portMAX_DELAY);
+   /* Wait until SPI1 transfer finishes  */
+   xSemaphoreTake(xSPI1SemaphoreB, portMAX_DELAY);
+   
+   /* Set CE line after transfer */
+   GPIO_SetBits(SPI1_CE_GPIO_PORT, SPI1_CE_PIN);
+      
    xSemaphoreGive(xSPI1Semaphore);
 }
