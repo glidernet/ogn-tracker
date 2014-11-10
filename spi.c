@@ -232,8 +232,8 @@ void SPI1_Send(uint8_t* data_tx, uint8_t* data_rx, uint8_t len)
    for (i=0; i<50; i++) { i=i; }
 
    /* Enable the DMA channels */
-   DMA_Cmd(DMA_SPI1_TX_CH, ENABLE);
    DMA_Cmd(DMA_SPI1_RX_CH, ENABLE);
+   DMA_Cmd(DMA_SPI1_TX_CH, ENABLE);
    /* Wait until SPI1 transfer finishes  */
    xSemaphoreTake(xSPI1SemaphoreB, portMAX_DELAY);
    
