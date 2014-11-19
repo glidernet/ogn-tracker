@@ -12,7 +12,8 @@
 #include "options.h"
 
 /* -------- defines -------- */
-#define SPIRIT1_PKT_LEN     (2*(2+26)) // two bytes to complete the SYNC, 26 data bytes and times two because we emulate Manchester encoding
+// #define SPIRIT1_PKT_LEN     (2*(2+26)) // two bytes to complete the SYNC, 26 data bytes and times two because we emulate Manchester encoding
+#define SPIRIT1_PKT_LEN     (3+2*26) // three bytes to complete the OGN SYNC word, 26 data+FEC bytes with Manchester emulation
 
 #define SPR_SPI_MAX_REG_NUM  0xFF
 #define SPR_SPI_HDR_LEN      2
@@ -40,6 +41,34 @@
 #define SPR1_SHDN_GPIO_PORT  GPIOA
 #define SPR1_SHDN_GPIO_CLK   RCC_AHBPeriph_GPIOA
 
+/*
+Packet structure overview:
+
+nRF905 sends the bit pattern 0xF50C9A93 at the beginning of every packet (0xF5 is hardwired and 0x0C9A93 is programmable in the chip).
+
+Bits are sent at 50 kbps and are manchester encoded thus 0 is encoded as 10 and 1 as 01
+Thus the nRF905 pattern 0xF% looks like: 01010101 10011001 sent at 100 kbps
+Accord. to other source nRF905 sends two more 1's thus at the beginning it really sends:
+ 1 1  1 1 1 1  0 1 0 1  : data       at  50 kbps
+0101 01010101 10011001  : manchester at 100 kbps
+as the preamble and then 24-bit address word 0x0C9A93 in the same manner.
+
+The DVB-T dongle FLARM/OGN receiver does not care about the first two sync bits and it matched only the 32-bit SYNC: 0xF50C9A93
+but just in case we want to send an nRF905 compatible signal, we should keep in mind the two bits at the very beginning.
+
+For OGN we have chosen to send the inverted pattern thus 0x0AF3656C as it is more straightforward for Spirit1
+and makes clear distingtion from FLARM. We send the signals as well on a different frequency.
+
+Spirit1 is set to work in non-Manchester, 100 kbps data rate and the emulate Manchester in software.
+Spirit1 sends 1-byte preamble which is 10101010 and it matches exactly the Manchester encoded 0 0 0 0.
+Then we send Manchester encoded 0xAF36 as a 32-bit (thus 4 byte) Spirit sync-word.
+After Manchester encoding 0xAF36 => 0x6655A596
+
+When we send the packet, we encode the remaining part of the SYNC word: 0x56C as three bytes: 0x99 0x96 0x5A
+and afterwards we encode 26 bytes of the apcket data.
+
+*/
+
 /* -------- variables -------- */
 xQueueHandle     xQueueSP1;
 
@@ -51,35 +80,35 @@ uint8_t SPR_SPI_BufferRX[SPR_SPI_MAX_REG_NUM+SPR_SPI_HDR_LEN];
 * @brief Radio structure fitting
 */
 SRadioInit xRadioInit = {
-   0,         // Xtal Offset
-   868.000e6, // Base Frequency
-   100e3,     // Channel spacing (could be
-   4,         // Channel number: the frequency is 868.0+4*0.1 = 868.4MHz
-   GFSK_BT05, // Modulation select
-   100e3,     // Data rate
-   51e3,      // Freq Deviation
-   330e3      // Filter bandwidth
+   0,         // Xtal Offset:          0 ppm
+   868.000e6, // Base Frequency:     868 MHz
+   100e3,     // Channel spacing:    100 kHz
+   4,         // Channel number:       4, frequency = 868.0+4*0.1 = 868.4MHz
+   GFSK_BT05, // Modulation select: GFSK, BT=0.5
+   100e3,     // Data rate:          100 kbps (with Manchester emulation: 50 kbps)
+   51e3,      // Freq Deviation:   +/-50 kHz
+   330e3      // Filter bandwidth:   330 kHz
 };
 
 /**
 * @brief Packet Basic structure fitting
 */
 PktBasicInit xBasicInit={
-  PKT_PREAMBLE_LENGTH_02BYTES,
-  PKT_SYNC_LENGTH_3BYTES,
-  0x6655A596,      // sync word = the first two bytes with Macnhester encoding emulation
-  PKT_LENGTH_FIX,  // fixed length packet
-  7,               /* length width */
-  PKT_NO_CRC,      // no CRC fields - we make the error checking and correcting code
-  PKT_CONTROL_LENGTH_0BYTES,
-  S_DISABLE,       /* no address field */
-  S_DISABLE,       /* no FEC */
-  S_DISABLE        /* no data whitening */
+  PKT_PREAMBLE_LENGTH_01BYTE,   // 1 byte preamble
+  PKT_SYNC_LENGTH_4BYTES,       // Spirit1 sync word 4 bytes
+  0x6655A596,                   // Spirit1 sync word = the first two OGN SYNC bytes Manchester encoded
+  PKT_LENGTH_FIX,               // fixed length packet
+  7,                            // length width - what is this ?
+  PKT_NO_CRC,                   // no CRC fields - we make the error checking and correcting code
+  PKT_CONTROL_LENGTH_0BYTES,    // 
+  S_DISABLE,                    // no address field
+  S_DISABLE,                    // no FEC
+  S_DISABLE                     // no data whitening
 };
 /* -------- constants -------- */
-/* Spirit1 Manchester encoding simulation */
-/* 0 encoded as 1->0 transition */
-/* 1 encoded as 0->1 transition */
+/* Spirit1 Manchester encoding emulation */
+/* 0 encoded as 1->0 (negative) transition: 10 */
+/* 1 encoded as 0->1 (positive) transition: 01 */
 const uint8_t hex_2_manch_encoding[0x10] =         // lookup table for 4-bit nibbles
 {
    0xAA, /* hex: 0, bin: 0000, manch: 10101010 */
@@ -308,12 +337,15 @@ void SpiritSendOGNPacket(uint8_t* pkt_data, uint8_t pkt_len)
    uint8_t in_pkt_pos, out_pkt_pos = 0;
 
    /* Fill end of sync word (sync start in SP1 sync register) */
-   Packet_TxBuff[out_pkt_pos++] = 0x96;
-   Packet_TxBuff[out_pkt_pos++] = 0x99;
-   Packet_TxBuff[out_pkt_pos++] = 0x96;
-   Packet_TxBuff[out_pkt_pos++] = 0x5A;
+   // Packet_TxBuff[out_pkt_pos++] = 0x96;
+   // Packet_TxBuff[out_pkt_pos++] = 0x99;
+   // Packet_TxBuff[out_pkt_pos++] = 0x96;
+   // Packet_TxBuff[out_pkt_pos++] = 0x5A;
+   Packet_TxBuff[out_pkt_pos++] = hex_2_manch_encoding[0x5]; // the last three nibbles of the OGN SYNC word
+   Packet_TxBuff[out_pkt_pos++] = hex_2_manch_encoding[0x6];
+   Packet_TxBuff[out_pkt_pos++] = hex_2_manch_encoding[0xC];
 
-   for (in_pkt_pos = 0; in_pkt_pos<pkt_len; in_pkt_pos++)
+   for (in_pkt_pos = 0; in_pkt_pos<pkt_len; in_pkt_pos++)    // OGN packet: 26 bytes Manchester encoded
    {
       uint8_t up_half = pkt_data[in_pkt_pos]>>4;
       uint8_t lo_half = pkt_data[in_pkt_pos]&0x0F;
