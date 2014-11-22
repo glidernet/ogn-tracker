@@ -20,7 +20,6 @@
 #include "spirit1.h"
 #include "gps.h"
 
-
 /* -------- defines -------- */
 #define SPI_DATA_LEN 256
 #define ACFT_ID_LEN    4
@@ -32,7 +31,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.0.3";
+static const char * const pcVersion = "0.0.4";
 /* -------- functions -------- */
 
 /**
@@ -370,7 +369,7 @@ static portBASE_TYPE prvSP1SendPacketCommand( char *pcWriteBuffer,
    sp1_msg.msg_len    = OGN_PKT_LEN;
    sp1_msg.msg_opcode = SP1_SEND_OGN_PKT;
    sp1_msg.src_id     = CONSOLE_USART_SRC_ID;
-   /* Send NMEA sentence to GPS task */
+   /* Send packet data to Spirit1 task */
    xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
 
    sprintf(pcWriteBuffer, "OGN packet sent.\r\n");
@@ -409,6 +408,81 @@ static portBASE_TYPE prvIWDGDisCommand( char *pcWriteBuffer,
     return pdFALSE;
 }
   
+static portBASE_TYPE prvSetChannelCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{
+    const char*  param;
+    BaseType_t   param_len;
+    int8_t       channel_number;
+    
+    param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
+    channel_number = atoi(param);
+    
+    if (param)
+    {
+        if ((channel_number >= 0) && (channel_number <= 6))
+        {
+            SetOption(OPT_CHANNEL, &channel_number);
+        }
+        else
+        {
+            sprintf(pcWriteBuffer, "Invalid channel number: %d.\r\n", channel_number);
+            return pdFALSE;  
+        }
+    }
+    /* get version of command */
+    channel_number = *(uint8_t *)GetOption(OPT_CHANNEL);
+    
+    sprintf(pcWriteBuffer, "Channel set: %d.\r\n", channel_number);
+    
+    return pdFALSE;                         
+}
+
+static portBASE_TYPE prvOperModeCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{
+    BaseType_t  param_len;
+    uint8_t new_mode = MODE_OGN;
+    const char* param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
+    
+    /* optional set version of command */
+    if(param)
+    {  
+       if (!strcmp(param, "ogn"))
+       {
+           new_mode = (uint8_t)MODE_OGN;
+       }
+       else if (!strcmp(param, "cw"))
+       {
+           new_mode = (uint8_t)MODE_CW;
+       }
+       else
+       {
+            sprintf(pcWriteBuffer, "unsupported mode, supported: ogn, cw\r\n");
+            return pdFALSE;            
+       }
+       SetOption(OPT_OPER_MODE, &new_mode);
+    } 
+    
+    /* get version of command */
+    new_mode = *(uint8_t *)GetOption(OPT_OPER_MODE);
+    
+    switch (new_mode)
+    {
+        case MODE_OGN:
+            sprintf(pcWriteBuffer, "mode ogn enabled\r\n");
+            break;    
+        case MODE_CW:   
+            sprintf(pcWriteBuffer, "mode cw enabled\r\n");
+            break;            
+        default:
+            sprintf(pcWriteBuffer, "unsupported mode\r\n");
+            break;
+    }
+    return pdFALSE;
+}
 // ---------------------------------------------------------------------------------------------------------------------------
 
 static const CLI_Command_Definition_t VerCommand           = { "ver",            "ver: version number and MCU ID\r\n",           prvVerCommand,           0 };
@@ -427,7 +501,9 @@ static const CLI_Command_Definition_t AcftIDCommand        = { "acft_id",      "
 static const CLI_Command_Definition_t TxPowerCommand       = { "tx_power",     "tx_power: transmitter power level [dBm].\r\n",   prvTxPowerCommand,   -1 };
 static const CLI_Command_Definition_t XtalCorrCommand      = { "xtal_corr",    "xtal_corr: Crystal freq. correction [ppm].\r\n", prvXtalCorrCommand,  -1 };
 static const CLI_Command_Definition_t FreqOfsCommand       = { "freq_ofs",     "freq_ofs:  RF frequency offset [Hz].\r\n",       prvFreqOfsCommand,   -1 };
-static const CLI_Command_Definition_t IWDGDisCommand       = { "iwdg",         "iwdg on/off: control ind. watchdog\r\n",            prvIWDGDisCommand,   -1 };
+static const CLI_Command_Definition_t IWDGDisCommand       = { "iwdg",         "iwdg on/off: control ind. watchdog\r\n",         prvIWDGDisCommand,   -1 };
+static const CLI_Command_Definition_t OperModeCommand      = { "mode",         "mode [ogn|cw]: set/check oper. mode\r\n",        prvOperModeCommand,  -1 };
+static const CLI_Command_Definition_t SetChannelCommand    = { "channel",      "set_channel 0-6: set/check operating channel\r\n",  prvSetChannelCommand, -1 };
 
 
 /**
@@ -455,6 +531,8 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&XtalCorrCommand);
    FreeRTOS_CLIRegisterCommand(&FreqOfsCommand);
    FreeRTOS_CLIRegisterCommand(&IWDGDisCommand);
+   FreeRTOS_CLIRegisterCommand(&SetChannelCommand);
+   FreeRTOS_CLIRegisterCommand(&OperModeCommand);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------

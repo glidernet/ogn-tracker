@@ -8,11 +8,9 @@
 #include "spi.h"
 #include "MCU_Interface.h"
 #include "SPIRIT_Config.h"
-
 #include "options.h"
 
 /* -------- defines -------- */
-// #define SPIRIT1_PKT_LEN     (2*(2+26)) // two bytes to complete the SYNC, 26 data bytes and times two because we emulate Manchester encoding
 #define SPIRIT1_PKT_LEN     (3+2*26) // three bytes to complete the OGN SYNC word, 26 data+FEC bytes with Manchester emulation
 
 #define SPR_SPI_MAX_REG_NUM  0xFF
@@ -337,10 +335,6 @@ void SpiritSendOGNPacket(uint8_t* pkt_data, uint8_t pkt_len)
    uint8_t in_pkt_pos, out_pkt_pos = 0;
 
    /* Fill end of sync word (sync start in SP1 sync register) */
-   // Packet_TxBuff[out_pkt_pos++] = 0x96;
-   // Packet_TxBuff[out_pkt_pos++] = 0x99;
-   // Packet_TxBuff[out_pkt_pos++] = 0x96;
-   // Packet_TxBuff[out_pkt_pos++] = 0x5A;
    Packet_TxBuff[out_pkt_pos++] = hex_2_manch_encoding[0x5]; // the last three nibbles of the OGN SYNC word
    Packet_TxBuff[out_pkt_pos++] = hex_2_manch_encoding[0x6];
    Packet_TxBuff[out_pkt_pos++] = hex_2_manch_encoding[0xC];
@@ -357,6 +351,31 @@ void SpiritSendOGNPacket(uint8_t* pkt_data, uint8_t pkt_len)
    SpiritSpiWriteLinearFifo(SPIRIT1_PKT_LEN, Packet_TxBuff);
 
    SpiritCmdStrobeTx();
+}
+
+/**
+* @brief  Switch Spirit1 to CW transmitting mode.
+* @param  None
+* @retval None
+*/
+void SP1_Enter_CW_mode(void)
+{
+   SpiritCmdStrobeSabort();
+   SpiritDirectRfSetTxMode(PN9_TX_MODE);
+   SpiritRadioCWTransmitMode(S_ENABLE);
+   SpiritCmdStrobeTx();
+}
+
+/**
+* @brief  Exit Spirit1 from CW transmitting mode.
+* @param  None
+* @retval None
+*/
+void SP1_Leave_CW_mode(void)
+{
+   SpiritCmdStrobeSabort();
+   SpiritDirectRfSetTxMode(NORMAL_TX_MODE);
+   SpiritRadioCWTransmitMode(S_DISABLE);  
 }
 
 void vTaskSP1(void* pvParameters)
@@ -376,6 +395,7 @@ void vTaskSP1(void* pvParameters)
 
    xRadioInit.nXtalOffsetPpm  = *(int16_t *)GetOption(OPT_XTAL_CORR);
    xRadioInit.lFrequencyBase += *(int32_t *)GetOption(OPT_FREQ_OFS);
+   xRadioInit.cChannelNumber  = *(uint8_t *)GetOption(OPT_CHANNEL);
    SpiritRadioInit(&xRadioInit);
 
    /* Spirit Packet config */
@@ -401,6 +421,12 @@ void vTaskSP1(void* pvParameters)
             break;
          case SP1_CHG_CHANNEL:             // a request to change active channel
             SpiritRadioSetChannel(msg.msg_data);
+            break;
+         case SP1_START_CW:                // a request to start CW
+            SP1_Enter_CW_mode();
+            break;
+         case SP1_STOP_CW:                // a request to stop CW
+            SP1_Leave_CW_mode();
             break;
          default:
             break;
