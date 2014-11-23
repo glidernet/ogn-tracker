@@ -483,6 +483,17 @@ static portBASE_TYPE prvOperModeCommand( char *pcWriteBuffer,
     }
     return pdFALSE;
 }
+
+static portBASE_TYPE prvMemStatCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{
+    int heap_used = (int)configTOTAL_HEAP_SIZE - (int)xPortGetFreeHeapSize();
+    sprintf(pcWriteBuffer,"Free RTOS heap used: %d/%d (%d%%)\r\n", heap_used, (int)configTOTAL_HEAP_SIZE, (100*heap_used)/(int)configTOTAL_HEAP_SIZE);
+    return pdFALSE;
+}
+
+
 // ---------------------------------------------------------------------------------------------------------------------------
 
 static const CLI_Command_Definition_t VerCommand           = { "ver",            "ver: version number and MCU ID\r\n",           prvVerCommand,           0 };
@@ -504,6 +515,7 @@ static const CLI_Command_Definition_t FreqOfsCommand       = { "freq_ofs",     "
 static const CLI_Command_Definition_t IWDGDisCommand       = { "iwdg",         "iwdg on/off: control ind. watchdog\r\n",         prvIWDGDisCommand,   -1 };
 static const CLI_Command_Definition_t OperModeCommand      = { "mode",         "mode [ogn|cw]: set/check oper. mode\r\n",        prvOperModeCommand,  -1 };
 static const CLI_Command_Definition_t SetChannelCommand    = { "channel",      "set_channel 0-6: set/check operating channel\r\n",  prvSetChannelCommand, -1 };
+static const CLI_Command_Definition_t MemStatCommand       = { "mem_stat",     "mem_stat: memory statistics\r\n",               prvMemStatCommand, 0 };
 
 
 /**
@@ -533,6 +545,7 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&IWDGDisCommand);
    FreeRTOS_CLIRegisterCommand(&SetChannelCommand);
    FreeRTOS_CLIRegisterCommand(&OperModeCommand);
+   FreeRTOS_CLIRegisterCommand(&MemStatCommand);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------
