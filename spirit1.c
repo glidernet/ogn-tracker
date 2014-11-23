@@ -85,7 +85,7 @@ SRadioInit xRadioInit = {
    4,         // Channel number:       4, frequency = 868.0+4*0.1 = 868.4MHz
    GFSK_BT05, // Modulation select: GFSK, BT=0.5
    100e3,     // Data rate:          100 kbps (with Manchester emulation: 50 kbps)
-   50e3,      // Freq Deviation:   +/-50 kHz
+   51e3,      // Freq Deviation:   +/-50 kHz (apparently, when set to 51 is closer to +/-50kHz)
    330e3      // Filter bandwidth:   330 kHz
 };
 
