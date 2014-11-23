@@ -41,11 +41,11 @@ xQueueHandle* Get_ControlQue()
 }
 
 /**
-* @brief  Configures the High Precision Timer Table.
+* @brief  Configures the High Precision Timer Table for OGN oper. mode.
 * @param  pointer to hpt_table data to be filled.
 * @retval length of filled data.
 */
-uint8_t Create_HPT_Table(HPT_Event* hpt_table_arr)
+uint8_t Create_HPT_Table_OGN(HPT_Event* hpt_table_arr)
 {
    uint8_t pos = 0;
    
@@ -75,6 +75,27 @@ uint8_t Create_HPT_Table(HPT_Event* hpt_table_arr)
    hpt_table_arr[pos].opcode  = HPT_PREPARE_PKT;
    pos++;
 	
+   hpt_table_arr[pos].time    = HPT_MS(1000);
+   hpt_table_arr[pos].opcode  = HPT_RESTART;
+   pos++;
+   
+   return pos;
+   
+}
+
+/**
+* @brief  Configures the High Precision Timer Table for CW oper. mode.
+* @param  pointer to hpt_table data to be filled.
+* @retval length of filled data.
+*/
+uint8_t Create_HPT_Table_CW(HPT_Event* hpt_table_arr)
+{
+   uint8_t pos = 0;
+    
+   hpt_table_arr[pos].time    = HPT_MS(925);
+   hpt_table_arr[pos].opcode  = HPT_IWDG_RELOAD;
+   pos++;
+   	
    hpt_table_arr[pos].time    = HPT_MS(1000);
    hpt_table_arr[pos].opcode  = HPT_RESTART;
    pos++;
@@ -141,6 +162,39 @@ void Control_Config(void)
 }
 
 /**
+* @brief  Executes necessary action before entering event loop.
+* @param  mode - selected mode.
+* @retval None
+*/
+void StartMode(oper_modes mode)
+{
+    task_message sp1_msg;
+    xQueueHandle* sp1_task_queue;
+    
+    switch(mode)
+    {
+        case MODE_CW:
+            /* wait for Spirit1 task */
+            vTaskDelay(1000);
+            sp1_task_queue = Get_SP1Que();
+            if (sp1_task_queue)
+            {
+                /* Start CW */
+                sp1_msg.msg_data   = 0;
+                sp1_msg.msg_len    = 0;
+                sp1_msg.msg_opcode = SP1_START_CW;
+                sp1_msg.src_id     = CONTROL_SRC_ID;
+                xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
+            }
+            break;
+        
+        default:
+            /* do nothing for other modes */
+            break;
+    }
+}
+
+/**
 * @brief  Main Control Task.
 * @param  None
 * @retval None
@@ -150,9 +204,25 @@ void vTaskControl(void* pvParameters)
    NVIC_InitTypeDef NVIC_InitStructure;
    task_message msg, sp1_msg;
    uint8_t* pkt_data = NULL;
-
+   oper_modes oper_mode;
+   
    control_que = xQueueCreate(10, sizeof(task_message));
-   Create_HPT_Table(hpt_table);
+      
+   /* Select timer table depending on operation mode */
+   oper_mode = *(uint8_t *)GetOption(OPT_OPER_MODE); 
+   switch (oper_mode)
+   {
+        case MODE_OGN:      
+            Create_HPT_Table_OGN(hpt_table);
+            break;
+        case MODE_CW:      
+            Create_HPT_Table_CW(hpt_table);
+            break;
+        default:
+            /* in case of error - fall to OGN mode */         
+            Create_HPT_Table_OGN(hpt_table);
+            break;
+   } 
    HPT_Start(hpt_table);
 
    /* enable GPS PPS input lines interrupts */
@@ -161,7 +231,9 @@ void vTaskControl(void* pvParameters)
    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
    NVIC_Init(&NVIC_InitStructure);
-
+   
+   StartMode(oper_mode);
+   
    for(;;)
    {
       xQueueReceive(control_que, &msg, portMAX_DELAY);

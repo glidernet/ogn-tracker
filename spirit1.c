@@ -8,7 +8,6 @@
 #include "spi.h"
 #include "MCU_Interface.h"
 #include "SPIRIT_Config.h"
-
 #include "options.h"
 
 /* -------- defines -------- */
@@ -356,6 +355,31 @@ void SpiritSendPacket_OGN(const uint8_t* pkt_data, uint8_t pkt_len)
    SpiritCmdStrobeTx();
 }
 
+/**
+* @brief  Switch Spirit1 to CW transmitting mode.
+* @param  None
+* @retval None
+*/
+void SP1_Enter_CW_mode(void)
+{
+   SpiritCmdStrobeSabort();
+   SpiritDirectRfSetTxMode(PN9_TX_MODE);
+   SpiritRadioCWTransmitMode(S_ENABLE);
+   SpiritCmdStrobeTx();
+}
+
+/**
+* @brief  Exit Spirit1 from CW transmitting mode.
+* @param  None
+* @retval None
+*/
+void SP1_Leave_CW_mode(void)
+{
+   SpiritCmdStrobeSabort();
+   SpiritDirectRfSetTxMode(NORMAL_TX_MODE);
+   SpiritRadioCWTransmitMode(S_DISABLE);  
+}
+
 void vTaskSP1(void* pvParameters)
 {
    task_message msg;
@@ -373,6 +397,7 @@ void vTaskSP1(void* pvParameters)
 
    xRadioInit.nXtalOffsetPpm  = *(int16_t *)GetOption(OPT_XTAL_CORR);
    xRadioInit.lFrequencyBase += *(int32_t *)GetOption(OPT_FREQ_OFS);
+   xRadioInit.cChannelNumber  = *(uint8_t *)GetOption(OPT_CHANNEL);
    SpiritRadioInit(&xRadioInit);
 
    SpiritPktBasicInit(&xBasicInit_OGN);
@@ -397,6 +422,12 @@ void vTaskSP1(void* pvParameters)
             break;
          case SP1_CHG_CHANNEL:             // a request to change active channel
             SpiritRadioSetChannel(msg.msg_data);
+            break;
+         case SP1_START_CW:                // a request to start CW
+            SP1_Enter_CW_mode();
+            break;
+         case SP1_STOP_CW:                // a request to stop CW
+            SP1_Leave_CW_mode();
             break;
          default:
             break;

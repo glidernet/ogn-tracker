@@ -12,8 +12,16 @@ typedef enum
    OPT_TX_POWER,
    OPT_XTAL_CORR,
    OPT_FREQ_OFS,
-   OPT_IWDG
+   OPT_IWDG,
+   OPT_OPER_MODE,
+   OPT_CHANNEL
 } option_types;
+
+typedef enum
+{
+   MODE_OGN = 0,
+   MODE_CW
+} oper_modes;
 
 #ifdef __cplusplus
 extern "C" {

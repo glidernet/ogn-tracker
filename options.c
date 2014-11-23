@@ -21,6 +21,8 @@ typedef struct
    int16_t   XtalCorr;         // [ppm]
    int32_t   FreqOfs;          // [Hz]
    uint8_t   IWDGDis;          // [0 - IWDG enabled ]
+   uint8_t   oper_mode;        // Tracker operation mode
+   uint8_t   channel;          // Selected channel for test modes
 } options_str;
 
 /* -------- variables -------- */
@@ -42,6 +44,8 @@ void ResetOptions(void)
   options.XtalCorr      =    0;         // [ppm]
   options.FreqOfs       =    0;         // [Hz]
   options.IWDGDis       =    0;         // [IWDG enabled]
+  options.oper_mode     = (uint8_t)MODE_OGN;
+  options.channel       =    4;         // 868.4 MHz
 }
 
 /**
@@ -170,10 +174,25 @@ void SetFreqOfs(int32_t new_value)
 uint8_t* GetIWDGDis(void)
 { return &options.IWDGDis; }
 
-void SetIWDGDis(int32_t new_value)
+void SetIWDGDis(uint8_t new_value)
 { options.IWDGDis = new_value;
   WriteBlock(OFFSETOF(options_str, IWDGDis), sizeof(options.IWDGDis)); }
 
+uint8_t* GetOperMode(void)
+{ return &options.oper_mode; }
+
+void SetOperMode(uint8_t new_value)
+{ options.oper_mode = new_value;
+  WriteBlock(OFFSETOF(options_str, oper_mode), sizeof(options.oper_mode)); }
+
+uint8_t* GetChannel(void)
+{ return &options.channel; }
+
+void SetChannel(uint8_t new_value)
+{ options.channel = new_value;
+  WriteBlock(OFFSETOF(options_str, channel), sizeof(options.channel)); }
+  
+  
 /* ------------------------------------------------------ */
 /**
   * @brief  Entry point function for accessing option values.
@@ -190,6 +209,8 @@ void* GetOption(option_types opt_code)
     case OPT_XTAL_CORR:  { ret_val = GetXtalCorr();  break; }
     case OPT_FREQ_OFS:   { ret_val = GetFreqOfs();   break; }
     case OPT_IWDG:       { ret_val = GetIWDGDis();   break; }
+    case OPT_OPER_MODE:  { ret_val = GetOperMode();  break; }
+    case OPT_CHANNEL:    { ret_val = GetChannel();   break; }
     default: break; }
   return ret_val; }
 
@@ -202,6 +223,8 @@ void SetOption(option_types opt_code, void* value)
     case OPT_XTAL_CORR:  { SetXtalCorr (*(int16_t  *) value); break; }
     case OPT_FREQ_OFS:   { SetFreqOfs  (*(int32_t  *) value); break; }
     case OPT_IWDG:       { SetIWDGDis  (*(uint8_t  *) value); break; }
+    case OPT_OPER_MODE:  { SetOperMode (*(uint8_t  *) value); break; }
+    case OPT_CHANNEL:    { SetChannel  (*(uint8_t  *) value); break; }
     default: break; }
 }
 
