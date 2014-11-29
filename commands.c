@@ -31,7 +31,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.0.4";
+static const char * const pcVersion = "0.1.0";
 /* -------- functions -------- */
 
 /**
@@ -200,19 +200,67 @@ static int PrintTxPower(char *Output, float TxPower)
   if(Neg) Int=(-Int);
   return sprintf(Output, "TxPower = %+d.%d dBm\r\n", Int, Frac); }
 
+static int PrintMaxTxPower(char *Output, float TxPower)
+{ int Neg=0; if(TxPower<0) { Neg=1; TxPower=(-TxPower); }
+  int Int = (int)floor(TxPower);
+  int Frac = (int)floor((TxPower-Int)*10);
+  if(Neg) Int=(-Int);
+  return sprintf(Output, "MaxTxPower = %+d.%d dBm\r\n", Int, Frac); }
+
 static portBASE_TYPE prvTxPowerCommand( char *pcWriteBuffer,
                              size_t xWriteBufferLen,
                              const char *pcCommandString )
-{ BaseType_t  param_len;
-  const char *param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
-  if(param)
-  { char *end;
-    float TxPower=strtof(param, &end);
-    if(end && ((*end)==0) && (TxPower>=(-30.0)) && (TxPower<=14.0) )
-    { SetOption(OPT_TX_POWER, &TxPower);
-      PrintTxPower(pcWriteBuffer, TxPower); }
-  } else { PrintTxPower(pcWriteBuffer, *(float *)GetOption(OPT_TX_POWER) ); }
-  return pdFALSE; }
+{ 
+    BaseType_t  param_len;
+    const char *param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
+    if(param)
+    { 
+        char *end;
+        float TxPower=strtof(param, &end);
+        float min_power = SPIRIT1_LIB_MIN_POWER;
+        float max_power = *(float *)GetOption(OPT_MAX_TX_PWR);
+    
+        if(end && ((*end)==0) && (TxPower>=min_power) && (TxPower<=max_power) )
+        { 
+            SetOption(OPT_TX_POWER, &TxPower);            
+        } 
+        else 
+        {
+            sprintf(pcWriteBuffer, "Invalid TX power, can't be greater than max. power \r\n");
+            return pdFALSE; 
+        }
+    }
+    
+    PrintTxPower(pcWriteBuffer, *(float *)GetOption(OPT_TX_POWER) ); 
+    return pdFALSE; 
+}
+
+static portBASE_TYPE prvMaxTxPowerCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ 
+    BaseType_t  param_len;
+    const char *param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
+  
+    if (param)
+    { 
+        char *end;
+        float TxPower=strtof(param, &end);
+        if (end && ((*end)==0) && (TxPower>=(-30.0)))
+        { 
+            SetOption(OPT_MAX_TX_PWR, &TxPower);
+        }
+        else
+        {   
+            sprintf(pcWriteBuffer, "Invalid max. TX power\r\n");
+            return pdFALSE;
+        }
+    }
+    
+    PrintMaxTxPower(pcWriteBuffer, *(float *)GetOption(OPT_MAX_TX_PWR) ); 
+    
+    return pdFALSE;
+}
 
 // ---------------------------------------------------------------------------------------------------------------------------
 
@@ -551,6 +599,7 @@ static const CLI_Command_Definition_t IWDGDisCommand       = { "iwdg",         "
 static const CLI_Command_Definition_t OperModeCommand      = { "mode",         "mode [ogn|cw]: set/check oper. mode\r\n",        prvOperModeCommand,  -1 };
 static const CLI_Command_Definition_t SetChannelCommand    = { "channel",      "channel 0-6: set/check operating channel\r\n",   prvSetChannelCommand, -1 };
 static const CLI_Command_Definition_t MemStatCommand       = { "mem_stat",     "mem_stat: memory statistics\r\n",                prvMemStatCommand, 0 };
+static const CLI_Command_Definition_t MaxTxPowerCommand    = { "max_tx_power", "max_tx_power: set max. measured power [dBm].\r\n", prvMaxTxPowerCommand,  -1 };
 
 /**
   * @brief  Function registers all console commands.
@@ -575,6 +624,7 @@ void RegisterCommands(void)
 
    FreeRTOS_CLIRegisterCommand(&AcftIDCommand);
    FreeRTOS_CLIRegisterCommand(&TxPowerCommand);
+   FreeRTOS_CLIRegisterCommand(&MaxTxPowerCommand);
    FreeRTOS_CLIRegisterCommand(&XtalCorrCommand);
    FreeRTOS_CLIRegisterCommand(&FreqOfsCommand);
    FreeRTOS_CLIRegisterCommand(&IWDGDisCommand);

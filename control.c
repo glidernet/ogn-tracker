@@ -58,6 +58,10 @@ uint8_t Create_HPT_Table_OGN(HPT_Event* hpt_table_arr)
    hpt_table_arr[pos].opcode  = HPT_SEND_PKT;
    pos++;
    
+   hpt_table_arr[pos].time    = HPT_MS(500);
+   hpt_table_arr[pos].opcode  = HPT_GPIO_UP;
+   pos++;
+   
    hpt_table_arr[pos].time    = HPT_MS(700);
    hpt_table_arr[pos].opcode  = HPT_SP1_CHANNEL;
    hpt_table_arr[pos].data1   = 2;  
@@ -65,6 +69,10 @@ uint8_t Create_HPT_Table_OGN(HPT_Event* hpt_table_arr)
    
    hpt_table_arr[pos].time    = HPT_MS(900);
    hpt_table_arr[pos].opcode  = HPT_SEND_PKT;
+   pos++;
+   
+   hpt_table_arr[pos].time    = HPT_MS(900);
+   hpt_table_arr[pos].opcode  = HPT_GPIO_DOWN;
    pos++;
    
    hpt_table_arr[pos].time    = HPT_MS(925);

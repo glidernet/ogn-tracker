@@ -11,6 +11,15 @@
 extern "C" {
 #endif
 
+/* -------- defines -------- */
+
+/* Maximum allowable by SPIRIT1 Library TX power settings. */
+/* Constants taken from SPIRIT_Radio.h: */
+/* #define IS_PAPOWER_DBM(PATABLE)      ((PATABLE)>= (-31) && (PATABLE)<=(12)) */
+
+#define SPIRIT1_LIB_MAX_POWER (+12.0F)
+#define SPIRIT1_LIB_MIN_POWER (-31.0F)
+
 /* --- Spirit task opcodes --- */
 typedef enum
 {

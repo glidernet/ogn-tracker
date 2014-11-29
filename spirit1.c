@@ -84,9 +84,10 @@ SRadioInit xRadioInit = {
    100e3,     // Channel spacing:    100 kHz
    4,         // Channel number:       4, frequency = 868.0+4*0.1 = 868.4MHz
    GFSK_BT05, // Modulation select: GFSK, BT=0.5
-   100e3,     // Data rate:          100 kbps (with Manchester emulation: 50 kbps)
-   51e3,      // Freq Deviation:   +/-50 kHz (apparently, when set to 51 is closer to +/-50kHz)
-   330e3      // Filter bandwidth:   330 kHz
+   100e3,     // Data rate:       99.976 kbps: Chapter 9.5.1: DATARATE_M=248 (spi1 011a00), DATARATE_E=11 (spi1 011b00).
+              //                               Real speed is 2 times lower due to manchester code emulation.
+   51e3,      // Freq Deviation: 50781.3 Hz  Chapter 9.5: FDEV_E=7, FDEV_M=0, (spi1 011c00)
+   330e3      // Filter bandwidth: 325.4 kHz Table 33: CHFLT_M=6, CHFLT_E=1, (spi1 011d00)
 };
 
 /**
@@ -322,12 +323,18 @@ void static SpiritNotPresent(void)
 */
 void static SpiritTXConf(float TxPower)
 {
+   /* maximum output power was measured for SPIRIT1_LIB_MAX_POWER setting */
+   float max_power = *(float *)GetOption(OPT_MAX_TX_PWR);
+   float pwr_delta = max_power - SPIRIT1_LIB_MAX_POWER;
+   float lib_power = TxPower - pwr_delta;
+   
+   if (lib_power > SPIRIT1_LIB_MAX_POWER) lib_power = SPIRIT1_LIB_MAX_POWER;
+   if (lib_power < SPIRIT1_LIB_MIN_POWER) lib_power = SPIRIT1_LIB_MIN_POWER;
+   
    /* Spirit Radio set power */
-   SpiritRadioSetPALeveldBm(0, TxPower);
+   SpiritRadioSetPALeveldBm(0, lib_power);
    SpiritRadioSetPALevelMaxIndex(0);
 }
-
-void static SpiritTxPower(float TxPower) { SpiritRadioSetPALeveldBm(0, TxPower); }
 
 /**
 * @brief  Send OGN packet.
@@ -417,7 +424,6 @@ void vTaskSP1(void* pvParameters)
       switch (msg.msg_opcode)
       {
          case SP1_SEND_OGN_PKT:             // a request to send a packet
-            SpiritTxPower(*(float *)GetOption(OPT_TX_POWER));
             SpiritSendPacket_OGN((uint8_t*)msg.msg_data, msg.msg_len);
             break;
          case SP1_CHG_CHANNEL:             // a request to change active channel

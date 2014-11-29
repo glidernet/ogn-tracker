@@ -24,6 +24,7 @@ typedef struct
    uint8_t   oper_mode;        // Tracker operation mode
    uint8_t   channel;          // Selected channel for test modes
    uint8_t   gpsdump;          // GPS dump to console
+   float     MaxTxPower;       // [dBm]
 } options_str;
 
 /* -------- variables -------- */
@@ -41,13 +42,14 @@ void ResetOptions(void)
   options.console_speed = 4800;         // [bps]
   options.gps_speed     = 9600;         // [bps]
   options.AcftID        = 0x07000000 | ((*(uint32_t*)0x1FF80050)&0x00FFFFFF); // set the address to the unique-ID of the CPU
-  options.TxPower       = 10.0;         // [dBm]
+  options.TxPower       = 14.0F;        // [dBm]
   options.XtalCorr      =    0;         // [ppm]
   options.FreqOfs       =    0;         // [Hz]
   options.IWDGDis       =    0;         // [IWDG enabled]
   options.oper_mode     = (uint8_t)MODE_OGN;
   options.channel       =    4;         // 868.4 MHz
   options.gpsdump       =    0;         // Disabled
+  options.MaxTxPower    = 14.5F;        // Maximum measured power
 }
 
 /**
@@ -158,6 +160,13 @@ float* GetTxPower(void)
 void SetTxPower(float new_value)
 { options.TxPower = new_value;
   WriteBlock(OFFSETOF(options_str, TxPower), sizeof(options.TxPower)); }
+  
+float* GetMaxTxPower(void)
+{ return &options.MaxTxPower; }
+
+void SetMaxTxPower(float new_value)
+{ options.MaxTxPower = new_value;
+  WriteBlock(OFFSETOF(options_str, MaxTxPower), sizeof(options.MaxTxPower)); }
 
 int16_t *GetXtalCorr(void)
 { return &options.XtalCorr; }
@@ -220,6 +229,7 @@ void* GetOption(option_types opt_code)
     case OPT_OPER_MODE:  { ret_val = GetOperMode();  break; }
     case OPT_CHANNEL:    { ret_val = GetChannel();   break; }
     case OPT_GPSDUMP:    { ret_val = GetGPSDump();   break; }
+    case OPT_MAX_TX_PWR: { ret_val = GetMaxTxPower();   break; }
     default: break; }
   return ret_val; }
 
@@ -235,6 +245,7 @@ void SetOption(option_types opt_code, void* value)
     case OPT_OPER_MODE:  { SetOperMode (*(uint8_t  *) value); break; }
     case OPT_CHANNEL:    { SetChannel  (*(uint8_t  *) value); break; }
     case OPT_GPSDUMP:    { SetGPSDump  (*(uint8_t  *) value); break; }
+    case OPT_MAX_TX_PWR: { SetMaxTxPower  (*(float    *) value); break; }
     default: break; }
 }
 
