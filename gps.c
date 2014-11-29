@@ -98,6 +98,11 @@ void vTaskGPS(void* pvParameters)
          case GPS_USART_SRC_ID:
          {
             /* Received NMEA sentence from real GPS */
+            if (*(uint8_t*)GetOption(OPT_GPSDUMP))
+            {
+                /* Send received NMEA sentence to console (without blocking) */
+                Console_Send((char*)msg.msg_data, 0);
+            }
             Handle_NMEA_String((char*)msg.msg_data, msg.msg_len);
             break;
          }

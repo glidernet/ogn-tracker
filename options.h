@@ -14,7 +14,8 @@ typedef enum
    OPT_FREQ_OFS,
    OPT_IWDG,
    OPT_OPER_MODE,
-   OPT_CHANNEL
+   OPT_CHANNEL,
+   OPT_GPSDUMP
 } option_types;
 
 typedef enum

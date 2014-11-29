@@ -23,6 +23,7 @@ typedef struct
    uint8_t   IWDGDis;          // [0 - IWDG enabled ]
    uint8_t   oper_mode;        // Tracker operation mode
    uint8_t   channel;          // Selected channel for test modes
+   uint8_t   gpsdump;          // GPS dump to console
 } options_str;
 
 /* -------- variables -------- */
@@ -46,6 +47,7 @@ void ResetOptions(void)
   options.IWDGDis       =    0;         // [IWDG enabled]
   options.oper_mode     = (uint8_t)MODE_OGN;
   options.channel       =    4;         // 868.4 MHz
+  options.gpsdump       =    0;         // Disabled
 }
 
 /**
@@ -192,6 +194,12 @@ void SetChannel(uint8_t new_value)
 { options.channel = new_value;
   WriteBlock(OFFSETOF(options_str, channel), sizeof(options.channel)); }
   
+uint8_t* GetGPSDump(void)
+{ return &options.gpsdump; }
+
+void SetGPSDump(uint8_t new_value)
+{ options.gpsdump = new_value;
+  WriteBlock(OFFSETOF(options_str, gpsdump), sizeof(options.gpsdump)); }
   
 /* ------------------------------------------------------ */
 /**
@@ -211,6 +219,7 @@ void* GetOption(option_types opt_code)
     case OPT_IWDG:       { ret_val = GetIWDGDis();   break; }
     case OPT_OPER_MODE:  { ret_val = GetOperMode();  break; }
     case OPT_CHANNEL:    { ret_val = GetChannel();   break; }
+    case OPT_GPSDUMP:    { ret_val = GetGPSDump();   break; }
     default: break; }
   return ret_val; }
 
@@ -225,6 +234,7 @@ void SetOption(option_types opt_code, void* value)
     case OPT_IWDG:       { SetIWDGDis  (*(uint8_t  *) value); break; }
     case OPT_OPER_MODE:  { SetOperMode (*(uint8_t  *) value); break; }
     case OPT_CHANNEL:    { SetChannel  (*(uint8_t  *) value); break; }
+    case OPT_GPSDUMP:    { SetGPSDump  (*(uint8_t  *) value); break; }
     default: break; }
 }
 

@@ -493,6 +493,40 @@ static portBASE_TYPE prvMemStatCommand( char *pcWriteBuffer,
     return pdFALSE;
 }
 
+static portBASE_TYPE prvGPSDumpCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ 
+    BaseType_t  param_len;
+    uint8_t gpsdump = 0;
+    
+    const char* param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
+    if(param)
+    {  
+       if (!strcmp(param, "en"))
+       {
+           gpsdump = 1;
+       }
+       else if (!strcmp(param, "dis"))
+       {
+           gpsdump = 0;
+       }
+       SetOption(OPT_GPSDUMP, &gpsdump);
+    } 
+    
+    gpsdump = *(uint8_t *)GetOption(OPT_GPSDUMP);
+    if (gpsdump)
+    {
+        sprintf(pcWriteBuffer, "GPS dump enabled\r\n");
+    }
+    else
+    {
+        sprintf(pcWriteBuffer, "GPS dump disabled\r\n");
+    }
+    return pdFALSE;
+}
+
+
 
 // ---------------------------------------------------------------------------------------------------------------------------
 
@@ -507,16 +541,16 @@ static const CLI_Command_Definition_t GPSPosCommand        = { "gps_pos",       
 
 static const CLI_Command_Definition_t ConsSpeedCommand     = { "cons_speed",   "cons_speed: console USART speed\r\n",            prvConsSpeedCommand, -1 };
 static const CLI_Command_Definition_t GPSSpeedCommand      = { "gps_speed",    "gps_speed: GPS USART speed\r\n",                 prvGPSSpeedCommand,  -1 };
+static const CLI_Command_Definition_t GPSDumpCommand       = { "gpsdump",      "gpsdump en/dis: dump GPS output to console\r\n", prvGPSDumpCommand, -1 };
 
 static const CLI_Command_Definition_t AcftIDCommand        = { "acft_id",      "acft_id:  aircraft identification\r\n",          prvAcftIDCommand,    -1 };
 static const CLI_Command_Definition_t TxPowerCommand       = { "tx_power",     "tx_power: transmitter power level [dBm].\r\n",   prvTxPowerCommand,   -1 };
 static const CLI_Command_Definition_t XtalCorrCommand      = { "xtal_corr",    "xtal_corr: Crystal freq. correction [ppm].\r\n", prvXtalCorrCommand,  -1 };
 static const CLI_Command_Definition_t FreqOfsCommand       = { "freq_ofs",     "freq_ofs:  RF frequency offset [Hz].\r\n",       prvFreqOfsCommand,   -1 };
-static const CLI_Command_Definition_t IWDGDisCommand       = { "iwdg",         "iwdg on/off: control ind. watchdog\r\n",         prvIWDGDisCommand,   -1 };
+static const CLI_Command_Definition_t IWDGDisCommand       = { "iwdg",         "iwdg en/dis: control ind. watchdog\r\n",         prvIWDGDisCommand,   -1 };
 static const CLI_Command_Definition_t OperModeCommand      = { "mode",         "mode [ogn|cw]: set/check oper. mode\r\n",        prvOperModeCommand,  -1 };
-static const CLI_Command_Definition_t SetChannelCommand    = { "channel",      "set_channel 0-6: set/check operating channel\r\n",  prvSetChannelCommand, -1 };
-static const CLI_Command_Definition_t MemStatCommand       = { "mem_stat",     "mem_stat: memory statistics\r\n",               prvMemStatCommand, 0 };
-
+static const CLI_Command_Definition_t SetChannelCommand    = { "channel",      "channel 0-6: set/check operating channel\r\n",   prvSetChannelCommand, -1 };
+static const CLI_Command_Definition_t MemStatCommand       = { "mem_stat",     "mem_stat: memory statistics\r\n",                prvMemStatCommand, 0 };
 
 /**
   * @brief  Function registers all console commands.
@@ -537,6 +571,7 @@ void RegisterCommands(void)
 
    FreeRTOS_CLIRegisterCommand(&GPSTimeCommand);
    FreeRTOS_CLIRegisterCommand(&GPSPosCommand);
+   FreeRTOS_CLIRegisterCommand(&GPSDumpCommand);
 
    FreeRTOS_CLIRegisterCommand(&AcftIDCommand);
    FreeRTOS_CLIRegisterCommand(&TxPowerCommand);
