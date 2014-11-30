@@ -31,7 +31,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.1.0";
+static const char * const pcVersion = "0.1.1";
 /* -------- functions -------- */
 
 /**
@@ -318,6 +318,20 @@ static portBASE_TYPE prvGPSPosCommand( char *pcWriteBuffer,
                              const char *pcCommandString )
 { GPS_GetPosition(pcWriteBuffer); strcat(pcWriteBuffer, "\r"); return pdFALSE; }
 
+/**
+  * @brief  Command gps_reset: sends GPS cold reset NMEA sentence.
+  * @param  CLI template
+  * @retval CLI template
+  */
+static portBASE_TYPE prvGPSResetCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ 
+  GPS_Reset();
+  sprintf(pcWriteBuffer, "GPS reset sentence sent\r\n");
+  return pdFALSE; 
+}
+  
 // ---------------------------------------------------------------------------------------------------------------------------
 
 /**
@@ -590,6 +604,7 @@ static const CLI_Command_Definition_t GPSPosCommand        = { "gps_pos",       
 static const CLI_Command_Definition_t ConsSpeedCommand     = { "cons_speed",   "cons_speed: console USART speed\r\n",            prvConsSpeedCommand, -1 };
 static const CLI_Command_Definition_t GPSSpeedCommand      = { "gps_speed",    "gps_speed: GPS USART speed\r\n",                 prvGPSSpeedCommand,  -1 };
 static const CLI_Command_Definition_t GPSDumpCommand       = { "gpsdump",      "gpsdump en/dis: dump GPS output to console\r\n", prvGPSDumpCommand, -1 };
+static const CLI_Command_Definition_t GPSResetCommand      = { "gps_reset",    "gps_reset: GPS cold reset.\r\n",                 prvGPSResetCommand, 0 };
 
 static const CLI_Command_Definition_t AcftIDCommand        = { "acft_id",      "acft_id:  aircraft identification\r\n",          prvAcftIDCommand,    -1 };
 static const CLI_Command_Definition_t TxPowerCommand       = { "tx_power",     "tx_power: transmitter power level [dBm].\r\n",   prvTxPowerCommand,   -1 };
@@ -621,6 +636,7 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&GPSTimeCommand);
    FreeRTOS_CLIRegisterCommand(&GPSPosCommand);
    FreeRTOS_CLIRegisterCommand(&GPSDumpCommand);
+   FreeRTOS_CLIRegisterCommand(&GPSResetCommand);
 
    FreeRTOS_CLIRegisterCommand(&AcftIDCommand);
    FreeRTOS_CLIRegisterCommand(&TxPowerCommand);

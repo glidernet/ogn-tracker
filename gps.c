@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <stm32l1xx.h>
 #include <FreeRTOS.h>
 #include <FreeRTOS_CLI.h>
@@ -16,7 +17,9 @@
 #include "ogn_lib.h"
 
 // #define GPS_DEBUG
-
+/* -------- constants -------- */
+/* http://support.maestro-wireless.com/knowledgebase.php?article=6 */
+static const char * const pcResetNMEA = "$PSRF101,-2686727,-4304282,3851642,75000,95629,1684,12,4*24\r\n";
 /* -------- defines ---------- */
 /* -------- variables -------- */
 /* circular buffer for NMEA messages */
@@ -31,8 +34,6 @@ xQueueHandle gps_que;
 * @retval None
 */
 
-// static SemaphoreHandle_t xGpsPosMutex = 0;
-
 uint32_t GPS_GetPosition(char *Output) { return OGN_GetPosition(Output); }
 
 void Handle_NMEA_String(const char* str, uint8_t len)
@@ -46,6 +47,17 @@ void Handle_NMEA_String(const char* str, uint8_t len)
   OGN_Parse_NMEA(str, len);
 #endif
   return; }
+
+/**
+* @brief  GPS Cold Reset.
+* @param  None
+* @retval None
+*/
+
+void GPS_Reset(void)
+{
+    USART3_Send((uint8_t*)pcResetNMEA, strlen(pcResetNMEA));
+}
 
 /**
 * @brief  Configures the GPS Task Peripherals.
@@ -73,8 +85,7 @@ void vTaskGPS(void* pvParameters)
 
    OGN_Init();
    OGN_SetAcftID(*(uint32_t*)GetOption(OPT_ACFT_ID));
-   // xGpsPosMutex = xSemaphoreCreateMutex();
-
+ 
    /* Allocate data buffer */
    nmea_buffer = init_cir_buf(CIR_BUF_NMEA);
    /* Send cir. buf. handle for USART3 driver & console */

@@ -9,6 +9,7 @@ extern "C" {
 
 uint32_t GPS_GetPosition(char *Output);
 
+void GPS_Reset(void);
 void GPS_Config(void);
 void vTaskGPS(void* pvParameters);
 

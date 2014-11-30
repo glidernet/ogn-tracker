@@ -47,6 +47,11 @@ static uint8_t* usart2_ptr;
 /* USART2 RX queue */
 static xQueueHandle* usart2_queue;
 
+/* Semaphore used for USART3 TX synchronization */
+static SemaphoreHandle_t xUSART3Semaphore;
+/* USART3 TX data */
+static uint16_t usart3_ctr;
+static uint8_t* usart3_ptr;
 /* USART3 RX queue */
 static xQueueHandle* usart3_queue;
 static uint8_t usart3_rx_buf[USART3_RX_BUF_SIZE];
@@ -96,6 +101,21 @@ void USART3_IRQHandler(void)
 
    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
+   /* USART in mode Transmitter -------------------------------------------------*/
+   if (USART_GetITStatus(USART3, USART_IT_TXE) == SET)
+   {
+      if (usart3_ctr == 0)
+      {
+         USART_ITConfig(USART3, USART_IT_TXE, DISABLE);
+         xSemaphoreGiveFromISR(xUSART3Semaphore, &xHigherPriorityTaskWoken);
+      }
+      else
+      {
+         USART_SendData(USART3, *usart3_ptr++);
+         usart3_ctr--;
+      }
+   }
+   
    /* USART in mode Receiver --------------------------------------------------*/
    if(USART_GetITStatus(USART3, USART_IT_RXNE) == SET)
    {
@@ -227,6 +247,32 @@ void USART2_Wait()
    xSemaphoreGive(xUSART2Semaphore);
 }
 
+/**
+* @brief  Sends data over USART3 Peripheral.
+* @brief  Function triggers transfer and exit (if USART clean).
+* @param  data, length
+* @retval None
+*/
+void USART3_Send(uint8_t* data, uint16_t len)
+{
+   /* Take access to USART3 TX  - will block if already used */
+   xSemaphoreTake(xUSART3Semaphore, portMAX_DELAY);
+   usart3_ptr = data; usart3_ctr = len;
+   USART_ITConfig(USART3, USART_IT_TXE, ENABLE);
+}
+
+/**
+* @brief  Waits until USART3 transmission finishes.
+* @param  None
+* @retval None
+*/
+void USART3_Wait()
+{
+   /* Take access to USART3 TX  - will block if already used */
+   xSemaphoreTake(xUSART3Semaphore, portMAX_DELAY);
+   xSemaphoreGive(xUSART3Semaphore);
+}
+
 /* -------- functions -------- */
 /**
 * @brief  Configures the USART3 Peripheral.
@@ -277,7 +323,7 @@ void USART3_Config(uint32_t speed)
    USART_InitStructure.USART_StopBits   = USART_StopBits_1;
    USART_InitStructure.USART_Parity     = USART_Parity_No;
    USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-   USART_InitStructure.USART_Mode = USART_Mode_Rx;
+   USART_InitStructure.USART_Mode = USART_Mode_Rx|USART_Mode_Tx;
    USART_Init(USART3, &USART_InitStructure);
 
    USART_ITConfig(USART3, USART_IT_RXNE, ENABLE);
@@ -290,6 +336,8 @@ void USART3_Config(uint32_t speed)
    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
    NVIC_Init(&NVIC_InitStructure);
+   
+   xUSART3Semaphore = xSemaphoreCreateMutex();
 }
 
 /**

@@ -22,6 +22,8 @@ void USART2_Wait(void);
 void USART3_Config(uint32_t speed);
 void USART3_SetQue(xQueueHandle* handle);
 void USART3_SetBuf(cir_buf_str* handle);
+void USART3_Send(uint8_t* data, uint16_t len);
+void USART3_Wait(void);
 
 #ifdef __cplusplus
 }
