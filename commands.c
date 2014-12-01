@@ -331,7 +331,35 @@ static portBASE_TYPE prvGPSResetCommand( char *pcWriteBuffer,
   sprintf(pcWriteBuffer, "GPS reset sentence sent\r\n");
   return pdFALSE; 
 }
-  
+
+/**
+  * @brief  Commands gps_on/off: control GPS operating mode.
+  * @param  CLI template
+  * @retval CLI template
+  */
+static portBASE_TYPE prvGPSOnCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{
+  GPS_On();
+  sprintf(pcWriteBuffer, "GPS on\r\n");
+  return pdFALSE; 
+}
+
+/**
+  * @brief  Commands gps_on/off: control GPS operating mode.
+  * @param  CLI template
+  * @retval CLI template
+  */
+static portBASE_TYPE prvGPSOffCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ 
+  GPS_Off();  
+  sprintf(pcWriteBuffer, "GPS off\r\n");
+  return pdFALSE; 
+}
+
 // ---------------------------------------------------------------------------------------------------------------------------
 
 /**
@@ -588,6 +616,38 @@ static portBASE_TYPE prvGPSDumpCommand( char *pcWriteBuffer,
     return pdFALSE;
 }
 
+static portBASE_TYPE prvGPSAlwONCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ 
+    BaseType_t  param_len;
+    uint8_t gps_alw_on = 0;
+    
+    const char* param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
+    if(param)
+    {  
+       if (!strcmp(param, "en"))
+       {
+           gps_alw_on = 1;
+       }
+       else if (!strcmp(param, "dis"))
+       {
+           gps_alw_on = 0;
+       }
+       SetOption(OPT_GPS_ALW_ON, &gps_alw_on);
+    } 
+    
+    gps_alw_on = *(uint8_t *)GetOption(OPT_GPS_ALW_ON);
+    if (gps_alw_on)
+    {
+        sprintf(pcWriteBuffer, "GPS always on - enabled\r\n");
+    }
+    else
+    {
+        sprintf(pcWriteBuffer, "GPS always on - disabled\r\n");
+    }
+    return pdFALSE;
+}
 
 
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -605,6 +665,9 @@ static const CLI_Command_Definition_t ConsSpeedCommand     = { "cons_speed",   "
 static const CLI_Command_Definition_t GPSSpeedCommand      = { "gps_speed",    "gps_speed: GPS USART speed\r\n",                 prvGPSSpeedCommand,  -1 };
 static const CLI_Command_Definition_t GPSDumpCommand       = { "gpsdump",      "gpsdump en/dis: dump GPS output to console\r\n", prvGPSDumpCommand, -1 };
 static const CLI_Command_Definition_t GPSResetCommand      = { "gps_reset",    "gps_reset: GPS cold reset.\r\n",                 prvGPSResetCommand, 0 };
+static const CLI_Command_Definition_t GPSOnCommand         = { "gps_on",       "gps_on: turn GPS on.\r\n",                       prvGPSOnCommand, 0 };
+static const CLI_Command_Definition_t GPSOffCommand        = { "gps_off",      "gps_off: turn GPS off.\r\n",                     prvGPSOffCommand, 0 };
+static const CLI_Command_Definition_t GPSAlwONCommand      = { "gps_always_on","gps_always_on en/dis: disable GPS power control\r\n", prvGPSAlwONCommand, -1 };
 
 static const CLI_Command_Definition_t AcftIDCommand        = { "acft_id",      "acft_id:  aircraft identification\r\n",          prvAcftIDCommand,    -1 };
 static const CLI_Command_Definition_t TxPowerCommand       = { "tx_power",     "tx_power: transmitter power level [dBm].\r\n",   prvTxPowerCommand,   -1 };
@@ -637,6 +700,9 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&GPSPosCommand);
    FreeRTOS_CLIRegisterCommand(&GPSDumpCommand);
    FreeRTOS_CLIRegisterCommand(&GPSResetCommand);
+   FreeRTOS_CLIRegisterCommand(&GPSOnCommand);
+   FreeRTOS_CLIRegisterCommand(&GPSOffCommand);
+   FreeRTOS_CLIRegisterCommand(&GPSAlwONCommand);
 
    FreeRTOS_CLIRegisterCommand(&AcftIDCommand);
    FreeRTOS_CLIRegisterCommand(&TxPowerCommand);

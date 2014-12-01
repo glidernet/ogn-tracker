@@ -25,6 +25,7 @@ typedef struct
    uint8_t   channel;          // Selected channel for test modes
    uint8_t   gpsdump;          // GPS dump to console
    float     MaxTxPower;       // [dBm]
+   uint8_t   gps_always_on;    // Used for GPS without power control
 } options_str;
 
 /* -------- variables -------- */
@@ -50,6 +51,7 @@ void ResetOptions(void)
   options.channel       =    4;         // 868.4 MHz
   options.gpsdump       =    0;         // Disabled
   options.MaxTxPower    = 14.5F;        // Maximum measured power
+  options.gps_always_on =    0;         // Disabled
 }
 
 /**
@@ -209,6 +211,13 @@ uint8_t* GetGPSDump(void)
 void SetGPSDump(uint8_t new_value)
 { options.gpsdump = new_value;
   WriteBlock(OFFSETOF(options_str, gpsdump), sizeof(options.gpsdump)); }
+
+uint8_t* GetGPSAlwON(void)
+{ return &options.gps_always_on; }
+
+void SetGPSAlwON(uint8_t new_value)
+{ options.gps_always_on = new_value;
+  WriteBlock(OFFSETOF(options_str, gps_always_on), sizeof(options.gps_always_on)); }
   
 /* ------------------------------------------------------ */
 /**
@@ -229,7 +238,8 @@ void* GetOption(option_types opt_code)
     case OPT_OPER_MODE:  { ret_val = GetOperMode();  break; }
     case OPT_CHANNEL:    { ret_val = GetChannel();   break; }
     case OPT_GPSDUMP:    { ret_val = GetGPSDump();   break; }
-    case OPT_MAX_TX_PWR: { ret_val = GetMaxTxPower();   break; }
+    case OPT_MAX_TX_PWR: { ret_val = GetMaxTxPower(); break;}
+    case OPT_GPS_ALW_ON: { ret_val = GetGPSAlwON();  break; }
     default: break; }
   return ret_val; }
 
@@ -245,7 +255,8 @@ void SetOption(option_types opt_code, void* value)
     case OPT_OPER_MODE:  { SetOperMode (*(uint8_t  *) value); break; }
     case OPT_CHANNEL:    { SetChannel  (*(uint8_t  *) value); break; }
     case OPT_GPSDUMP:    { SetGPSDump  (*(uint8_t  *) value); break; }
-    case OPT_MAX_TX_PWR: { SetMaxTxPower  (*(float    *) value); break; }
+    case OPT_MAX_TX_PWR: { SetMaxTxPower  (*(float *) value); break; }
+    case OPT_GPS_ALW_ON: { SetGPSAlwON (*(uint8_t  *) value); break; }
     default: break; }
 }
 

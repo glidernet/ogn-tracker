@@ -16,7 +16,8 @@ typedef enum
    OPT_OPER_MODE,
    OPT_CHANNEL,
    OPT_GPSDUMP,
-   OPT_MAX_TX_PWR
+   OPT_MAX_TX_PWR,
+   OPT_GPS_ALW_ON
 } option_types;
 
 typedef enum
