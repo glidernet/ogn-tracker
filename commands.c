@@ -507,10 +507,10 @@ static portBASE_TYPE prvSetChannelCommand( char *pcWriteBuffer,
     int8_t       channel_number;
     
     param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
-    channel_number = atoi(param);
     
     if (param)
     {
+        channel_number = atoi(param);
         if ((channel_number >= 0) && (channel_number <= 6))
         {
             SetOption(OPT_CHANNEL, &channel_number);
@@ -649,6 +649,36 @@ static portBASE_TYPE prvGPSAlwONCommand( char *pcWriteBuffer,
     return pdFALSE;
 }
 
+static portBASE_TYPE prvBackupRegCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{
+    BaseType_t  param_len;
+    const char* param;
+    uint32_t    reg_number;
+    uint32_t    reg_value;
+    
+    /* Get register number */
+    param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
+    
+    if (param) reg_number = atoi(param);
+    
+    if (!((param)&&(IS_RTC_BKP(reg_number))))
+    {
+        sprintf(pcWriteBuffer, "Invalid register number, valid: 0-31.\r\n");
+        return pdFALSE;
+    }    
+    /* Get register value if provided*/
+    param = FreeRTOS_CLIGetParameter(pcCommandString, 2, &param_len);    
+    if (param)
+    {
+        RTC_WriteBackupRegister(reg_number, atoi(param));
+    }   
+    reg_value = RTC_ReadBackupRegister(reg_number);
+    sprintf(pcWriteBuffer, "Register %d: %d\r\n", (int)reg_number, (int)reg_value);
+    
+    return pdFALSE;
+}
 
 // ---------------------------------------------------------------------------------------------------------------------------
 
@@ -678,6 +708,7 @@ static const CLI_Command_Definition_t OperModeCommand      = { "mode",         "
 static const CLI_Command_Definition_t SetChannelCommand    = { "channel",      "channel 0-6: set/check operating channel\r\n",   prvSetChannelCommand, -1 };
 static const CLI_Command_Definition_t MemStatCommand       = { "mem_stat",     "mem_stat: memory statistics\r\n",                prvMemStatCommand, 0 };
 static const CLI_Command_Definition_t MaxTxPowerCommand    = { "max_tx_power", "max_tx_power: set max. measured power [dBm].\r\n", prvMaxTxPowerCommand,  -1 };
+static const CLI_Command_Definition_t BackupRegCommand     = { "backup_reg",   "backup_reg reg [value].\r\n",                  prvBackupRegCommand,  -1 };
 
 /**
   * @brief  Function registers all console commands.
@@ -713,6 +744,7 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&SetChannelCommand);
    FreeRTOS_CLIRegisterCommand(&OperModeCommand);
    FreeRTOS_CLIRegisterCommand(&MemStatCommand);
+   FreeRTOS_CLIRegisterCommand(&BackupRegCommand);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------

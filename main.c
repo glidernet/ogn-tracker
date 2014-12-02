@@ -49,6 +49,11 @@
 void prvSetupHardware(void)
 {
    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
+   /* Enable RTC and backup registers */
+   RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
+   /* Allow access to RTC backup registers */
+   PWR_RTCAccessCmd(ENABLE);
+ 
    Console_Config();
    GPS_Config();
    Spirit1_Config();
