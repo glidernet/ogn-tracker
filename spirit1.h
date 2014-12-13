@@ -33,6 +33,7 @@ typedef enum
 void Spirit1_Config(void);
 void vTaskSP1(void* pvParameters);
 xQueueHandle* Get_SP1Que();
+void Spirit1EnterShutdown(void);
 
 #ifdef __cplusplus
 }

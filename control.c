@@ -5,16 +5,21 @@
 #include <task.h>
 #include <semphr.h>
 #include <queue.h>
+#include <timers.h>
 #include "messages.h"
 #include "hpt_timer.h"
 #include "ogn_lib.h"
 #include "spirit1.h"
 #include "options.h"
+#include "console.h"
+#include "gps.h"
 
 /* -------- defines -------- */
 #define MAX_HPT_TABLE_LEN  16
+#define PWR_DOWN_TIMER_ID  2
 /* -------- variables -------- */
 HPT_Event hpt_table[MAX_HPT_TABLE_LEN];
+TimerHandle_t xPowerDownTimer;
 
 /* Console task queue */
 xQueueHandle  control_que;
@@ -34,11 +39,60 @@ void EXTI9_5_IRQHandler(void)
    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
    
 }
+
+/* interrupt for falling Wakeup line */
+void EXTI15_10_IRQHandler(void)
+{
+   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+      
+   if(EXTI_GetITStatus(EXTI_Line13) != RESET)
+   {
+      /* Clear the EXTI line 13 pending bit */
+      EXTI_ClearITPendingBit(EXTI_Line13);  
+      xTimerStartFromISR(xPowerDownTimer, &xHigherPriorityTaskWoken);     
+   }
+   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+   
+}
+
 /* -------- functions -------- */
 xQueueHandle* Get_ControlQue()
 {
    return &control_que;
 }
+
+/**
+* @brief  Initiates tracker shut down.
+* @param  None
+* @retval None
+*/
+void PreShutDownSequence(void)
+{
+    Console_Send("Shutdown...\r\n", 1);
+    /* Disable SP1 by SHDN line */
+    Spirit1EnterShutdown();
+    /* Disable GPS using NMEA sentence */
+    GPS_Off();
+    /* Deactivate port C GPIO lines - entering shutdown generates glitches if active */
+    GPIO_DeInit(GPIOC);
+    
+    /* There is no way to shut-down Independent Watchdog other than CPU reset */
+    /* Shut-down will be finished after reset in main()/HandlePowerUpMode() function. */
+    /* So we need to configure power-up mode so after reset CPU will shut itself down. */
+    
+    RTC_WriteBackupRegister(SHDN_REG_NUM, SHDN_MAGIC_NUM);
+    vTaskDelay(500);
+    NVIC_SystemReset();  
+}
+
+void vPwrDownTimerCallback(TimerHandle_t pxTimer)
+{
+    if (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_13) == Bit_SET)
+    {
+        PreShutDownSequence();
+    }
+}
+
 
 /**
 * @brief  Configures the High Precision Timer Table for OGN oper. mode.
@@ -144,7 +198,22 @@ void Control_Config(void)
 {
    GPIO_InitTypeDef GPIO_InitStructure;
    EXTI_InitTypeDef EXTI_InitStructure;
+   NVIC_InitTypeDef NVIC_InitStructure;
 
+   /* Power button should be pressed for 1 second to power off, xPowerDownTimer is used for counting this time */
+   /* when power button is pressed timer is restarted */
+   xPowerDownTimer = xTimerCreate(
+      "PDTimer",
+      /* The timer period in ticks. */
+      1000,
+      /* The timer will stop when expire. */
+      pdFALSE,
+      /* unique id */
+      ( void * )PWR_DOWN_TIMER_ID,
+      /* Each timer calls the same callback when it expires. */
+      vPwrDownTimerCallback
+    );
+    
    /* Configure PC6 Pin (GPS_PPS) as GPIO interrupt */
    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOC, ENABLE);  
    /* Enable SYSCFG clock */
@@ -163,7 +232,30 @@ void Control_Config(void)
    EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
    EXTI_InitStructure.EXTI_LineCmd = ENABLE;
    EXTI_Init(&EXTI_InitStructure);
-    
+   
+   /* Configure PC13 Pin (Wakeup) as GPIO interrupt */  
+   GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_IN;
+   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+   GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
+   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+   GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_13;
+   GPIO_Init(GPIOC, &GPIO_InitStructure);
+
+   SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource13); 
+
+   EXTI_InitStructure.EXTI_Line    = EXTI_Line13;
+   EXTI_InitStructure.EXTI_Mode    = EXTI_Mode_Interrupt;
+   EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
+   EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+   EXTI_Init(&EXTI_InitStructure);
+   
+   /* enable Power Button input lines interrupt */
+   NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
+   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = configPWR_BTN_INTERRUPT_PRIORITY;
+   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+   NVIC_Init(&NVIC_InitStructure);
+  
    IWDG_Config();
    HPT_Config();
 
@@ -239,7 +331,7 @@ void vTaskControl(void* pvParameters)
    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
    NVIC_Init(&NVIC_InitStructure);
-   
+      
    StartMode(oper_mode);
    
    for(;;)

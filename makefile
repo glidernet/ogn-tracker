@@ -1,7 +1,7 @@
 # Tool chain downloaded from: https://launchpad.net/gcc-arm-embedded
 # unpacked to a directory: TPATH
 
-TPATH = ../gcc-arm-none-eabi-4.8/bin
+TPATH = ../gcc-arm-none-eabi-4.9/bin
 TCHAIN = arm-none-eabi
 
 CC      = $(TPATH)/$(TCHAIN)-gcc

@@ -142,6 +142,8 @@ NVIC value of 255. */
 #define configSPI_BUS_INTERRUPT_PRIORITY (configLIBRARY_KERNEL_INTERRUPT_PRIORITY-3)
 /* Priority 11: GPS PPS line interrupt */
 #define configGPS_PPS_INTERRUPT_PRIORITY (configLIBRARY_KERNEL_INTERRUPT_PRIORITY-4)
+/* Priority 11: Power button line interrupt */
+#define configPWR_BTN_INTERRUPT_PRIORITY (configLIBRARY_KERNEL_INTERRUPT_PRIORITY-5)
 
 /* The size of the global output buffer that is available for use when there
 are multiple command interpreters running at once (for example, one on a UART

@@ -46,14 +46,52 @@
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
+
+
+/**
+  * @brief  Function responsible for detecting power-up mode:
+  * @brief  1. Tracker powered up by connecting battery.
+  * @brief  2. Tracker powered up by wake-up button.
+  * @brief  3. Tracker during transition to shut-down mode.
+  * @param  None
+  * @retval None
+  */
+void HandlePowerUpMode(void)
+{
+    /* Enable RTC and backup registers */
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
+    /* Allow access to RTC backup registers */
+    PWR_RTCAccessCmd(ENABLE);
+    /* Clear WakeUp flag */
+    PWR_ClearFlag(PWR_FLAG_WU);
+    
+    /* Check for mode 3: tracker during transition to shut-down */
+    if (RTC_ReadBackupRegister(SHDN_REG_NUM) == SHDN_MAGIC_NUM)
+    {
+        /* Reprogram SHDN_REG_NUM to 0 for correct restart next time */
+        RTC_WriteBackupRegister(SHDN_REG_NUM, 0);
+        /* Activate Power Button in standby mode */
+        PWR_WakeUpPinCmd(PWR_WakeUpPin_2, ENABLE);
+        /* Go to the lowest possible power mode */
+        PWR_UltraLowPowerCmd(ENABLE);
+        PWR_EnterSTANDBYMode();
+    }
+
+    /* Check if the StandBy flag is set - tracker powered up by wake-up button.*/
+    if (PWR_GetFlagStatus(PWR_FLAG_SB) != RESET)
+    {
+        /* Clear StandBy flag */
+        PWR_ClearFlag(PWR_FLAG_SB);
+
+        /* Wait for RTC APB registers synchronisation */
+        RTC_WaitForSynchro();
+    }  
+}
+
 void prvSetupHardware(void)
 {
    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
-   /* Enable RTC and backup registers */
-   RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
-   /* Allow access to RTC backup registers */
-   PWR_RTCAccessCmd(ENABLE);
- 
+   
    Console_Config();
    GPS_Config();
    Spirit1_Config();
@@ -73,7 +111,8 @@ int main(void)
        file (startup_stm32l1xx_xx.s) before to branch to application main.
        To reconfigure the default setting of SystemInit() function, refer to
        system_stm32l1xx.c file
-     */ 
+     */
+   HandlePowerUpMode();
    InitOptions();
    prvSetupHardware();
       
