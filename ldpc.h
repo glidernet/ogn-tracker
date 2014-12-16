@@ -6,10 +6,18 @@
 
 #include "bitcount.h"
 
+#ifdef __AVR__
+#include <avr/pgmspace.h>
+#endif
+
 // FindVectors65432bit(10,20,23, 500) => 208, Delta=2579
 
 // every row represents a parity check to be performed on the received codeword
-static const uint32_t LDPC_ParityCheck[48][7] = { // parity check vectors
+static const uint32_t LDPC_ParityCheck[48][7]
+#ifdef __AVR__
+PROGMEM
+#endif
+= { // parity check vectors
  { 0x00000805, 0x00000020, 0x04000000, 0x20000000, 0x00000040, 0x00044020, 0x00000000 },
  { 0x00000001, 0x00800800, 0x00000000, 0x00000000, 0x00000000, 0x10010000, 0x00008C98 },
  { 0x00004001, 0x01000080, 0x80000400, 0x00000000, 0x08000200, 0x00200000, 0x00000005 },
@@ -61,7 +69,11 @@ static const uint32_t LDPC_ParityCheck[48][7] = { // parity check vectors
 } ;
 
 // every row represents the generator for a parity bit
-static const uint32_t LDPC_ParityGen[48][5] = { // parity bits generator
+static const uint32_t LDPC_ParityGen[48][5] 
+#ifdef __AVR__
+PROGMEM
+#endif
+= { // parity bits generator
  { 0x40A90281, 0x9159D249, 0xCE9D516B, 0x2FDEED0B, 0xD9267CD4  },
  { 0xCCBC0FC3, 0xCC4FA4BC, 0x811EC3D0, 0xB07EC1B3, 0xA3B8E8D8  },
  { 0x66418D56, 0x3B85ADFF, 0xD2A6532E, 0x48CF52E4, 0x6A16586D  },
@@ -112,6 +124,59 @@ static const uint32_t LDPC_ParityGen[48][5] = { // parity bits generator
  { 0x55CD3406, 0x5E1F7407, 0x63F2D35A, 0x5ACAFEA4, 0x7E48A8DF  }
 } ;
 
+#ifdef __AVR__
+
+// encode Parity from Data: Data is 5x 32-bit words = 160 bits, Parity is 1.5x 32-bit word = 48 bits
+void LDPC_Encode(const uint32_t *Data, uint32_t *Parity, const uint32_t ParityGen[48][5])
+{ uint8_t ParIdx=0; Parity[ParIdx]=0; uint32_t Mask=1;
+  for(uint8_t Row=0; Row<48; Row++)
+  { uint8_t Count=0;
+    const uint32_t *Gen=ParityGen[Row];
+    for(uint8_t Idx=0; Idx<5; Idx++)
+    { Count+=Count1s(Data[Idx]&pgm_read_dword(Gen+Idx)); }
+    if(Count&1) Parity[ParIdx]|=Mask; Mask<<=1;
+    if(Mask==0) { ParIdx++; Parity[ParIdx]=0; Mask=1; }
+  }
+}
+
+void LDPC_Encode(const uint32_t *Data, uint32_t *Parity)
+{ LDPC_Encode(Data, Parity, LDPC_ParityGen); }
+
+// encode Parity from Data: Data is 20 bytes = 160 bits, Parity is 6 bytes = 48 bits
+void LDPC_Encode(const uint8_t *Data, uint8_t *Parity, const uint32_t ParityGen[48][5])
+{ uint8_t ParIdx=0; Parity[ParIdx]=0; uint8_t Mask=1;
+  for(uint8_t Row=0; Row<48; Row++)
+  { uint8_t Count=0;
+    const uint8_t *Gen = (uint8_t *)ParityGen[Row];
+    for(uint8_t Idx=0; Idx<20; Idx++)
+    { Count+=Count1s(Data[Idx]&pgm_read_byte(Gen+Idx)); }
+    if(Count&1) Parity[ParIdx]|=Mask; Mask<<=1;
+    if(Mask==0) { ParIdx++; Parity[ParIdx]=0; Mask=1; }
+  }
+}
+
+void LDPC_Encode(const uint8_t *Data, uint8_t *Parity)
+{ LDPC_Encode(Data, Parity, LDPC_ParityGen); }
+
+void LDPC_Encode(uint8_t *Data)
+{ LDPC_Encode(Data, Data+20, LDPC_ParityGen); }
+
+// check Data against Parity (run 48 parity checks) - return number of failed checks
+int8_t LDPC_Check(const uint8_t *Data) // 20 data bytes followed by 6 parity bytes
+{ uint8_t Errors=0;
+  for(uint8_t Row=0; Row<48; Row++)
+  { uint8_t Count=0;
+    const uint8_t *Check = (uint8_t *)LDPC_ParityCheck[Row];
+    for(uint8_t Idx=0; Idx<26; Idx++)
+    { Count+=Count1s(Data[Idx] & pgm_read_byte(Check+Idx)); }
+    if(Count&1) Errors++; }
+  return Errors; }
+
+int8_t LDPC_Check(const uint32_t *Packet)
+{ return LDPC_Check( (uint8_t *)Packet ); }
+
+#else // __AVR__
+
 // encode Parity from Data: Data is 5x 32-bit words = 160 bits, Parity is 1.5x 32-bit word = 48 bits
 void LDPC_Encode(const uint32_t *Data, uint32_t *Parity, const uint32_t ParityGen[48][5])
 { // printf("LDPC_Encode: %08X %08X %08X %08X %08X", Data[0], Data[1], Data[2], Data[3], Data[4] );
@@ -144,6 +209,8 @@ int LDPC_Check(const uint32_t *Data, const uint32_t *Parity) // Data and Parity 
     if(Count&1) Errors++; }
   return Errors; }
 
+int LDPC_Check(const uint32_t *Packet) { return LDPC_Check(Packet, Packet+5); }
+
 int LDPC_Check(const uint8_t *Data) // Data and Parity are 8-bit bytes
 { int Errors=0;
   for(int Row=0; Row<48; Row++)
@@ -156,6 +223,10 @@ int LDPC_Check(const uint8_t *Data) // Data and Parity are 8-bit bytes
       ParityWord>>=8; }
     if(Count&1) Errors++; }
   return Errors; }
+
+#endif // __AVR__
+
+#ifndef __AVR__
 
 class LDPC_Decoder
 { public:
@@ -232,6 +303,11 @@ class LDPC_Decoder
      }
    }
 
+   void Input(const float *Data, float RefAmpl=1.0)
+   { for(int Bit=0; Bit<CodeBits; Bit++)
+     { InpBit[Bit] = floor(64*Data[Bit]/RefAmpl+0.5); }
+   }
+
    void Output(uint32_t Data[CodeWords])
    { uint32_t Mask=1; int Idx=0; uint32_t Word=0;
      for(int Bit=0; Bit<CodeBits; Bit++)
@@ -279,5 +355,6 @@ class LDPC_Decoder
 
 } ;
 
+#endif // __AVR__
 
 #endif // of __LDPC_H__

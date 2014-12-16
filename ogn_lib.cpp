@@ -56,7 +56,7 @@ uint32_t OGN_GetPosition(char *Output)                             // print into
   if(Position[Ptr].isComplete())
   { if(Output) Position[Ptr].PrintLine(Output); }
   }
-  uint32_t Time=Position[Ptr].UnixTime;
+  uint32_t Time=Position[Ptr].getUnixTime();
   xSemaphoreGive(xOgnPosMutex);
   return Time; }
 
@@ -75,7 +75,7 @@ uint8_t* OGN_PreparePacket(void)                                   // Prepare OG
     Packet.setAcftType(AcftType);                                   // set aircraft type
     if(Private) Packet.setPrivate();                                // set private/stealth flag
            else Packet.clrPrivate();
-    Packet.Encrypt();                                               // hash the data
+    Packet.Whiten();                                                // Whiten the position/speed data (not the header)
     Packet.setFEC();                                                // compute the parity checks
     ret_data = (uint8_t*)&Packet.Header; }                          // get pointer to packet bytes: works only with little-endian CPU
   xSemaphoreGive(xOgnPosMutex);
