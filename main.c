@@ -35,6 +35,7 @@
 #include "options.h"
 #include "spirit1.h"
 #include "control.h"
+#include "display.h"
 
 /** @addtogroup Template_Project
   * @{
@@ -48,6 +49,21 @@
 /* Private functions ---------------------------------------------------------*/
 
 
+/**
+  * @brief  Function finishes shut-down sequence, started at PreShutDownSequence() 
+  * @param  None
+  * @retval None
+  */
+void ShutdownFinish(void)
+{
+    /* Reprogram SHDN_REG_NUM to 0 for correct restart next time */
+    RTC_WriteBackupRegister(SHDN_REG_NUM, 0);
+    /* Activate Power Button in standby mode */
+    PWR_WakeUpPinCmd(PWR_WakeUpPin_2, ENABLE);
+    /* Go to the lowest possible power mode */
+    PWR_UltraLowPowerCmd(ENABLE);
+    PWR_EnterSTANDBYMode();
+}
 /**
   * @brief  Function responsible for detecting power-up mode:
   * @brief  1. Tracker powered up by connecting battery.
@@ -68,21 +84,26 @@ void HandlePowerUpMode(void)
     /* Check for mode 3: tracker during transition to shut-down */
     if (RTC_ReadBackupRegister(SHDN_REG_NUM) == SHDN_MAGIC_NUM)
     {
-        /* Reprogram SHDN_REG_NUM to 0 for correct restart next time */
-        RTC_WriteBackupRegister(SHDN_REG_NUM, 0);
-        /* Activate Power Button in standby mode */
-        PWR_WakeUpPinCmd(PWR_WakeUpPin_2, ENABLE);
-        /* Go to the lowest possible power mode */
-        PWR_UltraLowPowerCmd(ENABLE);
-        PWR_EnterSTANDBYMode();
+        ShutdownFinish();
     }
 
     /* Check if the StandBy flag is set - tracker powered up by wake-up button.*/
     if (PWR_GetFlagStatus(PWR_FLAG_SB) != RESET)
     {
+        volatile int delay;
         /* Clear StandBy flag */
         PWR_ClearFlag(PWR_FLAG_SB);
-
+        /* Enable power button */       
+        RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOC, ENABLE);  
+        /* Wait 1 second */
+        for (delay=0; delay<1000000; delay++) { delay++; delay--; }
+        
+        if (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_13) != Bit_SET)
+        {
+            /* power button pressed too short - shutdown tracker */
+            ShutdownFinish();
+        }
+        /* Power button still pressed - proceed to wake-up */
         /* Wait for RTC APB registers synchronisation */
         RTC_WaitForSynchro();
     }  
@@ -93,6 +114,7 @@ void prvSetupHardware(void)
    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
    
    Console_Config();
+   Display_Config();
    GPS_Config();
    Spirit1_Config();
    Control_Config();
@@ -117,6 +139,7 @@ int main(void)
    prvSetupHardware();
       
    xTaskCreate(vTaskConsole,   (char *)"Console", 1024, NULL, tskIDLE_PRIORITY+1, NULL);
+   xTaskCreate(vTaskDisplay,   (char *)"Display", 1024, NULL, tskIDLE_PRIORITY+1, NULL);
    xTaskCreate(vTaskGPS,       (char *)"GPS",     1024, NULL, tskIDLE_PRIORITY+2, NULL);
    xTaskCreate(vTaskSP1,       (char *)"SP1",     1024, NULL, tskIDLE_PRIORITY+3, NULL);
    xTaskCreate(vTaskControl,   (char *)"Control", 1024, NULL, tskIDLE_PRIORITY+4, NULL);

@@ -28,23 +28,27 @@ void OGN_SetAcftID(uint32_t id)
 { AcftID = id; }
 
 
-int OGN_Parse_NMEA(const char* str, uint8_t len)                   // process NMEA from the GPS
-{ xSemaphoreTake(xOgnPosMutex, portMAX_DELAY);
+OGN_Parse_res_t OGN_Parse_NMEA(const char* str, uint8_t len)                   // process NMEA from the GPS
+{ 
+  OGN_Parse_res_t ret_value;
+  xSemaphoreTake(xOgnPosMutex, portMAX_DELAY);
   int Delta; int PrevPtr;
-  int Ret=Position[PosPtr].ReadNMEA(str); if(Ret<=0) goto Exit;    // return 0, when no useful NMEA (or negative when bad NMEA)
-  if(!Position[PosPtr].isComplete())       { Ret=1;  goto Exit; }  // return 1, when position is not yet complete, but the NMEA was useful
-  if(!Position[PosPtr].isValid())          { Ret=2;  goto Exit; }  // return 2, when position is complete, but not valid (no GPS fix)
+  int Ret=Position[PosPtr].ReadNMEA(str);
+  if(Ret<0)                                { ret_value = OGN_PARSE_BAD_NMEA;         goto Exit; }  // bad NMEA
+  if(Ret==0)                               { ret_value = OGN_PARSE_NO_USEFUL_NMEA;   goto Exit; }  // no useful NMEA 
+  if(!Position[PosPtr].isComplete())       { ret_value = OGN_PARSE_POS_NOT_COMPLETE; goto Exit; }  // position is not yet complete, but the NMEA was useful
+  if(!Position[PosPtr].isValid())          { ret_value = OGN_PARSE_POS_NOT_VALID;    goto Exit; }  // position is complete, but not valid (no GPS fix)
   PrevPtr=(PosPtr+2)&3; Delta=0;                                   // current position is complete and valid: look two position earlier
   if(Position[PrevPtr].isValid())
   { Delta=Position[PosPtr].calcDifferences(Position[PrevPtr]); }
   else
   { PrevPtr=(PosPtr+3)&3;
     Delta=Position[PosPtr].calcDifferences(Position[PrevPtr]); }
-  PosPtr=(PosPtr+1)&3; Ret=Delta<=5?4:3;                           // return 3, when GPS lock but previos lock more than 5 seconds ago
-                                                                   // return 4, when GPS lock and previous lock no more than 5 seconds ago.
+  PosPtr=(PosPtr+1)&3; ret_value=Delta<=5? OGN_PARSE_POS_VALID_CURRENT:OGN_PARSE_POS_VALID_5SECS_AGO; // GPS lock: check age (if 5 seconds ago)
+                                                                 
  Exit:
   xSemaphoreGive(xOgnPosMutex);
-  return Ret; }
+  return ret_value; }
 
 uint32_t OGN_GetPosition(char *Output)                             // print into a string current position and other GPS data
 { xSemaphoreTake(xOgnPosMutex, portMAX_DELAY);

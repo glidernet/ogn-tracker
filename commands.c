@@ -31,7 +31,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.1.1";
+static const char * const pcVersion = "0.2.0";
 /* -------- functions -------- */
 
 /**

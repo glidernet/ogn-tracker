@@ -1,3 +1,4 @@
+#include "hpt_timer.h"
 #include <stm32l1xx.h>
 #include <FreeRTOS.h>
 #include <FreeRTOS_CLI.h>
@@ -5,9 +6,6 @@
 #include <semphr.h>
 #include <queue.h>
 #include <timers.h>
-
-#include "hpt_timer.h"
-
 #include "console.h"
 #include "control.h"
 #include "messages.h"
@@ -16,7 +14,6 @@
 //#define HPT_DEBUG
 
 /* -------- defines -------- */
-#define HPT_TIMER_ID  1
 /* -------- variables -------- */
 TimerHandle_t xHPTimer;
 uint8_t       event_awaited;
@@ -98,14 +95,14 @@ void vHPTimerCallback(TimerHandle_t pxTimer)
             break;
             
         case HPT_GPIO_UP:
-            GPIO_SetBits(GPIOC, GPIO_Pin_5);
+            //GPIO_SetBits(...);
             #ifdef HPT_DEBUG
             Console_Send("HPT_GPIO_UP\r\n",0);
             #endif
             break;
             
         case HPT_GPIO_DOWN:
-            GPIO_ResetBits(GPIOC, GPIO_Pin_5);
+            //GPIO_ResetBits(...);
             #ifdef HPT_DEBUG
             Console_Send("HPT_GPIO_DOWN\r\n",0);
             #endif
@@ -194,21 +191,7 @@ void HPT_Start(HPT_Event* hpt_table)
 */
 void HPT_Config(void)
 {
-   /* Test GPIO PC5 */
-   GPIO_InitTypeDef GPIO_InitStructure;
-
-   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOC, ENABLE);
-
-   GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_OUT;
-   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-   GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
-   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-   GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_5;
-   GPIO_Init(GPIOC, &GPIO_InitStructure);
-   
-   GPIO_ResetBits(GPIOC, GPIO_Pin_5);
-   
-   xHPTimer = xTimerCreate(
+    xHPTimer = xTimerCreate(
       "HPTimer",
       /* The timer period in ticks. */
       HPT_MS(1000),

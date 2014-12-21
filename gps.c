@@ -1,3 +1,4 @@
+#include "gps.h"
 #include <stdio.h>
 #include <string.h>
 #include <stm32l1xx.h>
@@ -5,9 +6,7 @@
 #include <FreeRTOS_CLI.h>
 #include <task.h>
 #include <semphr.h>
-
-#include "gps.h"
-
+#include <timers.h>
 #include "usart.h"
 #include "messages.h"
 #include "cir_buf.h"
@@ -15,6 +14,7 @@
 #include "options.h"
 #include "spirit1.h"
 #include "ogn_lib.h"
+#include "display.h"
 
 // #define GPS_DEBUG
 /* -------- constants -------- */
@@ -31,9 +31,62 @@ static const char * const pcShutDownNMEA = "$PSRF117,16*0B\r\n";
 /* circular buffer for NMEA messages */
 cir_buf_str* nmea_buffer;
 xQueueHandle gps_que;
+static TimerHandle_t xGPSValidTimer;
+static uint8_t GPS_fix_found;
 
 
 /* -------- functions -------- */
+
+/**
+* @brief  Send new GPS fix status to display task.
+* @param  New fix state
+* @retval None
+*/
+void GPS_Send_Disp_Status(display_opcode_types msg_type)
+{
+    task_message display_msg;
+    xQueueHandle* disp_task_queue = Get_DisplayQue();
+    if (disp_task_queue)
+    {
+        /* Start CW */
+        display_msg.msg_data   = 0;
+        display_msg.msg_len    = 0;
+        display_msg.msg_opcode = msg_type;
+        display_msg.src_id     = GPS_USART_SRC_ID;
+        xQueueSend(*disp_task_queue, &display_msg, portMAX_DELAY);
+    }
+}
+
+/**
+* @brief  GPS fix timeout callback.
+* @brief  Callback is called when there is no valid fix for 2 secs.
+* @param  Timer handle
+* @retval None
+*/
+void vGPSValidTimerCallback(TimerHandle_t pxTimer)
+{
+    GPS_fix_found = 0;
+    GPS_Send_Disp_Status(DISP_GPS_NO_FIX);
+    Console_Send("GPS fix lost.\r\n",0);
+}
+
+/**
+* @brief  Function called whenever valid GPS position is found.
+* @param  None
+* @retval None
+*/
+void GPS_Valid_Position(void)
+{
+    xTimerStart(xGPSValidTimer, portMAX_DELAY);
+     
+    if (!GPS_fix_found)    /* detect only once */
+    {
+        GPS_Send_Disp_Status(DISP_GPS_FIX);
+        Console_Send("GPS fix found.\r\n",0); 
+    }
+    GPS_fix_found = 1;    
+}
+
 /**
 * @brief  Functions parses received NMEA string.
 * @param  string address, string length
@@ -44,13 +97,18 @@ uint32_t GPS_GetPosition(char *Output) { return OGN_GetPosition(Output); }
 
 void Handle_NMEA_String(const char* str, uint8_t len)
 {
+    OGN_Parse_res_t ret_value;
 #ifdef GPS_DEBUG
-  static char DebugStr[120];
-  int Ret=OGN_Parse_NMEA(str, len);
-  sprintf(DebugStr, "NMEA:%6.6s[%2d] => %d\r\n", str, len, Ret);
-  Console_Send(DebugStr, 0);
+    static char DebugStr[120];
+    int Ret=OGN_Parse_NMEA(str, len);
+    sprintf(DebugStr, "NMEA:%6.6s[%2d] => %d\r\n", str, len, Ret);
+    Console_Send(DebugStr, 0);
 #else
-  OGN_Parse_NMEA(str, len);
+    ret_value = OGN_Parse_NMEA(str, len);
+    if (ret_value == OGN_PARSE_POS_VALID_CURRENT)
+    {
+        GPS_Valid_Position();
+    }
 #endif
   return; }
 
@@ -102,6 +160,19 @@ void GPS_Config(void)
       USART3_Config(*gps_speed);
    } 
    
+   /* GPS validity timer */
+   xGPSValidTimer = xTimerCreate(
+     "GPSTimer",
+     /* The timer period in ticks. */
+     2000,
+     /* The timer will stop when expire. */
+     pdFALSE,
+     /* unique id */
+     ( void * )GPS_VALID_TIMER,
+     /* Each timer calls the same callback when it expires. */
+     vGPSValidTimerCallback
+   );
+        
    /* GPS ON/OFF pin configuration */
    RCC_AHBPeriphClockCmd(GPS_ON_OFF_CLK, ENABLE);
 
@@ -123,7 +194,7 @@ void GPS_Config(void)
 void vTaskGPS(void* pvParameters)
 {
    task_message msg;
-
+   
    OGN_Init();
    OGN_SetAcftID(*(uint32_t*)GetOption(OPT_ACFT_ID));
  
@@ -145,6 +216,9 @@ void vTaskGPS(void* pvParameters)
    vTaskDelay(700);
    /* Perform GPS on sequence */
    GPS_On();
+   /* Check GPS fix status */
+   GPS_fix_found = 0;
+   xTimerStart(xGPSValidTimer, portMAX_DELAY);  
    
    for(;;)
    {
