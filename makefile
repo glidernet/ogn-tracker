@@ -55,6 +55,12 @@ CC_SRC    += spirit1_dk/src/SPIRIT_Types.c
 CC_SRC    += spirit1_dk/src/SPIRIT_PktBasic.c
 CC_SRC    += spirit1_dk/src/SPIRIT_PktCommon.c
 CC_SRC    += spirit1_dk/src/SPIRIT_DirectRF.c
+CC_SRC    += spirit1_dk/src/SPIRIT_Gpio.c
+CC_SRC    += spirit1_dk/src/SPIRIT_Irq.c
+CC_SRC    += spirit1_dk/src/SPIRIT_Timer.c
+CC_SRC    += spirit1_dk/src/SPIRIT_Qi.c
+CC_SRC    += spirit1_dk/src/SPIRIT_LinearFifo.c
+
 
 H_SRC      = main.h
 H_SRC     += options.h

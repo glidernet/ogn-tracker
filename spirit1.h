@@ -10,6 +10,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+/* ---- data structures ---- */
+typedef struct
+{
+   uint8_t*  packet_data_ptr;
+   float     rssi;
+   
+} rcv_packet_str;
 
 /* -------- defines -------- */
 
@@ -26,13 +33,21 @@ typedef enum
    SP1_SEND_OGN_PKT   = 1,  // Send packet in OGN format
    SP1_CHG_CHANNEL,         // Change active channel
    SP1_START_CW,            // Start transmitting continuous wave
-   SP1_STOP_CW              // Stop transmitting continuous wave
+   SP1_STOP_CW,             // Stop transmitting continuous wave
+   SP1_START_RX,            // Start receiving on current channel
+   SP1_INT_GPIO0_IRQ        // internal message 
 }sp1_opcode_types;
+
+typedef enum
+{
+   SP1_OUT_PKT_READY   = 1,  // Received packet in OGN format
+}sp1_out_opcode_types;
+
 
 /* --- SPIRIT1 related functions --- */
 void Spirit1_Config(void);
 void vTaskSP1(void* pvParameters);
-xQueueHandle* Get_SP1Que();
+xQueueHandle* Get_SP1Queue();
 void Spirit1EnterShutdown(void);
 
 #ifdef __cplusplus

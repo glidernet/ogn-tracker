@@ -22,13 +22,13 @@ typedef enum
    HPT_SEND_PKT,     /* Send OGN packet */
    HPT_SP1_CHANNEL,  /* Switch SP1 to selected channel */ 
    HPT_IWDG_RELOAD   /* Reload Independent Watchdog */   
-} htp_opcodes;
+} hpt_opcodes;
 
 /* -------- structures ------- */
 typedef struct
 {
    uint32_t     time;
-   htp_opcodes  opcode;
+   hpt_opcodes  opcode;
    uint32_t     data1;
 } HPT_Event;
 

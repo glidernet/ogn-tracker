@@ -14,14 +14,21 @@
 #include "console.h"
 #include "gps.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
 /* -------- defines -------- */
 #define MAX_HPT_TABLE_LEN  16
 /* -------- variables -------- */
 HPT_Event hpt_table[MAX_HPT_TABLE_LEN];
 TimerHandle_t xPowerDownTimer;
 
+/* pointer to TX packet data */
+uint8_t* TX_pkt_data = NULL;
+
 /* Console task queue */
-xQueueHandle  control_que;
+xQueueHandle  control_queue;
 /* -------- interrupt handlers -------- */
 
 /* interrupt for raising GPS_PPS line */
@@ -55,9 +62,9 @@ void EXTI15_10_IRQHandler(void)
 }
 
 /* -------- functions -------- */
-xQueueHandle* Get_ControlQue()
+xQueueHandle* Get_ControlQueue()
 {
-   return &control_que;
+   return &control_queue;
 }
 
 /**
@@ -141,7 +148,7 @@ uint8_t Create_HPT_Table_OGN(HPT_Event* hpt_table_arr)
 * @param  pointer to hpt_table data to be filled.
 * @retval length of filled data.
 */
-uint8_t Create_HPT_Table_CW(HPT_Event* hpt_table_arr)
+uint8_t Create_HPT_Table_Idle(HPT_Event* hpt_table_arr)
 {
    uint8_t pos = 0;
     
@@ -264,16 +271,34 @@ void StartMode(oper_modes mode)
     
     switch(mode)
     {
+        case MODE_IDLE:          
+            break;
+            
         case MODE_CW:
             /* wait for Spirit1 task */
             vTaskDelay(1000);
-            sp1_task_queue = Get_SP1Que();
+            sp1_task_queue = Get_SP1Queue();
             if (sp1_task_queue)
             {
                 /* Start CW */
                 sp1_msg.msg_data   = 0;
                 sp1_msg.msg_len    = 0;
                 sp1_msg.msg_opcode = SP1_START_CW;
+                sp1_msg.src_id     = CONTROL_SRC_ID;
+                xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
+            }
+            break;
+            
+         case MODE_RX:
+            /* wait for Spirit1 task */
+            vTaskDelay(1000);
+            sp1_task_queue = Get_SP1Queue();
+            if (sp1_task_queue)
+            {
+                /* Start RX */
+                sp1_msg.msg_data   = 0;
+                sp1_msg.msg_len    = 0;
+                sp1_msg.msg_opcode = SP1_START_RX;
                 sp1_msg.src_id     = CONTROL_SRC_ID;
                 xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
             }
@@ -285,6 +310,93 @@ void StartMode(oper_modes mode)
     }
 }
 
+/* borrowed from commands.c */
+static uint8_t print_hex_val(uint8_t data, char* dest)
+{
+   char t;
+   t = data>>4;
+   dest[0] = t > 9 ? t+'A'-0x0A : t+'0';
+   t = data&0x0F;
+   dest[1] = t > 9 ? t+'A'-0x0A : t+'0';
+   return 2;
+}
+
+
+void Print_packet(rcv_packet_str* packet)
+{
+    char buffer[80];
+    int i, Neg=0, ctr=0; 
+    
+    float rssi = packet->rssi;
+    
+    if(rssi<0) { Neg=1; rssi=(-rssi); }
+    int Int = (int)floor(rssi);
+    int Frac = (int)floor((rssi-Int)*10);
+    if(Neg) Int=(-Int);
+    sprintf(buffer, "Packet received: %+d.%d dBm \r\n", Int, Frac);
+    Console_Send(buffer, 1);
+    
+    for (i=0; i < OGN_PKT_LEN; i++)
+    {
+       ctr+= print_hex_val(packet->packet_data_ptr[i], &buffer[ctr]);
+    }
+    buffer[ctr++] = '\r'; buffer[ctr++] = '\n';
+    buffer[ctr++] = '\0';
+    
+    Console_Send(buffer, 1);
+    
+}
+
+/**
+* @brief  Handle messages received from Spirit1 task.
+* @param  Message structure.
+* @retval None
+*/
+static void Handle_sp1_msgs(task_message* msg)
+{
+    switch (msg->msg_opcode)
+    {
+        case SP1_OUT_PKT_READY:
+            Print_packet((rcv_packet_str*)msg->msg_data);
+            break;
+            
+        default:
+            break;
+    }
+}
+
+/**
+* @brief  Handle messages received from High Precision Timer task.
+* @param  Message structure.
+* @retval None
+*/
+static void Handle_hpt_msgs(task_message* msg)
+{
+    task_message sp1_msg;
+    
+    switch (msg->msg_opcode)
+    {
+        case HPT_PREPARE_PKT:
+            TX_pkt_data = OGN_PreparePacket();
+            break;
+
+        case HPT_SEND_PKT:
+            if (TX_pkt_data)
+            {
+                sp1_msg.msg_data   = (uint32_t)TX_pkt_data;
+                sp1_msg.msg_len    = OGN_PKT_LEN;
+                sp1_msg.msg_opcode = SP1_SEND_OGN_PKT;
+                sp1_msg.src_id     = CONTROL_SRC_ID;
+                xQueueHandle* sp1_task_queue = Get_SP1Queue();
+                xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
+            }
+            break;
+            
+        default:
+            break;
+     }    
+}
+
 /**
 * @brief  Main Control Task.
 * @param  None
@@ -293,11 +405,10 @@ void StartMode(oper_modes mode)
 void vTaskControl(void* pvParameters)
 {
    NVIC_InitTypeDef NVIC_InitStructure;
-   task_message msg, sp1_msg;
-   uint8_t* pkt_data = NULL;
+   task_message msg;
    oper_modes oper_mode;
    
-   control_que = xQueueCreate(10, sizeof(task_message));
+   control_queue = xQueueCreate(10, sizeof(task_message));
       
    /* Select timer table depending on operation mode */
    oper_mode = *(uint8_t *)GetOption(OPT_OPER_MODE); 
@@ -306,9 +417,12 @@ void vTaskControl(void* pvParameters)
         case MODE_OGN:      
             Create_HPT_Table_OGN(hpt_table);
             break;
-        case MODE_CW:      
-            Create_HPT_Table_CW(hpt_table);
+        case MODE_IDLE:
+        case MODE_CW: 
+        case MODE_RX:          
+            Create_HPT_Table_Idle(hpt_table);
             break;
+    
         default:
             /* in case of error - fall to OGN mode */         
             Create_HPT_Table_OGN(hpt_table);
@@ -327,26 +441,19 @@ void vTaskControl(void* pvParameters)
    
    for(;;)
    {
-      xQueueReceive(control_que, &msg, portMAX_DELAY);
-      switch (msg.msg_opcode)
-      {
-         case HPT_PREPARE_PKT:
-            pkt_data = OGN_PreparePacket();
-            break;
-
-         case HPT_SEND_PKT:
-            if (pkt_data)
-            {
-                sp1_msg.msg_data   = (uint32_t)pkt_data;
-                sp1_msg.msg_len    = OGN_PKT_LEN;
-                sp1_msg.msg_opcode = SP1_SEND_OGN_PKT;
-                sp1_msg.src_id     = CONTROL_SRC_ID;
-                xQueueHandle* sp1_task_queue = Get_SP1Que();
-                xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
-            }
-            break;
-         default:
-            break;
+        xQueueReceive(control_queue, &msg, portMAX_DELAY);
+        switch (msg.src_id)
+        {
+            case HPT_SRC_ID:
+                Handle_hpt_msgs(&msg);
+                break;
+            
+            case SPIRIT1_SRC_ID:
+                Handle_sp1_msgs(&msg);
+                break;
+                
+            default:
+                break;
       }
    }
 }

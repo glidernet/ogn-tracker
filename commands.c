@@ -31,7 +31,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.2.0";
+static const char * const pcVersion = "0.2.1";
 /* -------- functions -------- */
 
 /**
@@ -453,7 +453,7 @@ static portBASE_TYPE prvSP1SendPacketCommand( char *pcWriteBuffer,
    {
       OGN_packet[i>>1] = get_hex_str_val(&param[i]);
    }
-   xQueueHandle* sp1_task_queue = Get_SP1Que();
+   xQueueHandle* sp1_task_queue = Get_SP1Queue();
 
    sp1_msg.msg_data   = (uint32_t)&OGN_packet;
    sp1_msg.msg_len    = OGN_PKT_LEN;
@@ -544,9 +544,17 @@ static portBASE_TYPE prvOperModeCommand( char *pcWriteBuffer,
        {
            new_mode = (uint8_t)MODE_OGN;
        }
+       else if (!strcmp(param, "idle"))
+       {
+           new_mode = (uint8_t)MODE_IDLE;
+       }
        else if (!strcmp(param, "cw"))
        {
            new_mode = (uint8_t)MODE_CW;
+       }
+       else if (!strcmp(param, "rx"))
+       {
+           new_mode = (uint8_t)MODE_RX;
        }
        else
        {
@@ -563,10 +571,16 @@ static portBASE_TYPE prvOperModeCommand( char *pcWriteBuffer,
     {
         case MODE_OGN:
             sprintf(pcWriteBuffer, "mode ogn enabled\r\n");
-            break;    
+            break;
+        case MODE_IDLE:   
+            sprintf(pcWriteBuffer, "mode idle enabled\r\n");
+            break;               
         case MODE_CW:   
             sprintf(pcWriteBuffer, "mode cw enabled\r\n");
-            break;            
+            break;
+        case MODE_RX:   
+            sprintf(pcWriteBuffer, "mode rx enabled\r\n");
+            break;                 
         default:
             sprintf(pcWriteBuffer, "unsupported mode\r\n");
             break;

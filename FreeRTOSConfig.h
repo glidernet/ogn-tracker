@@ -140,10 +140,12 @@ NVIC value of 255. */
 #define configGPS_INTERRUPT_PRIORITY     (configLIBRARY_KERNEL_INTERRUPT_PRIORITY-2)
 /* Priority 12: SPI bus interrupt */
 #define configSPI_BUS_INTERRUPT_PRIORITY (configLIBRARY_KERNEL_INTERRUPT_PRIORITY-3)
-/* Priority 11: GPS PPS line interrupt */
-#define configGPS_PPS_INTERRUPT_PRIORITY (configLIBRARY_KERNEL_INTERRUPT_PRIORITY-4)
-/* Priority 11: Power button line interrupt */
-#define configPWR_BTN_INTERRUPT_PRIORITY (configLIBRARY_KERNEL_INTERRUPT_PRIORITY-5)
+/* Priority 11: Spirit1 IC interrupts */
+#define configSPIRIT1_INTERRUPT_PRIORITY (configLIBRARY_KERNEL_INTERRUPT_PRIORITY-4)
+/* Priority 10: GPS PPS line interrupt */
+#define configGPS_PPS_INTERRUPT_PRIORITY (configLIBRARY_KERNEL_INTERRUPT_PRIORITY-5)
+/* Priority 9: Power button line interrupt */
+#define configPWR_BTN_INTERRUPT_PRIORITY (configLIBRARY_KERNEL_INTERRUPT_PRIORITY-6)
 
 /* Timers identifiers */
 #define HPT_TIMER_ID        1

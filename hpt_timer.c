@@ -73,7 +73,7 @@ BaseType_t HPT_RestartFromISR(void)
 void vHPTimerCallback(TimerHandle_t pxTimer)
 {
     uint8_t new_event_scheduled = 0;
-    xQueueHandle* dest_que;
+    xQueueHandle* dest_queue;
     task_message  ctrl_msg;
     uint32_t      data1;
     
@@ -112,36 +112,36 @@ void vHPTimerCallback(TimerHandle_t pxTimer)
             #ifdef HPT_DEBUG
             Console_Send("HPT_PREPARE_PKT\r\n",0);
             #endif
-            dest_que = Get_ControlQue();
+            dest_queue = Get_ControlQueue();
             ctrl_msg.msg_data   = 0;
             ctrl_msg.msg_len    = 0;
             ctrl_msg.msg_opcode = HPT_PREPARE_PKT;
-            ctrl_msg.src_id     = 0;
-            xQueueSend(*dest_que, &ctrl_msg, portMAX_DELAY);
+            ctrl_msg.src_id     = HPT_SRC_ID;
+            xQueueSend(*dest_queue, &ctrl_msg, portMAX_DELAY);
             break;
             
         case HPT_SEND_PKT:            
             #ifdef HPT_DEBUG
             Console_Send("HPT_SEND_PKT\r\n",0);
             #endif
-            dest_que = Get_ControlQue();
+            dest_queue = Get_ControlQueue();
             ctrl_msg.msg_data   = 0;
             ctrl_msg.msg_len    = 0;
             ctrl_msg.msg_opcode = HPT_SEND_PKT;
-            ctrl_msg.src_id     = 0;
-            xQueueSend(*dest_que, &ctrl_msg, portMAX_DELAY);
+            ctrl_msg.src_id     = HPT_SRC_ID;
+            xQueueSend(*dest_queue, &ctrl_msg, portMAX_DELAY);
             break;
             
         case HPT_SP1_CHANNEL:            
             #ifdef HPT_DEBUG
             Console_Send("HPT_SP1_CHANNEL\r\n",0);
             #endif
-            dest_que = Get_SP1Que();
+            dest_queue = Get_SP1Queue();
             ctrl_msg.msg_data   = data1;
             ctrl_msg.msg_len    = 0;
             ctrl_msg.msg_opcode = SP1_CHG_CHANNEL;
-            ctrl_msg.src_id     = 0;
-            xQueueSend(*dest_que, &ctrl_msg, portMAX_DELAY);
+            ctrl_msg.src_id     = HPT_SRC_ID;
+            xQueueSend(*dest_queue, &ctrl_msg, portMAX_DELAY);
             break;
             
         case HPT_IWDG_RELOAD:            

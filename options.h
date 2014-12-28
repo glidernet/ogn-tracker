@@ -23,7 +23,9 @@ typedef enum
 typedef enum
 {
    MODE_OGN = 0,
-   MODE_CW
+   MODE_IDLE,
+   MODE_CW,
+   MODE_RX
 } oper_modes;
 
 #ifdef __cplusplus

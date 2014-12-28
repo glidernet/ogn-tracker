@@ -9,12 +9,15 @@
 #include "MCU_Interface.h"
 #include "SPIRIT_Config.h"
 #include "options.h"
+#include "ogn_lib.h"
+#include "control.h"
 
 /* -------- defines -------- */
-#define SPIRIT1_PKT_LEN     (3+2*26+1) // three bytes to complete the OGN SYNC word, 26 data+FEC bytes with Manchester emulation
+#define SPIRIT1_PKT_LEN     (3+2*(OGN_PKT_LEN)+1) // three bytes to complete the OGN SYNC word, 26 data+FEC bytes with Manchester emulation
 
 #define SPR_SPI_MAX_REG_NUM  0xFF
 #define SPR_SPI_HDR_LEN      2
+#define SPR_MAX_FIFO_LEN     96
 
 /** @defgroup SPI_Headers
 * @{
@@ -38,6 +41,14 @@
 #define SPR1_SHDN_PIN        GPIO_Pin_8
 #define SPR1_SHDN_GPIO_PORT  GPIOA
 #define SPR1_SHDN_GPIO_CLK   RCC_AHBPeriph_GPIOA
+
+#define SPR1_GPIO0_PIN        GPIO_Pin_0
+#define SPR1_GPIO0_GPIO_PORT  GPIOA
+#define SPR1_GPIO0_GPIO_CLK   RCC_AHBPeriph_GPIOA
+#define SPR1_GPIO0_PORT_SRC   EXTI_PortSourceGPIOA
+#define SPR1_GPIO0_PIN_SRC    EXTI_PinSource0
+#define SPR1_GPIO0_EXTI_LINE  EXTI_Line0
+#define SPR1_GPIO0_EXTI_IRQ   EXTI0_IRQn
 
 /*
 Packet structure overview:
@@ -71,7 +82,7 @@ and afterwards we encode 26 bytes of the apcket data.
 /* -------- variables -------- */
 xQueueHandle     xQueueSP1;
 
-uint8_t Packet_TxBuff[96];
+uint8_t Packet_TxBuff[SPR_MAX_FIFO_LEN], Packet_RxBuff[SPR_MAX_FIFO_LEN];
 
 uint8_t SPR_SPI_BufferTX[SPR_SPI_MAX_REG_NUM+SPR_SPI_HDR_LEN];
 uint8_t SPR_SPI_BufferRX[SPR_SPI_MAX_REG_NUM+SPR_SPI_HDR_LEN];
@@ -100,12 +111,22 @@ PktBasicInit xBasicInit_OGN = { // for sending OGN packets
   // 0x6655A596,                   // Spirit1 sync word = the first two OGN SYNC bytes Manchester encoded
   0xA6655A59,                   // here we add extra 2 data bits (thus 4 Manchester bits) to make preamble longer - nRF905-like
   PKT_LENGTH_FIX,               // fixed length packet
-  7,                            // length width - what is this ?
+  7,                            // optional field that is defined as the cumulative length of Address, Control, and Payload fields
+                                // in fixed length mode, the field length is not used
   PKT_NO_CRC,                   // no CRC fields - we make the error checking and correcting code
   PKT_CONTROL_LENGTH_0BYTES,    // 
   S_DISABLE,                    // no address field
   S_DISABLE,                    // no FEC
   S_DISABLE                     // no data whitening
+};
+
+/**
+* @brief GPIO structure fitting
+*/
+SGpioInit xGpioIRQ={
+  SPIRIT_GPIO_0,
+  SPIRIT_GPIO_MODE_DIGITAL_OUTPUT_LP,
+  SPIRIT_GPIO_DIG_OUT_IRQ
 };
 
 /* -------- constants -------- */
@@ -132,10 +153,63 @@ const uint8_t hex_2_manch_encoding[0x10] =         // lookup table for 4-bit nib
    0x55  /* hex: F, bin: 1111, manch: 01010101 */
 };
 
+/* Octave script for creating manchester to binary decoding by analysing transition "to" bits 
+function m2b_to
+    ctr = 0;
+    for (manch = 0:255)
+        manch_bin = dec2bin(manch,8);
+        bin = manch_bin(2:2:8);
+        dec = bin2dec(bin);
+        if !(mod(ctr,16)) 
+            printf("\n");
+        endif
+        ctr++;
+        printf("0x%x, ",dec);
+    endfor
+endfunction
+*/
+
+const uint8_t manch_2_hex_to_trans[256] = 
+{
+    0x0, 0x1, 0x0, 0x1, 0x2, 0x3, 0x2, 0x3, 0x0, 0x1, 0x0, 0x1, 0x2, 0x3, 0x2, 0x3,
+    0x4, 0x5, 0x4, 0x5, 0x6, 0x7, 0x6, 0x7, 0x4, 0x5, 0x4, 0x5, 0x6, 0x7, 0x6, 0x7,
+    0x0, 0x1, 0x0, 0x1, 0x2, 0x3, 0x2, 0x3, 0x0, 0x1, 0x0, 0x1, 0x2, 0x3, 0x2, 0x3,
+    0x4, 0x5, 0x4, 0x5, 0x6, 0x7, 0x6, 0x7, 0x4, 0x5, 0x4, 0x5, 0x6, 0x7, 0x6, 0x7,
+    0x8, 0x9, 0x8, 0x9, 0xa, 0xb, 0xa, 0xb, 0x8, 0x9, 0x8, 0x9, 0xa, 0xb, 0xa, 0xb,
+    0xc, 0xd, 0xc, 0xd, 0xe, 0xf, 0xe, 0xf, 0xc, 0xd, 0xc, 0xd, 0xe, 0xf, 0xe, 0xf,
+    0x8, 0x9, 0x8, 0x9, 0xa, 0xb, 0xa, 0xb, 0x8, 0x9, 0x8, 0x9, 0xa, 0xb, 0xa, 0xb,
+    0xc, 0xd, 0xc, 0xd, 0xe, 0xf, 0xe, 0xf, 0xc, 0xd, 0xc, 0xd, 0xe, 0xf, 0xe, 0xf,
+    0x0, 0x1, 0x0, 0x1, 0x2, 0x3, 0x2, 0x3, 0x0, 0x1, 0x0, 0x1, 0x2, 0x3, 0x2, 0x3,
+    0x4, 0x5, 0x4, 0x5, 0x6, 0x7, 0x6, 0x7, 0x4, 0x5, 0x4, 0x5, 0x6, 0x7, 0x6, 0x7,
+    0x0, 0x1, 0x0, 0x1, 0x2, 0x3, 0x2, 0x3, 0x0, 0x1, 0x0, 0x1, 0x2, 0x3, 0x2, 0x3,
+    0x4, 0x5, 0x4, 0x5, 0x6, 0x7, 0x6, 0x7, 0x4, 0x5, 0x4, 0x5, 0x6, 0x7, 0x6, 0x7,
+    0x8, 0x9, 0x8, 0x9, 0xa, 0xb, 0xa, 0xb, 0x8, 0x9, 0x8, 0x9, 0xa, 0xb, 0xa, 0xb,
+    0xc, 0xd, 0xc, 0xd, 0xe, 0xf, 0xe, 0xf, 0xc, 0xd, 0xc, 0xd, 0xe, 0xf, 0xe, 0xf,
+    0x8, 0x9, 0x8, 0x9, 0xa, 0xb, 0xa, 0xb, 0x8, 0x9, 0x8, 0x9, 0xa, 0xb, 0xa, 0xb,
+    0xc, 0xd, 0xc, 0xd, 0xe, 0xf, 0xe, 0xf, 0xc, 0xd, 0xc, 0xd, 0xe, 0xf, 0xe, 0xf
+};
 /* -------- interrupt handlers -------- */
 
+/* interrupt for raising GPIO0 line */
+void EXTI0_IRQHandler(void)
+{  
+   task_message sp1_msg;
+   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
+   if(EXTI_GetITStatus(SPR1_GPIO0_EXTI_LINE) != RESET)
+   {
+        /* Clear the GPIO0 EXTI line pending bit */
+        EXTI_ClearITPendingBit(SPR1_GPIO0_EXTI_LINE);
+        sp1_msg.msg_data   = 0;
+        sp1_msg.msg_len    = 0;
+        sp1_msg.msg_opcode = SP1_INT_GPIO0_IRQ;
+        sp1_msg.src_id     = SPIRIT1_SRC_ID;
+        xQueueSendFromISR(xQueueSP1, &sp1_msg, &xHigherPriorityTaskWoken);
+   }
+   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
 /* -------- functions -------- */
-xQueueHandle* Get_SP1Que()
+xQueueHandle* Get_SP1Queue()
 {
    return &xQueueSP1;
 }
@@ -273,7 +347,9 @@ void Spirit1ExitShutdown(void)
 void Spirit1_Config(void)
 {
    GPIO_InitTypeDef GPIO_InitStructure;
-
+   EXTI_InitTypeDef EXTI_InitStructure;
+   NVIC_InitTypeDef NVIC_InitStructure;
+   
    SPI1_Config();
 
    /* SPIRIT1 SHDN pin configuration */
@@ -287,6 +363,32 @@ void Spirit1_Config(void)
    GPIO_Init(SPR1_SHDN_GPIO_PORT, &GPIO_InitStructure);
 
    Spirit1EnterShutdown();
+    
+   /* SPIRIT1 GPIO0 pin configuration */
+   RCC_AHBPeriphClockCmd(SPR1_GPIO0_GPIO_CLK, ENABLE); 
+
+   GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_IN;
+   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+   GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
+   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+   GPIO_InitStructure.GPIO_Pin   = SPR1_GPIO0_PIN;
+   GPIO_Init(SPR1_GPIO0_GPIO_PORT, &GPIO_InitStructure);
+
+   SYSCFG_EXTILineConfig(SPR1_GPIO0_PORT_SRC, SPR1_GPIO0_PIN_SRC); 
+
+   EXTI_InitStructure.EXTI_Line    = SPR1_GPIO0_EXTI_LINE;
+   EXTI_InitStructure.EXTI_Mode    = EXTI_Mode_Interrupt;
+   EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
+   EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+   EXTI_Init(&EXTI_InitStructure);   
+   
+   /* enable Spirit1 GPIO0 input line interrupt */
+   NVIC_InitStructure.NVIC_IRQChannel = SPR1_GPIO0_EXTI_IRQ;
+   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = configSPIRIT1_INTERRUPT_PRIORITY;
+   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+   NVIC_Init(&NVIC_InitStructure);
+   
 }
 
 /**
@@ -296,23 +398,9 @@ void Spirit1_Config(void)
 */
 void static SpiritNotPresent(void)
 {
-   GPIO_InitTypeDef GPIO_InitStructure;
-
-   /* SPI1 SCK is connected to LED, change it to GPIO */
-   GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_OUT;
-   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-   GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
-   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-   GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_5;
-
-   GPIO_Init(GPIOA, &GPIO_InitStructure);
-
    for (;;)
    {
-      GPIO_SetBits(GPIOA, GPIO_Pin_5);
-      vTaskDelay(150);
-      GPIO_ResetBits(GPIOA, GPIO_Pin_5);
-      vTaskDelay(850);
+      vTaskDelay(1000);
    }
 }
 
@@ -344,7 +432,7 @@ void static SpiritTXConf(float TxPower)
 void SpiritSendPacket_OGN(const uint8_t* pkt_data, uint8_t pkt_len)
 {
    uint8_t in_pkt_pos, out_pkt_pos = 0;
-
+ 
    uint8_t Buff = 0x06; uint8_t Byte;
    Byte = hex_2_manch_encoding[0x5]; Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
    Byte = hex_2_manch_encoding[0x6]; Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
@@ -355,12 +443,54 @@ void SpiritSendPacket_OGN(const uint8_t* pkt_data, uint8_t pkt_len)
      Byte = hex_2_manch_encoding[Data&0x0F]; Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
    }
    Buff = (Buff<<4) | 0x0A; Packet_TxBuff[out_pkt_pos++] = Buff;
-
+    
    SpiritCmdStrobeFlushTxFifo();
    SpiritSpiWriteLinearFifo(SPIRIT1_PKT_LEN, Packet_TxBuff);
 
    SpiritCmdStrobeTx();
 }
+
+
+
+/* Data for single packet */
+rcv_packet_str rcv_packet;
+uint8_t ogn_packet[OGN_PKT_LEN];
+
+/**
+* @brief  Receive OGN packet.
+* @param  None
+* @retval None
+*/
+rcv_packet_str* SpiritReceivePacket_OGN(void)
+{
+    uint16_t cRxData;
+    uint8_t  in_pkt_pos, out_pkt_pos;
+    
+    cRxData = SpiritLinearFifoReadNumElementsRxFifo();
+    SpiritSpiReadLinearFifo(cRxData, Packet_RxBuff);
+    /* Flush the RX FIFO */
+    SpiritCmdStrobeFlushRxFifo();
+    
+    if (cRxData != SPIRIT1_PKT_LEN)
+    {
+       return NULL; 
+    }
+    
+    rcv_packet.packet_data_ptr = ogn_packet;
+    rcv_packet.rssi = SpiritQiGetRssidBm();
+    
+    /* Decode packet */
+    in_pkt_pos = 3; /* skip preamble */
+    
+    for (out_pkt_pos = 0; out_pkt_pos < OGN_PKT_LEN; out_pkt_pos++)
+    {
+        ogn_packet[out_pkt_pos]  = manch_2_hex_to_trans[Packet_RxBuff[in_pkt_pos++]]<<4;
+        ogn_packet[out_pkt_pos] |= manch_2_hex_to_trans[Packet_RxBuff[in_pkt_pos++]];
+    }
+    
+    return &rcv_packet;
+}
+
 
 /**
 * @brief  Switch Spirit1 to CW transmitting mode.
@@ -387,10 +517,24 @@ void SP1_Leave_CW_mode(void)
    SpiritRadioCWTransmitMode(S_DISABLE);  
 }
 
+/**
+* @brief  Switch Spirit1 to persistent RX mode.
+* @param  None
+* @retval None
+*/
+void SP1_Enter_Pers_RX_mode(void)
+{
+   SpiritRadioPersistenRx(S_ENABLE);
+   SpiritCmdStrobeRx();
+}
+
 void vTaskSP1(void* pvParameters)
 {
-   task_message msg;
-
+   task_message msg, control_msg;
+   SpiritIrqs xIrqStatus;
+   xQueueHandle* control_queue;
+   rcv_packet_str* rcv_packet_ptr;
+   
    Spirit1ExitShutdown();
 
    if (SpiritGeneralGetDevicePartNumber() != 0x0130)
@@ -401,7 +545,10 @@ void vTaskSP1(void* pvParameters)
 
    SpiritRadioSetXtalFrequency(26e6);
    SpiritGeneralSetSpiritVersion(SPIRIT_VERSION_3_0);
-
+    
+    /* Spirit IRQ configuration */
+   SpiritGpioInit(&xGpioIRQ);  
+   
    xRadioInit.nXtalOffsetPpm  = *(int16_t *)GetOption(OPT_XTAL_CORR);
    xRadioInit.lFrequencyBase += *(int32_t *)GetOption(OPT_FREQ_OFS);
    xRadioInit.cChannelNumber  = *(uint8_t *)GetOption(OPT_CHANNEL);
@@ -409,12 +556,25 @@ void vTaskSP1(void* pvParameters)
 
    SpiritPktBasicInit(&xBasicInit_OGN);
 
-   /* payload length config */
+   /* payload length configuration */
    SpiritPktBasicSetPayloadLength(SPIRIT1_PKT_LEN);
 
    /* Set TX parameters */
    SpiritTXConf(*(float *)GetOption(OPT_TX_POWER));
 
+   /* Spirit IRQs enable */
+   SpiritIrqDeInit(NULL);
+   SpiritIrq(RX_DATA_READY, S_ENABLE);
+
+   /* RX timeout config */
+   SpiritTimerSetRxTimeoutMs(500.0);
+   
+   /* IRQ registers blanking */
+   SpiritIrqClearStatus();
+   
+   /* Get Control task queue */
+   control_queue = Get_ControlQueue();
+   
    /* Create queue for SP1 task messages received */
    xQueueSP1 = xQueueCreate(10, sizeof(task_message));
 
@@ -432,9 +592,34 @@ void vTaskSP1(void* pvParameters)
          case SP1_START_CW:                // a request to start CW
             SP1_Enter_CW_mode();
             break;
-         case SP1_STOP_CW:                // a request to stop CW
+         case SP1_STOP_CW:                 // a request to stop CW
             SP1_Leave_CW_mode();
             break;
+         case SP1_START_RX:                // a request to start RX
+            SP1_Enter_Pers_RX_mode();
+            break;
+            
+         case SP1_INT_GPIO0_IRQ:           // internal message - GPIO0 triggered
+         {
+            /* Check/clear interrupt status register */
+            SpiritIrqGetStatus(&xIrqStatus);
+            /* Check RX Data Ready IRQ */
+            if (xIrqStatus.IRQ_RX_DATA_READY)
+            {
+                /* Attempt to receive OGN packet */
+                rcv_packet_ptr = SpiritReceivePacket_OGN();
+                if (rcv_packet_ptr && control_queue)
+                {   
+                    /* Send received packet to control task */
+                    control_msg.msg_data   = (uint32_t)rcv_packet_ptr;
+                    control_msg.msg_len    = 0;
+                    control_msg.msg_opcode = SP1_OUT_PKT_READY;
+                    control_msg.src_id     = SPIRIT1_SRC_ID;
+                    xQueueSend(*control_queue, &control_msg, portMAX_DELAY);
+                }
+            }
+            break;
+         }   
          default:
             break;
       }

@@ -7,7 +7,9 @@ typedef enum
 {
    CONSOLE_USART_SRC_ID = 1,
    GPS_USART_SRC_ID,
-   CONTROL_SRC_ID
+   CONTROL_SRC_ID,
+   HPT_SRC_ID,
+   SPIRIT1_SRC_ID
 } src_id_types;
 
 typedef struct
