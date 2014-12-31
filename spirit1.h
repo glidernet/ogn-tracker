@@ -15,7 +15,9 @@ typedef struct
 {
    uint8_t*  packet_data_ptr;
    float     rssi;
-   
+   uint8_t   lqi;
+   uint8_t   pqi;
+   uint8_t   sqi;  
 } rcv_packet_str;
 
 /* -------- defines -------- */

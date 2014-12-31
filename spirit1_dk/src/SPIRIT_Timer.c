@@ -570,7 +570,7 @@ void SpiritTimerComputeRxTimeoutValues(float fDesiredMsec , uint8_t* pcCounter ,
   
   /* If the desired value is over the maximum limit, the counter and the
   prescaler are settled to their maximum values, and doesn't execute the routine */
-  if(fDesiredMsec>3291.0 && nXtalFrequency==24000000 || fDesiredMsec>3159.0 && nXtalFrequency==25000000 || fDesiredMsec>3038.0 && nXtalFrequency==26000000)
+  if(((fDesiredMsec>3291.0) && (nXtalFrequency==24000000)) || ((fDesiredMsec>3159.0) && (nXtalFrequency==25000000)) || ((fDesiredMsec>3038.0) && (nXtalFrequency==26000000)))
   {
     *pcCounter = 0xFF;
     *pcPrescaler = 0xFF;

@@ -478,6 +478,9 @@ rcv_packet_str* SpiritReceivePacket_OGN(void)
     
     rcv_packet.packet_data_ptr = ogn_packet;
     rcv_packet.rssi = SpiritQiGetRssidBm();
+    rcv_packet.lqi  = SpiritQiGetLqi();
+    rcv_packet.pqi  = SpiritQiGetPqi();
+    rcv_packet.sqi  = SpiritQiGetSqi();
     
     /* Decode packet */
     in_pkt_pos = 3; /* skip preamble */
@@ -569,6 +572,10 @@ void vTaskSP1(void* pvParameters)
    /* RX timeout config */
    SpiritTimerSetRxTimeoutMs(500.0);
    
+   /* QI Config */
+   SpiritQiSqiCheck(S_ENABLE);
+   SpiritQiSetSqiThreshold(SQI_TH_2); /* 4 wrong bits in sync accepted */
+    
    /* IRQ registers blanking */
    SpiritIrqClearStatus();
    

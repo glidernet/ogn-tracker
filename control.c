@@ -328,12 +328,15 @@ void Print_packet(rcv_packet_str* packet)
     int i, Neg=0, ctr=0; 
     
     float rssi = packet->rssi;
+    int lqi = packet->lqi;
+    int pqi = packet->pqi;
+    int sqi = packet->sqi;
     
     if(rssi<0) { Neg=1; rssi=(-rssi); }
     int Int = (int)floor(rssi);
     int Frac = (int)floor((rssi-Int)*10);
     if(Neg) Int=(-Int);
-    sprintf(buffer, "Packet received: %+d.%d dBm \r\n", Int, Frac);
+    sprintf(buffer, "Packet received: RSSI: %+d.%ddBm, LQI: %d, PQI: %d, SQI: %d\r\n", Int, Frac, lqi, pqi, sqi);
     Console_Send(buffer, 1);
     
     for (i=0; i < OGN_PKT_LEN; i++)
