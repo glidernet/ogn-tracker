@@ -19,8 +19,9 @@ typedef enum
    HPT_GPIO_UP,      /* Test GPIO up */
    HPT_GPIO_DOWN,    /* Test GPIO down */
    HPT_PREPARE_PKT,  /* Prepare OGN packet */
-   HPT_SEND_PKT,     /* Send OGN packet */
-   HPT_SP1_CHANNEL,  /* Switch SP1 to selected channel */ 
+   HPT_COPY_PKT,     /* Copy OGN packet data */
+   HPT_SP1_CHANNEL,  /* Switch SP1 to selected channel */
+   HPT_TX_PKT,       /* TX copied packet data */   
    HPT_IWDG_RELOAD   /* Reload Independent Watchdog */   
 } hpt_opcodes;
 

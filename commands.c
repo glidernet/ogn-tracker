@@ -31,7 +31,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.2.1";
+static const char * const pcVersion = "0.2.2";
 /* -------- functions -------- */
 
 /**
@@ -457,11 +457,25 @@ static portBASE_TYPE prvSP1SendPacketCommand( char *pcWriteBuffer,
 
    sp1_msg.msg_data   = (uint32_t)&OGN_packet;
    sp1_msg.msg_len    = OGN_PKT_LEN;
-   sp1_msg.msg_opcode = SP1_SEND_OGN_PKT;
+   sp1_msg.msg_opcode = SP1_COPY_OGN_PKT;
    sp1_msg.src_id     = CONSOLE_USART_SRC_ID;
    /* Send packet data to Spirit1 task */
    xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
 
+   sp1_msg.msg_data   = 0;
+   sp1_msg.msg_len    = 0;
+   sp1_msg.msg_opcode = SP1_TX_PACKET;
+   sp1_msg.src_id     = CONSOLE_USART_SRC_ID;
+   /* TX packet */
+   xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
+   
+   sp1_msg.msg_data   = 0;
+   sp1_msg.msg_len    = 0;
+   sp1_msg.msg_opcode = SP1_COPY_OGN_PKT;
+   sp1_msg.src_id     = CONSOLE_USART_SRC_ID;
+   /* Clear packet data in Spirit1 task */
+   xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
+   
    sprintf(pcWriteBuffer, "OGN packet sent.\r\n");
    return pdFALSE;
 }
