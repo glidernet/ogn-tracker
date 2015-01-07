@@ -120,14 +120,14 @@ void vHPTimerCallback(TimerHandle_t pxTimer)
             xQueueSend(*dest_queue, &ctrl_msg, portMAX_DELAY);
             break;
             
-        case HPT_SEND_PKT:            
+        case HPT_COPY_PKT:            
             #ifdef HPT_DEBUG
-            Console_Send("HPT_SEND_PKT\r\n",0);
+            Console_Send("HPT_COPY_PKT\r\n",0);
             #endif
             dest_queue = Get_ControlQueue();
             ctrl_msg.msg_data   = 0;
             ctrl_msg.msg_len    = 0;
-            ctrl_msg.msg_opcode = HPT_SEND_PKT;
+            ctrl_msg.msg_opcode = HPT_COPY_PKT;
             ctrl_msg.src_id     = HPT_SRC_ID;
             xQueueSend(*dest_queue, &ctrl_msg, portMAX_DELAY);
             break;
@@ -140,6 +140,18 @@ void vHPTimerCallback(TimerHandle_t pxTimer)
             ctrl_msg.msg_data   = data1;
             ctrl_msg.msg_len    = 0;
             ctrl_msg.msg_opcode = SP1_CHG_CHANNEL;
+            ctrl_msg.src_id     = HPT_SRC_ID;
+            xQueueSend(*dest_queue, &ctrl_msg, portMAX_DELAY);
+            break;
+        
+        case HPT_TX_PKT:            
+            #ifdef HPT_DEBUG
+            Console_Send("HPT_TX_PKT\r\n",0);
+            #endif
+            dest_queue = Get_SP1Queue();
+            ctrl_msg.msg_data   = 0;
+            ctrl_msg.msg_len    = 0;
+            ctrl_msg.msg_opcode = SP1_TX_PACKET;
             ctrl_msg.src_id     = HPT_SRC_ID;
             xQueueSend(*dest_queue, &ctrl_msg, portMAX_DELAY);
             break;

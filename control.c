@@ -109,13 +109,17 @@ uint8_t Create_HPT_Table_OGN(HPT_Event* hpt_table_arr)
 {
    uint8_t pos = 0;
    
+   hpt_table_arr[pos].time    = HPT_MS(150);
+   hpt_table_arr[pos].opcode  = HPT_COPY_PKT;
+   pos++;
+   
    hpt_table_arr[pos].time    = HPT_MS(200);
    hpt_table_arr[pos].opcode  = HPT_SP1_CHANNEL;
    hpt_table_arr[pos].data1   = 4;  
    pos++;
    
-   hpt_table_arr[pos].time    = HPT_MS(500);
-   hpt_table_arr[pos].opcode  = HPT_SEND_PKT;
+   hpt_table_arr[pos].time    = HPT_MS(400);
+   hpt_table_arr[pos].opcode  = HPT_TX_PKT;
    pos++;
    
    hpt_table_arr[pos].time    = HPT_MS(700);
@@ -124,7 +128,7 @@ uint8_t Create_HPT_Table_OGN(HPT_Event* hpt_table_arr)
    pos++;
    
    hpt_table_arr[pos].time    = HPT_MS(900);
-   hpt_table_arr[pos].opcode  = HPT_SEND_PKT;
+   hpt_table_arr[pos].opcode  = HPT_TX_PKT;
    pos++;
    
    hpt_table_arr[pos].time    = HPT_MS(925);
@@ -383,16 +387,13 @@ static void Handle_hpt_msgs(task_message* msg)
             TX_pkt_data = OGN_PreparePacket();
             break;
 
-        case HPT_SEND_PKT:
-            if (TX_pkt_data)
-            {
-                sp1_msg.msg_data   = (uint32_t)TX_pkt_data;
-                sp1_msg.msg_len    = OGN_PKT_LEN;
-                sp1_msg.msg_opcode = SP1_SEND_OGN_PKT;
-                sp1_msg.src_id     = CONTROL_SRC_ID;
-                xQueueHandle* sp1_task_queue = Get_SP1Queue();
-                xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
-            }
+        case HPT_COPY_PKT:
+            sp1_msg.msg_data   = (uint32_t)TX_pkt_data; /* null allowed - packet data will be cleared */
+            sp1_msg.msg_len    = OGN_PKT_LEN;
+            sp1_msg.msg_opcode = SP1_COPY_OGN_PKT;
+            sp1_msg.src_id     = CONTROL_SRC_ID;
+            xQueueHandle* sp1_task_queue = Get_SP1Queue();
+            xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
             break;
             
         default:

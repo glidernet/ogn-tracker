@@ -32,11 +32,12 @@ typedef struct
 /* --- Spirit task opcodes --- */
 typedef enum
 {
-   SP1_SEND_OGN_PKT   = 1,  // Send packet in OGN format
+   SP1_COPY_OGN_PKT = 1,    // Copy packet data in OGN format
    SP1_CHG_CHANNEL,         // Change active channel
    SP1_START_CW,            // Start transmitting continuous wave
    SP1_STOP_CW,             // Stop transmitting continuous wave
    SP1_START_RX,            // Start receiving on current channel
+   SP1_TX_PACKET,           // Transmitting buffered packet on current channel
    SP1_INT_GPIO0_IRQ        // internal message 
 }sp1_opcode_types;
 

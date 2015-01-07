@@ -83,6 +83,7 @@ and afterwards we encode 26 bytes of the apcket data.
 xQueueHandle     xQueueSP1;
 
 uint8_t Packet_TxBuff[SPR_MAX_FIFO_LEN], Packet_RxBuff[SPR_MAX_FIFO_LEN];
+uint8_t Packet_TxBuff_Len;
 
 uint8_t SPR_SPI_BufferTX[SPR_SPI_MAX_REG_NUM+SPR_SPI_HDR_LEN];
 uint8_t SPR_SPI_BufferRX[SPR_SPI_MAX_REG_NUM+SPR_SPI_HDR_LEN];
@@ -448,6 +449,9 @@ void Spirit1_Config(void)
    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
    NVIC_Init(&NVIC_InitStructure);
    
+   /* No packet in TX buffer */
+   Packet_TxBuff_Len = 0;
+   
 }
 
 /**
@@ -484,31 +488,43 @@ void static SpiritTXConf(float TxPower)
 }
 
 /**
-* @brief  Send OGN packet.
+* @brief  Copy OGN packet to Spirit1 task memory.
+* @param  packet length and address, could be invalid when packet data should be cleared
+* @retval None
+*/
+void SpiritCopyPacket_OGN(const uint8_t* pkt_data, uint8_t pkt_len)
+{
+   uint8_t in_pkt_pos, out_pkt_pos = 0;
+   if ((pkt_data)&&(pkt_len))
+   {
+      uint8_t Buff = 0x06; uint8_t Byte;
+      Byte = hex_2_manch_encoding[0x5]; Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
+      Byte = hex_2_manch_encoding[0x6]; Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
+      Byte = hex_2_manch_encoding[0xC]; Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
+      for (in_pkt_pos = 0; in_pkt_pos<pkt_len; in_pkt_pos++)
+      { uint8_t Data = pkt_data[in_pkt_pos];
+        Byte = hex_2_manch_encoding[Data>>4];   Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
+        Byte = hex_2_manch_encoding[Data&0x0F]; Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
+      }
+      Buff = (Buff<<4) | 0x0A; Packet_TxBuff[out_pkt_pos++] = Buff;
+   }
+   Packet_TxBuff_Len = out_pkt_pos;
+}
+
+/**
+* @brief  Transmit prepared packet.
 * @param  None
 * @retval None
 */
-void SpiritSendPacket_OGN(const uint8_t* pkt_data, uint8_t pkt_len)
+void SP1_TX_packet(void)
 {
-   uint8_t in_pkt_pos, out_pkt_pos = 0;
- 
-   uint8_t Buff = 0x06; uint8_t Byte;
-   Byte = hex_2_manch_encoding[0x5]; Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
-   Byte = hex_2_manch_encoding[0x6]; Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
-   Byte = hex_2_manch_encoding[0xC]; Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
-   for (in_pkt_pos = 0; in_pkt_pos<pkt_len; in_pkt_pos++)
-   { uint8_t Data = pkt_data[in_pkt_pos];
-     Byte = hex_2_manch_encoding[Data>>4];   Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
-     Byte = hex_2_manch_encoding[Data&0x0F]; Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
-   }
-   Buff = (Buff<<4) | 0x0A; Packet_TxBuff[out_pkt_pos++] = Buff;
-    
-   SpiritCmdStrobeFlushTxFifo();
-   SpiritSpiWriteLinearFifo(SPIRIT1_PKT_LEN, Packet_TxBuff);
-
-   SpiritCmdStrobeTx();
+    if (Packet_TxBuff_Len)
+    {
+        SpiritCmdStrobeFlushTxFifo();
+        SpiritSpiWriteLinearFifo(SPIRIT1_PKT_LEN, Packet_TxBuff);
+        SpiritCmdStrobeTx();
+    }
 }
-
 
 
 /* Data for single packet */
@@ -649,8 +665,8 @@ void vTaskSP1(void* pvParameters)
       xQueueReceive(xQueueSP1, &msg, portMAX_DELAY);
       switch (msg.msg_opcode)
       {
-         case SP1_SEND_OGN_PKT:             // a request to send a packet
-            SpiritSendPacket_OGN((uint8_t*)msg.msg_data, msg.msg_len);
+         case SP1_COPY_OGN_PKT:            // a request to copy a packet data
+            SpiritCopyPacket_OGN((uint8_t*)msg.msg_data, msg.msg_len);
             break;
          case SP1_CHG_CHANNEL:             // a request to change active channel
             SpiritRadioSetChannel(msg.msg_data);
@@ -664,7 +680,9 @@ void vTaskSP1(void* pvParameters)
          case SP1_START_RX:                // a request to start RX
             SP1_Enter_Pers_RX_mode();
             break;
-            
+         case SP1_TX_PACKET:               // a request to TX buffered packet
+            SP1_TX_packet();
+            break;         
          case SP1_INT_GPIO0_IRQ:           // internal message - GPIO0 triggered
          {
             /* Check/clear interrupt status register */
