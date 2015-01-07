@@ -7,7 +7,7 @@
 /* -------- defines -------- */
 /* -------- variables -------- */
 static int         PosPtr=0;        // round buffer pointer
-static OgnPosition Position[4];     // keep a round-buffer of for positions
+static OgnPosition Position[4];     // keep a round-buffer of four positions
 static OGN_Packet  Packet;          // encoded OGN packet
 static uint32_t    AcftID;
 
