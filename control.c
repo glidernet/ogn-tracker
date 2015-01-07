@@ -329,29 +329,38 @@ static uint8_t print_hex_val(uint8_t data, char* dest)
 void Print_packet(rcv_packet_str* packet)
 {
     char buffer[80];
-    int i, Neg=0, ctr=0; 
-    
+    int i, Neg=0;
+
     float rssi = packet->rssi;
     int lqi = packet->lqi;
     int pqi = packet->pqi;
     int sqi = packet->sqi;
-    
+
     if(rssi<0) { Neg=1; rssi=(-rssi); }
     int Int = (int)floor(rssi);
     int Frac = (int)floor((rssi-Int)*10);
     if(Neg) Int=(-Int);
     sprintf(buffer, "Packet received: RSSI: %+d.%ddBm, LQI: %d, PQI: %d, SQI: %d\r\n", Int, Frac, lqi, pqi, sqi);
     Console_Send(buffer, 1);
-    
+
+    int ctr=0;
     for (i=0; i < OGN_PKT_LEN; i++)
     {
-       ctr+= print_hex_val(packet->packet_data_ptr[i], &buffer[ctr]);
+       ctr+= print_hex_val(packet->data_ptr[i], &buffer[ctr]);
     }
     buffer[ctr++] = '\r'; buffer[ctr++] = '\n';
     buffer[ctr++] = '\0';
-    
     Console_Send(buffer, 1);
-    
+
+    ctr=0;
+    for (i=0; i < OGN_PKT_LEN; i++)
+    {
+       ctr+= print_hex_val(packet->err_ptr[i], &buffer[ctr]);
+    }
+    buffer[ctr++] = '\r'; buffer[ctr++] = '\n';
+    buffer[ctr++] = '\0';
+    Console_Send(buffer, 1);
+
 }
 
 /**

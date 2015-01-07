@@ -11,13 +11,14 @@
 extern "C" {
 #endif
 /* ---- data structures ---- */
-typedef struct
+typedef struct                 // received packet structure
 {
-   uint8_t*  packet_data_ptr;
-   float     rssi;
-   uint8_t   lqi;
-   uint8_t   pqi;
-   uint8_t   sqi;  
+   uint8_t*  data_ptr;  // pointer to data (why not directly store data ?)
+   uint8_t*  err_ptr;   // pointer to manchester error pattern
+   float     rssi;      // [dBm] Received Signal Strength Indicator
+   uint8_t   lqi;       // [S/N] Link Quality Indicator (signal-to-noise)
+   uint8_t   pqi;       // [bits] Preamble Quality Indicator ?
+   uint8_t   sqi;       // [bits] SYNCword quality Indicator
 } rcv_packet_str;
 
 /* -------- defines -------- */

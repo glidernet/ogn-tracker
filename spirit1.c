@@ -252,7 +252,7 @@ const uint8_t manch_2_hex_to_trans[256] = // lower nibble has the data bits and 
 
 /* interrupt for raising GPIO0 line */
 void EXTI0_IRQHandler(void)
-{  
+{
    task_message sp1_msg;
    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
@@ -409,7 +409,7 @@ void Spirit1_Config(void)
    GPIO_InitTypeDef GPIO_InitStructure;
    EXTI_InitTypeDef EXTI_InitStructure;
    NVIC_InitTypeDef NVIC_InitStructure;
-   
+
    SPI1_Config();
 
    /* SPIRIT1 SHDN pin configuration */
@@ -423,9 +423,9 @@ void Spirit1_Config(void)
    GPIO_Init(SPR1_SHDN_GPIO_PORT, &GPIO_InitStructure);
 
    Spirit1EnterShutdown();
-    
+
    /* SPIRIT1 GPIO0 pin configuration */
-   RCC_AHBPeriphClockCmd(SPR1_GPIO0_GPIO_CLK, ENABLE); 
+   RCC_AHBPeriphClockCmd(SPR1_GPIO0_GPIO_CLK, ENABLE);
 
    GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_IN;
    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
@@ -434,24 +434,24 @@ void Spirit1_Config(void)
    GPIO_InitStructure.GPIO_Pin   = SPR1_GPIO0_PIN;
    GPIO_Init(SPR1_GPIO0_GPIO_PORT, &GPIO_InitStructure);
 
-   SYSCFG_EXTILineConfig(SPR1_GPIO0_PORT_SRC, SPR1_GPIO0_PIN_SRC); 
+   SYSCFG_EXTILineConfig(SPR1_GPIO0_PORT_SRC, SPR1_GPIO0_PIN_SRC);
 
    EXTI_InitStructure.EXTI_Line    = SPR1_GPIO0_EXTI_LINE;
    EXTI_InitStructure.EXTI_Mode    = EXTI_Mode_Interrupt;
    EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
    EXTI_InitStructure.EXTI_LineCmd = ENABLE;
-   EXTI_Init(&EXTI_InitStructure);   
-   
+   EXTI_Init(&EXTI_InitStructure);
+
    /* enable Spirit1 GPIO0 input line interrupt */
    NVIC_InitStructure.NVIC_IRQChannel = SPR1_GPIO0_EXTI_IRQ;
    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = configSPIRIT1_INTERRUPT_PRIORITY;
    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
    NVIC_Init(&NVIC_InitStructure);
-   
+
    /* No packet in TX buffer */
    Packet_TxBuff_Len = 0;
-   
+
 }
 
 /**
@@ -478,10 +478,10 @@ void static SpiritTXConf(float TxPower)
    float max_power = *(float *)GetOption(OPT_MAX_TX_PWR);
    float pwr_delta = max_power - SPIRIT1_LIB_MAX_POWER;
    float lib_power = TxPower - pwr_delta;
-   
+
    if (lib_power > SPIRIT1_LIB_MAX_POWER) lib_power = SPIRIT1_LIB_MAX_POWER;
    if (lib_power < SPIRIT1_LIB_MIN_POWER) lib_power = SPIRIT1_LIB_MIN_POWER;
-   
+
    /* Spirit Radio set power */
    SpiritRadioSetPALeveldBm(0, lib_power);
    SpiritRadioSetPALevelMaxIndex(0);
@@ -497,12 +497,12 @@ void SpiritCopyPacket_OGN(const uint8_t* pkt_data, uint8_t pkt_len)
    uint8_t in_pkt_pos, out_pkt_pos = 0;
    if ((pkt_data)&&(pkt_len))
    {
-      uint8_t Buff = 0x06; uint8_t Byte;
+      uint8_t Buff = 0x06; uint8_t Byte;     // complete the preamble/SYNC
       Byte = hex_2_manch_encoding[0x5]; Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
       Byte = hex_2_manch_encoding[0x6]; Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
       Byte = hex_2_manch_encoding[0xC]; Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
       for (in_pkt_pos = 0; in_pkt_pos<pkt_len; in_pkt_pos++)
-      { uint8_t Data = pkt_data[in_pkt_pos];
+      { uint8_t Data = pkt_data[in_pkt_pos]; // get the next data byte => convert in two Manchester bytes
         Byte = hex_2_manch_encoding[Data>>4];   Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
         Byte = hex_2_manch_encoding[Data&0x0F]; Buff = (Buff<<4) | (Byte>>4); Packet_TxBuff[out_pkt_pos++] = Buff; Buff = Byte&0x0F;
       }
@@ -529,7 +529,8 @@ void SP1_TX_packet(void)
 
 /* Data for single packet */
 rcv_packet_str rcv_packet;
-uint8_t ogn_packet[OGN_PKT_LEN];
+uint8_t ogn_packet_data[OGN_PKT_LEN];
+uint8_t ogn_packet_err[OGN_PKT_LEN];
 
 /**
 * @brief  Receive OGN packet.
@@ -540,32 +541,36 @@ rcv_packet_str* SpiritReceivePacket_OGN(void)
 {
     uint16_t cRxData;
     uint8_t  in_pkt_pos, out_pkt_pos;
-    
+
     cRxData = SpiritLinearFifoReadNumElementsRxFifo();
     SpiritSpiReadLinearFifo(cRxData, Packet_RxBuff);
     /* Flush the RX FIFO */
     SpiritCmdStrobeFlushRxFifo();
-    
-    if (cRxData != SPIRIT1_PKT_LEN)
-    {
-       return NULL; 
-    }
-    
-    rcv_packet.packet_data_ptr = ogn_packet;
-    rcv_packet.rssi = SpiritQiGetRssidBm();
-    rcv_packet.lqi  = SpiritQiGetLqi();
-    rcv_packet.pqi  = SpiritQiGetPqi();
-    rcv_packet.sqi  = SpiritQiGetSqi();
-    
-    /* Decode packet */
-    in_pkt_pos = 3; /* skip preamble */
-    
+
+    if (cRxData != SPIRIT1_PKT_LEN) return NULL;
+
+    rcv_packet.data_ptr = ogn_packet_data;
+    rcv_packet.err_ptr  = ogn_packet_err;
+    rcv_packet.rssi     = SpiritQiGetRssidBm();
+    rcv_packet.lqi      = SpiritQiGetLqi();
+    rcv_packet.pqi      = SpiritQiGetPqi();
+    rcv_packet.sqi      = SpiritQiGetSqi();
+
+    // Decode Manchester
+    in_pkt_pos = 0; uint8_t Manch, Data, Err;
+    Manch = Packet_RxBuff[in_pkt_pos++]; Data=manch_2_hex_to_trans[Manch]; Err=Data>>4; Data&=0x0F;
+    Manch = Packet_RxBuff[in_pkt_pos++]; Data=manch_2_hex_to_trans[Manch]; Err=Data>>4; Data&=0x0F;
+    Manch = Packet_RxBuff[in_pkt_pos++]; Data=manch_2_hex_to_trans[Manch]; Err=Data>>4; Data&=0x0F;
+    Manch = Packet_RxBuff[in_pkt_pos++]; Data=manch_2_hex_to_trans[Manch]; Err=Data>>4; Data&=0x0F;
+
     for (out_pkt_pos = 0; out_pkt_pos < OGN_PKT_LEN; out_pkt_pos++)
-    {
-        ogn_packet[out_pkt_pos]  = (manch_2_hex_to_trans[Packet_RxBuff[in_pkt_pos++]]&0x0F)<<4;
-        ogn_packet[out_pkt_pos] |= (manch_2_hex_to_trans[Packet_RxBuff[in_pkt_pos++]]&0x0F);
-    }
-    
+    { uint8_t DataByte = Data; uint8_t ErrByte=Err;
+      Manch = Packet_RxBuff[in_pkt_pos++]; Data=manch_2_hex_to_trans[Manch]; Err=Data>>4; Data&=0x0F;
+      DataByte = (DataByte<<4) |  Data;     ErrByte = (ErrByte<<4) |  Err;
+      Manch = Packet_RxBuff[in_pkt_pos++]; Data=manch_2_hex_to_trans[Manch]; Err=Data>>4; Data&=0x0F;
+      DataByte = (DataByte<<2) | (Data>>2); ErrByte = (ErrByte<<2) | (Err>>2);
+      ogn_packet_data[out_pkt_pos] = DataByte; ogn_packet_err[out_pkt_pos] = ErrByte; }
+
     return &rcv_packet;
 }
 
@@ -592,7 +597,7 @@ void SP1_Leave_CW_mode(void)
 {
    SpiritCmdStrobeSabort();
    SpiritDirectRfSetTxMode(NORMAL_TX_MODE);
-   SpiritRadioCWTransmitMode(S_DISABLE);  
+   SpiritRadioCWTransmitMode(S_DISABLE);
 }
 
 /**
@@ -612,7 +617,7 @@ void vTaskSP1(void* pvParameters)
    SpiritIrqs xIrqStatus;
    xQueueHandle* control_queue;
    rcv_packet_str* rcv_packet_ptr;
-   
+
    Spirit1ExitShutdown();
 
    if (SpiritGeneralGetDevicePartNumber() != 0x0130)
@@ -623,10 +628,10 @@ void vTaskSP1(void* pvParameters)
 
    SpiritRadioSetXtalFrequency(26e6);
    SpiritGeneralSetSpiritVersion(SPIRIT_VERSION_3_0);
-    
+
     /* Spirit IRQ configuration */
-   SpiritGpioInit(&xGpioIRQ);  
-   
+   SpiritGpioInit(&xGpioIRQ);
+
    xRadioInit.nXtalOffsetPpm  = *(int16_t *)GetOption(OPT_XTAL_CORR);
    xRadioInit.lFrequencyBase += *(int32_t *)GetOption(OPT_FREQ_OFS);
    xRadioInit.cChannelNumber  = *(uint8_t *)GetOption(OPT_CHANNEL);
@@ -646,17 +651,17 @@ void vTaskSP1(void* pvParameters)
 
    /* RX timeout config */
    SpiritTimerSetRxTimeoutMs(500.0);
-   
+
    /* QI Config */
    SpiritQiSqiCheck(S_ENABLE);
    SpiritQiSetSqiThreshold(SQI_TH_2); /* 4 wrong bits in sync accepted */
-    
+
    /* IRQ registers blanking */
    SpiritIrqClearStatus();
-   
+
    /* Get Control task queue */
    control_queue = Get_ControlQueue();
-   
+
    /* Create queue for SP1 task messages received */
    xQueueSP1 = xQueueCreate(10, sizeof(task_message));
 
@@ -682,7 +687,7 @@ void vTaskSP1(void* pvParameters)
             break;
          case SP1_TX_PACKET:               // a request to TX buffered packet
             SP1_TX_packet();
-            break;         
+            break;
          case SP1_INT_GPIO0_IRQ:           // internal message - GPIO0 triggered
          {
             /* Check/clear interrupt status register */
@@ -693,7 +698,7 @@ void vTaskSP1(void* pvParameters)
                 /* Attempt to receive OGN packet */
                 rcv_packet_ptr = SpiritReceivePacket_OGN();
                 if (rcv_packet_ptr && control_queue)
-                {   
+                {
                     /* Send received packet to control task */
                     control_msg.msg_data   = (uint32_t)rcv_packet_ptr;
                     control_msg.msg_len    = 0;
@@ -703,7 +708,7 @@ void vTaskSP1(void* pvParameters)
                 }
             }
             break;
-         }   
+         }
          default:
             break;
       }
