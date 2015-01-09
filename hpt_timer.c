@@ -10,6 +10,7 @@
 #include "control.h"
 #include "messages.h"
 #include "spirit1.h"
+#include "timer_const.h"
 
 //#define HPT_DEBUG
 
@@ -156,6 +157,18 @@ void vHPTimerCallback(TimerHandle_t pxTimer)
             xQueueSend(*dest_queue, &ctrl_msg, portMAX_DELAY);
             break;
             
+        case HPT_TX_PKT_LBT:            
+            #ifdef HPT_DEBUG
+            Console_Send("HPT_TX_PKT_LBT\r\n",0);
+            #endif
+            dest_queue = Get_SP1Queue();
+            ctrl_msg.msg_data   = data1;
+            ctrl_msg.msg_len    = 0;
+            ctrl_msg.msg_opcode = SP1_TX_PACKET_LBT;
+            ctrl_msg.src_id     = HPT_SRC_ID;
+            xQueueSend(*dest_queue, &ctrl_msg, portMAX_DELAY);
+            break;
+            
         case HPT_IWDG_RELOAD:            
             #ifdef HPT_DEBUG
             Console_Send("HPT_IWDG_RELOAD\r\n",0);
@@ -205,8 +218,8 @@ void HPT_Config(void)
 {
     xHPTimer = xTimerCreate(
       "HPTimer",
-      /* The timer period in ticks. */
-      HPT_MS(1000),
+      /* The timer period in ms. */
+      TIMER_MS(1000),
       /* The timer will stop when expire. */
       pdFALSE,
       /* unique id */

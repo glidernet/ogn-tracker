@@ -81,6 +81,8 @@ H_SRC     += control.h
 H_SRC     += hpt_timer.h
 H_SRC     += ogn_lib.h
 H_SRC     += display.h
+H_SRC     += timer_const.h
+
 
 CPP_SRC   = ogn_lib.cpp
 

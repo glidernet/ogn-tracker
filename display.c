@@ -5,6 +5,7 @@
 #include <semphr.h>
 #include <queue.h>
 #include <timers.h>
+#include "timer_const.h"
 #include "messages.h"
 
 /* -------- defines -------- */

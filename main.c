@@ -27,6 +27,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include <stdlib.h>
 #include <FreeRTOS.h>
 #include <task.h>
 #include <semphr.h>
@@ -112,6 +113,7 @@ void HandlePowerUpMode(void)
 void prvSetupHardware(void)
 {
    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
+   srand(*(uint32_t*)0x1FF80050); /* Set CPU id as seed */
    
    Console_Config();
    Display_Config();

@@ -1,9 +1,11 @@
 #include "spirit1.h"
 #include <stm32l1xx.h>
+#include <stdlib.h>
 #include <FreeRTOS.h>
 #include <task.h>
 #include <semphr.h>
 #include <queue.h>
+#include <timers.h>
 #include "messages.h"
 #include "spi.h"
 #include "MCU_Interface.h"
@@ -11,6 +13,7 @@
 #include "options.h"
 #include "ogn_lib.h"
 #include "control.h"
+#include "timer_const.h"
 
 /* -------- defines -------- */
 #define SPIRIT1_PKT_LEN     (3+2*(OGN_PKT_LEN)+1) // three bytes to complete the OGN SYNC word, 26 data+FEC bytes with Manchester emulation
@@ -79,8 +82,12 @@ and afterwards we encode 26 bytes of the apcket data.
 
 */
 
+/* ------- declarations ------ */
+void SP1_TX_packet(void);
+
 /* -------- variables -------- */
 xQueueHandle     xQueueSP1;
+TimerHandle_t    xSP1Timer;
 
 uint8_t Packet_TxBuff[SPR_MAX_FIFO_LEN], Packet_RxBuff[SPR_MAX_FIFO_LEN];
 uint8_t Packet_TxBuff_Len;
@@ -153,42 +160,6 @@ const uint8_t hex_2_manch_encoding[0x10] =         // lookup table for 4-bit nib
    0x56, /* hex: E, bin: 1110, manch: 01010110 */
    0x55  /* hex: F, bin: 1111, manch: 01010101 */
 };
-
-/* Octave script for creating manchester to binary decoding by analysing transition "to" bits 
-function m2b_to
-    ctr = 0;
-    for (manch = 0:255)
-        manch_bin = dec2bin(manch,8);
-        bin = manch_bin(2:2:8);
-        dec = bin2dec(bin);
-        if !(mod(ctr,16)) 
-            printf("\n");
-        endif
-        ctr++;
-        printf("0x%x, ",dec);
-    endfor
-endfunction
-
-const uint8_t manch_2_hex_to_trans[256] = 
-{
-    0x0, 0x1, 0x0, 0x1, 0x2, 0x3, 0x2, 0x3, 0x0, 0x1, 0x0, 0x1, 0x2, 0x3, 0x2, 0x3,
-    0x4, 0x5, 0x4, 0x5, 0x6, 0x7, 0x6, 0x7, 0x4, 0x5, 0x4, 0x5, 0x6, 0x7, 0x6, 0x7,
-    0x0, 0x1, 0x0, 0x1, 0x2, 0x3, 0x2, 0x3, 0x0, 0x1, 0x0, 0x1, 0x2, 0x3, 0x2, 0x3,
-    0x4, 0x5, 0x4, 0x5, 0x6, 0x7, 0x6, 0x7, 0x4, 0x5, 0x4, 0x5, 0x6, 0x7, 0x6, 0x7,
-    0x8, 0x9, 0x8, 0x9, 0xa, 0xb, 0xa, 0xb, 0x8, 0x9, 0x8, 0x9, 0xa, 0xb, 0xa, 0xb,
-    0xc, 0xd, 0xc, 0xd, 0xe, 0xf, 0xe, 0xf, 0xc, 0xd, 0xc, 0xd, 0xe, 0xf, 0xe, 0xf,
-    0x8, 0x9, 0x8, 0x9, 0xa, 0xb, 0xa, 0xb, 0x8, 0x9, 0x8, 0x9, 0xa, 0xb, 0xa, 0xb,
-    0xc, 0xd, 0xc, 0xd, 0xe, 0xf, 0xe, 0xf, 0xc, 0xd, 0xc, 0xd, 0xe, 0xf, 0xe, 0xf,
-    0x0, 0x1, 0x0, 0x1, 0x2, 0x3, 0x2, 0x3, 0x0, 0x1, 0x0, 0x1, 0x2, 0x3, 0x2, 0x3,
-    0x4, 0x5, 0x4, 0x5, 0x6, 0x7, 0x6, 0x7, 0x4, 0x5, 0x4, 0x5, 0x6, 0x7, 0x6, 0x7,
-    0x0, 0x1, 0x0, 0x1, 0x2, 0x3, 0x2, 0x3, 0x0, 0x1, 0x0, 0x1, 0x2, 0x3, 0x2, 0x3,
-    0x4, 0x5, 0x4, 0x5, 0x6, 0x7, 0x6, 0x7, 0x4, 0x5, 0x4, 0x5, 0x6, 0x7, 0x6, 0x7,
-    0x8, 0x9, 0x8, 0x9, 0xa, 0xb, 0xa, 0xb, 0x8, 0x9, 0x8, 0x9, 0xa, 0xb, 0xa, 0xb,
-    0xc, 0xd, 0xc, 0xd, 0xe, 0xf, 0xe, 0xf, 0xc, 0xd, 0xc, 0xd, 0xe, 0xf, 0xe, 0xf,
-    0x8, 0x9, 0x8, 0x9, 0xa, 0xb, 0xa, 0xb, 0x8, 0x9, 0x8, 0x9, 0xa, 0xb, 0xa, 0xb,
-    0xc, 0xd, 0xc, 0xd, 0xe, 0xf, 0xe, 0xf, 0xc, 0xd, 0xc, 0xd, 0xe, 0xf, 0xe, 0xf
-};
-*/
 
 /* Code to generate the Manchester decoding table (compiles with warnings)
 
@@ -400,6 +371,16 @@ void Spirit1ExitShutdown(void)
 }
 
 /**
+* @brief  SP1 timer callback.
+* @param  None
+* @retval None
+*/
+void vSP1TimerCallback(TimerHandle_t pxTimer)
+{
+   SP1_TX_packet();
+}
+
+/**
 * @brief  Configures the SPIRIT1 IC.
 * @param  None
 * @retval None
@@ -410,6 +391,18 @@ void Spirit1_Config(void)
    EXTI_InitTypeDef EXTI_InitStructure;
    NVIC_InitTypeDef NVIC_InitStructure;
 
+   xSP1Timer = xTimerCreate(
+      "SP1Timer",
+      /* The timer period in ms. */
+      TIMER_MS(200),
+      /* The timer will stop when expire. */
+      pdFALSE,
+      /* unique id */
+      ( void * )SP1_TIMER_ID,
+      /* Each timer calls the same callback when it expires. */
+      vSP1TimerCallback
+    );
+    
    SPI1_Config();
 
    /* SPIRIT1 SHDN pin configuration */
@@ -524,6 +517,18 @@ void SP1_TX_packet(void)
         SpiritSpiWriteLinearFifo(SPIRIT1_PKT_LEN, Packet_TxBuff);
         SpiritCmdStrobeTx();
     }
+}
+
+/**
+* @brief  Transmit prepared packet with delay and LBT.
+* @param  None
+* @retval None
+*/
+void SP1_TX_packet_LBT(uint32_t max_tx_delay_ms)
+{
+    uint16_t tx_delay = rand() % max_tx_delay_ms;
+    xTimerChangePeriod(xSP1Timer, TIMER_MS(tx_delay), portMAX_DELAY);
+    xTimerStart(xSP1Timer, portMAX_DELAY);
 }
 
 
@@ -674,6 +679,8 @@ void vTaskSP1(void* pvParameters)
             SpiritCopyPacket_OGN((uint8_t*)msg.msg_data, msg.msg_len);
             break;
          case SP1_CHG_CHANNEL:             // a request to change active channel
+            xTimerStop(xSP1Timer, portMAX_DELAY); // cancel running TX timer (if not expired already) 
+            SpiritCmdStrobeSabort();       // cancel all activities
             SpiritRadioSetChannel(msg.msg_data);
             break;
          case SP1_START_CW:                // a request to start CW
@@ -687,6 +694,9 @@ void vTaskSP1(void* pvParameters)
             break;
          case SP1_TX_PACKET:               // a request to TX buffered packet
             SP1_TX_packet();
+            break;
+         case SP1_TX_PACKET_LBT:           // a request to TX with LBT buffered packet
+            SP1_TX_packet_LBT(msg.msg_data);
             break;
          case SP1_INT_GPIO0_IRQ:           // internal message - GPIO0 triggered
          {

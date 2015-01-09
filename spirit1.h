@@ -39,6 +39,8 @@ typedef enum
    SP1_STOP_CW,             // Stop transmitting continuous wave
    SP1_START_RX,            // Start receiving on current channel
    SP1_TX_PACKET,           // Transmitting buffered packet on current channel
+   SP1_TX_PACKET_LBT,       // Transmitting buffered packet on current channel with Listen Before Talk 
+                            // and random TX timing 
    SP1_INT_GPIO0_IRQ        // internal message 
 }sp1_opcode_types;
 

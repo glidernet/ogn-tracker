@@ -15,6 +15,7 @@
 #include "spirit1.h"
 #include "ogn_lib.h"
 #include "display.h"
+#include "timer_const.h"
 
 // #define GPS_DEBUG
 /* -------- constants -------- */

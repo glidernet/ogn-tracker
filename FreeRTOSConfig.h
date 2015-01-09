@@ -147,11 +147,6 @@ NVIC value of 255. */
 /* Priority 9: Power button line interrupt */
 #define configPWR_BTN_INTERRUPT_PRIORITY (configLIBRARY_KERNEL_INTERRUPT_PRIORITY-6)
 
-/* Timers identifiers */
-#define HPT_TIMER_ID        1
-#define PWR_DOWN_TIMER_ID   2
-#define GPS_VALID_TIMER     3
-#define DISP_GPS_TIMER      4
 
 /* The size of the global output buffer that is available for use when there
 are multiple command interpreters running at once (for example, one on a UART

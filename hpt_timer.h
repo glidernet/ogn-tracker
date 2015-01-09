@@ -10,7 +10,6 @@ extern "C" {
 #endif
 
 /* -------- defines -------- */
-#define HPT_MS(x) (x)
 
 typedef enum
 {
@@ -21,7 +20,8 @@ typedef enum
    HPT_PREPARE_PKT,  /* Prepare OGN packet */
    HPT_COPY_PKT,     /* Copy OGN packet data */
    HPT_SP1_CHANNEL,  /* Switch SP1 to selected channel */
-   HPT_TX_PKT,       /* TX copied packet data */   
+   HPT_TX_PKT,       /* TX copied packet data */
+   HPT_TX_PKT_LBT,   /* TX copied packet data with Listen Before Talk and random access */      
    HPT_IWDG_RELOAD   /* Reload Independent Watchdog */   
 } hpt_opcodes;
 

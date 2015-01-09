@@ -1,4 +1,7 @@
 #include "control.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 #include <stm32l1xx.h>
 #include <FreeRTOS.h>
 #include <FreeRTOS_CLI.h>
@@ -13,10 +16,8 @@
 #include "options.h"
 #include "console.h"
 #include "gps.h"
+#include "timer_const.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
 
 /* -------- defines -------- */
 #define MAX_HPT_TABLE_LEN  16
@@ -109,37 +110,39 @@ uint8_t Create_HPT_Table_OGN(HPT_Event* hpt_table_arr)
 {
    uint8_t pos = 0;
    
-   hpt_table_arr[pos].time    = HPT_MS(150);
+   hpt_table_arr[pos].time    = TIMER_MS(150);
    hpt_table_arr[pos].opcode  = HPT_COPY_PKT;
    pos++;
    
-   hpt_table_arr[pos].time    = HPT_MS(200);
+   hpt_table_arr[pos].time    = TIMER_MS(300);
    hpt_table_arr[pos].opcode  = HPT_SP1_CHANNEL;
    hpt_table_arr[pos].data1   = 4;  
    pos++;
    
-   hpt_table_arr[pos].time    = HPT_MS(400);
-   hpt_table_arr[pos].opcode  = HPT_TX_PKT;
+   hpt_table_arr[pos].time    = TIMER_MS(301);  /* Start of TX period */
+   hpt_table_arr[pos].opcode  = HPT_TX_PKT_LBT; /* LBT TX with random delay time */
+   hpt_table_arr[pos].data1   = 380;            /* Max. TX delay time */
    pos++;
    
-   hpt_table_arr[pos].time    = HPT_MS(700);
+   hpt_table_arr[pos].time    = TIMER_MS(700);
    hpt_table_arr[pos].opcode  = HPT_SP1_CHANNEL;
    hpt_table_arr[pos].data1   = 2;  
    pos++;
    
-   hpt_table_arr[pos].time    = HPT_MS(900);
-   hpt_table_arr[pos].opcode  = HPT_TX_PKT;
+   hpt_table_arr[pos].time    = TIMER_MS(701);  /* Start of TX period */
+   hpt_table_arr[pos].opcode  = HPT_TX_PKT_LBT; /* LBT TX with random delay time */
+   hpt_table_arr[pos].data1   = 380;            /* Max. TX delay time */
    pos++;
    
-   hpt_table_arr[pos].time    = HPT_MS(925);
+   hpt_table_arr[pos].time    = TIMER_MS(925);
    hpt_table_arr[pos].opcode  = HPT_IWDG_RELOAD;
    pos++;
    
-   hpt_table_arr[pos].time    = HPT_MS(950);
+   hpt_table_arr[pos].time    = TIMER_MS(950);
    hpt_table_arr[pos].opcode  = HPT_PREPARE_PKT;
    pos++;
 	
-   hpt_table_arr[pos].time    = HPT_MS(1000);
+   hpt_table_arr[pos].time    = TIMER_MS(1000);
    hpt_table_arr[pos].opcode  = HPT_RESTART;
    pos++;
    
@@ -156,11 +159,11 @@ uint8_t Create_HPT_Table_Idle(HPT_Event* hpt_table_arr)
 {
    uint8_t pos = 0;
     
-   hpt_table_arr[pos].time    = HPT_MS(925);
+   hpt_table_arr[pos].time    = TIMER_MS(925);
    hpt_table_arr[pos].opcode  = HPT_IWDG_RELOAD;
    pos++;
    	
-   hpt_table_arr[pos].time    = HPT_MS(1000);
+   hpt_table_arr[pos].time    = TIMER_MS(1000);
    hpt_table_arr[pos].opcode  = HPT_RESTART;
    pos++;
    
@@ -206,8 +209,8 @@ void Control_Config(void)
    /* when power button is pressed timer is restarted */
    xPowerDownTimer = xTimerCreate(
       "PDTimer",
-      /* The timer period in ticks. */
-      1000,
+      /* The timer period in ms. */
+      TIMER_MS(1000),
       /* The timer will stop when expire. */
       pdFALSE,
       /* unique id */
