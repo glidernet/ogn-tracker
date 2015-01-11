@@ -6,6 +6,10 @@
 
 #include "bitcount.h"
 
+#ifndef __AVR__
+#include <math.h>
+#endif
+
 #ifdef __AVR__
 #include <avr/pgmspace.h>
 #endif
@@ -17,7 +21,8 @@ static const uint32_t LDPC_ParityCheck[48][7]
 #ifdef __AVR__
 PROGMEM
 #endif
-= { // parity check vectors
+= { // parity check vectors: 48 vectors for 48 parity checks
+    // Eaech vector applied to the data packet should yield even number of bits
  { 0x00000805, 0x00000020, 0x04000000, 0x20000000, 0x00000040, 0x00044020, 0x00000000 },
  { 0x00000001, 0x00800800, 0x00000000, 0x00000000, 0x00000000, 0x10010000, 0x00008C98 },
  { 0x00004001, 0x01000080, 0x80000400, 0x00000000, 0x08000200, 0x00200000, 0x00000005 },
@@ -68,12 +73,81 @@ PROGMEM
  { 0x00000000, 0x00101000, 0x08000001, 0x02000200, 0x82004A80, 0x00004000, 0x00000202 }
 } ;
 
+
+static const uint8_t LDPC_ParityCheckIndex[48][24]
+#ifdef __AVR__
+PROGMEM
+#endif
+= { // number of, indicies to bits to be taken for parity checks
+ { 10,   0,   2,  11,  37,  90, 125, 134, 165, 174, 178 },
+ { 11,   0,  43,  55, 176, 188, 195, 196, 199, 202, 203, 207 },
+ { 11,   0,  14,  39,  56,  74,  95, 137, 155, 181, 192, 194, },
+ { 14,   0,   8,  41,  61,  65,  69, 175, 186, 187, 190, 191, 193, 204, 206 },
+ { 15,   0,  10,  72,  75,  78, 101, 160, 163, 166, 168, 169, 182, 183, 189, 197 },
+ { 21,   0,  18,  20,  24,  25,  33,  96, 126, 136, 142, 144, 145, 148, 150, 152, 158, 170, 171, 173, 180, 205 },
+ { 18,  11,  15,  26,  33,  38,  41,  42,  57,  63, 101, 133, 146, 155, 159, 164, 184, 185, 202 },
+ { 17,   1,  11,  61,  66,  68,  89, 117, 120, 128, 129, 138, 154, 162, 183, 194, 205, 207 },
+ { 18,   5,  11,  17,  25,  69,  75,  81,  95, 102, 112, 115, 116, 124, 156, 157, 161, 200, 203 },
+ { 18,   4,   6,   8,  11,  14,  23,  30,  48,  51,  98, 105, 108, 113, 140, 158, 168, 172, 188 },
+ { 17,   9,  11,  27,  35,  49,  82, 100, 118, 121, 141, 152, 167, 169, 179, 181, 190, 196 },
+ { 17,  36,  47,  69,  71,  87,  88,  92, 103, 114, 130, 135, 152, 168, 178, 194, 198, 202 },
+ { 18,   3,   8,  18,  29,  59,  60,  75,  79,  85,  86,  91,  97,  99, 132, 155, 167, 178, 207 },
+ { 16,   7,  14,  32,  41,  45,  49,  54,  80, 106, 109, 111, 139, 150, 178, 183, 203 },
+ { 15,  53,  61,  62,  70,  73,  84,  95,  96, 101, 123, 151, 153, 178, 179, 188 },
+ { 14,  12,  33,  48,  56,  64,  77,  83, 122, 128, 161, 178, 196, 197, 206 },
+ { 13,   8,   9,  13,  58,  83,  93,  95, 110, 125, 143, 145, 183, 202 },
+ { 15,  14,  40,  46,  52,  67,  69,  76,  82,  94, 101, 122, 125, 149, 180, 207 },
+ { 14,  12,  16,  27,  50,  61, 119, 125, 127, 144, 147, 155, 168, 201, 203 },
+ { 12,  19,  20,  28,  34,  41,  75,  77, 107, 118, 125, 188, 194 },
+ { 13,  62,  63,  85,  92, 111, 113, 125, 157, 163, 191, 192, 196, 205 },
+ { 10,  14,  25,  31,  61,  77,  85,  90, 169, 177, 202 },
+ { 12,  21,  22,  27,  41,  44,  90,  92,  95, 131, 158, 197, 207 },
+ { 12,  18,  26,  48,  58,  84,  90, 104, 149, 163, 190, 194, 203 },
+ { 11,   9,  36,  40,  72,  90, 138, 150, 155, 157, 188, 206 },
+ { 17,  19,  39,  76,  90,  96,  97,  98, 109, 115, 119, 120, 130, 133, 143, 160, 186, 196 },
+ { 15,  21,  29,  37,  70,  80, 107, 120, 127, 140, 156, 163, 180, 181, 202, 206 },
+ { 19,   4,  28,  31,  32,  37,  44,  50,  55,  56,  59,  63,  67,  68,  72, 115, 123, 145, 190, 198 },
+ { 18,  17,  22,  23,  26,  34,  36,  37,  46,  54,  60, 110, 128, 144, 151, 169, 186, 192, 195 },
+ { 18,  13,  20,  30,  37,  39,  45,  57,  84,  94, 103, 116, 138, 147, 167, 176, 177, 191, 197 },
+ { 18,  16,  37,  40,  43,  49,  58,  73, 113, 114, 131, 132, 137, 160, 161, 162, 173, 184, 204 },
+ { 17,   3,  17,  38,  47,  53,  55,  83, 106, 108, 126, 134, 149, 154, 160, 181, 191, 201 },
+ { 16,   1,  10,  30,  52,  56,  79,  87,  93, 111, 133, 134, 148, 156, 179, 195, 204 },
+ { 17,   5,   7,  12,  29,  72,  82,  88,  98, 104, 129, 134, 146, 153, 173, 176, 187, 192 },
+ { 16,  24,  39,  43,  60,  62,  65,  68,  71, 118, 122, 124, 134, 139, 140, 182, 185 },
+ { 13,   4,  57,  78,  80,  99, 100, 117, 134, 137, 171, 186, 199, 200 },
+ { 14,  15,  35,  51,  55,  66,  70,  91, 116, 130, 165, 171, 182, 192, 204 },
+ { 14,  24,  45,  64,  78,  89,  97, 102, 165, 172, 181, 184, 187, 195, 198 },
+ { 15,  23,  42,  56,  65,  86, 109, 126, 127, 135, 141, 162, 165, 166, 176, 200 },
+ { 14,  10,  38,  43,  54,  59,  74, 100, 103, 107, 129, 136, 143, 165, 193 },
+ { 15,   6,  21,  32,  39, 112, 114, 121, 146, 148, 151, 154, 165, 175, 189, 199 },
+ { 12,   2,  10,  55,  76, 110, 112, 137, 141, 147, 170, 185, 187 },
+ { 14,   2,   5,  13,  15,  65,  74, 108, 117, 119, 123, 132, 142, 189, 195 },
+ { 14,   1,   2,   6,  19,  22,  47,  67,  73,  99, 102, 164, 176, 182, 193 },
+ { 14,   2,   3,   7,  42,  43,  46,  50,  66,  78,  81,  87, 105, 175, 177 },
+ { 14,   2,  16,  28,  51,  79,  88,  89,  94, 106, 124, 136, 159, 166, 199 },
+ { 16,  31,  34,  35,  53,  71,  74,  81,  86,  93, 104, 131, 164, 170, 172, 174, 199 },
+ { 15,  44,  52,  64,  91, 105, 121, 135, 137, 139, 142, 153, 159, 174, 193, 201 }
+  } ;
+
+static const uint8_t LDPC_BitWeight[208] // weight of parity checks for every codeword bit
+#ifdef __AVR__
+PROGMEM
+#endif
+= { 6, 3, 6, 3, 3, 3, 3, 3, 4, 3, 4, 6, 3, 3, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    3, 3, 3, 3, 3, 6, 3, 5, 3, 5, 3, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 5, 3, 3, 3, 3, 5, 3, 3,
+    3, 4, 3, 3, 3, 4, 3, 3, 4, 3, 4, 4, 3, 3, 4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 6, 3, 3, 3, 3, 5,
+    3, 3, 3, 3, 3, 4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 6, 3, 3,
+    3, 3, 3, 3, 3, 3, 6, 3, 3, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 3, 3, 3, 3,
+    4, 3, 3, 4, 3, 6, 3, 3, 4, 4, 3, 3, 3, 3, 3, 3, 5, 3, 6, 3, 3, 5, 4, 4, 3, 3, 4, 4, 5, 3, 4, 4,
+    5, 4, 5, 5, 5, 4, 3, 5, 3, 3, 6, 5, 4, 3, 4, 5 } ;
+
 // every row represents the generator for a parity bit
 static const uint32_t LDPC_ParityGen[48][5] 
 #ifdef __AVR__
 PROGMEM
 #endif
-= { // parity bits generator
+= { // Parity bits generator: 48 vectors to generate 48 parity bits
+    // Each vector applied to the user data yields a corresponding parity bit
  { 0x40A90281, 0x9159D249, 0xCE9D516B, 0x2FDEED0B, 0xD9267CD4  },
  { 0xCCBC0FC3, 0xCC4FA4BC, 0x811EC3D0, 0xB07EC1B3, 0xA3B8E8D8  },
  { 0x66418D56, 0x3B85ADFF, 0xD2A6532E, 0x48CF52E4, 0x6A16586D  },
@@ -175,16 +249,35 @@ int8_t LDPC_Check(const uint8_t *Data) // 20 data bytes followed by 6 parity byt
 int8_t LDPC_Check(const uint32_t *Packet)
 { return LDPC_Check( (uint8_t *)Packet ); }
 
-#else // __AVR__
+#else // if not 8-bit AVR
+
+void LDPC_Encode(const uint8_t *Data, uint8_t *Parity, const uint32_t ParityGen[48][5])
+{ uint8_t ParIdx=0; uint8_t ParByte=0; uint8_t Mask=1;
+  for(uint8_t Row=0; Row<48; Row++)
+  { uint8_t Count=0;
+    const uint8_t *Gen = (uint8_t *)(ParityGen[Row]);
+    for(uint8_t Idx=0; Idx<20; Idx++)
+    { Count+=Count1s((uint8_t)(Data[Idx]&Gen[Idx])); }
+    if(Count&1) ParByte|=Mask; Mask<<=1;
+    if(Mask==0) { Parity[ParIdx++]=ParByte; Mask=1; ParByte=0; }
+  }
+  // if(Mask!=1) Parity[ParIdx]=ParByte;
+}
+
+void LDPC_Encode(const uint8_t *Data, uint8_t *Parity)
+{ LDPC_Encode(Data, Parity, LDPC_ParityGen); }
+
+void LDPC_Encode(uint8_t *Data)
+{ LDPC_Encode(Data, Data+20); }
 
 // encode Parity from Data: Data is 5x 32-bit words = 160 bits, Parity is 1.5x 32-bit word = 48 bits
 void LDPC_Encode(const uint32_t *Data, uint32_t *Parity, const uint32_t ParityGen[48][5])
 { // printf("LDPC_Encode: %08X %08X %08X %08X %08X", Data[0], Data[1], Data[2], Data[3], Data[4] );
-  int ParIdx=0; Parity[ParIdx]=0; uint32_t Mask=1;
-  for(int Row=0; Row<48; Row++)
-  { int Count=0;
+  uint8_t ParIdx=0; Parity[ParIdx]=0; uint32_t Mask=1;
+  for(uint8_t Row=0; Row<48; Row++)
+  { uint8_t Count=0;
     const uint32_t *Gen=ParityGen[Row];
-    for(int Idx=0; Idx<5; Idx++)
+    for(uint8_t Idx=0; Idx<5; Idx++)
     { Count+=Count1s(Data[Idx]&Gen[Idx]); }
     if(Count&1) Parity[ParIdx]|=Mask; Mask<<=1;
     if(Mask==0) { ParIdx++; Parity[ParIdx]=0; Mask=1; }
@@ -230,32 +323,34 @@ int LDPC_Check(const uint8_t *Data) // Data and Parity are 8-bit bytes
 
 class LDPC_Decoder
 { public:
-   const static int UserBits   = 160;                 // 5 32-bit bits = 20 bytes
-   const static int UserWords  = UserBits/32;
-   const static int ParityBits =  48;                 // 6 bytes (total packet is 26 bytes)
-   const static int CodeBits   = UserBits+ParityBits; // 160+48 = 208 code bits = 26 bytes
-   const static int CodeWords  = (CodeBits+31)/32;
-   const static int MaxCheckWeight = 24;
-   // const static int MaxBitWeight   =  8;
+   const static uint8_t UserBits   = 160;                 // 5 32-bit bits = 20 bytes
+   const static uint8_t UserWords  = UserBits/32;
+   const static uint8_t ParityBits =  48;                 // 6 bytes (total packet is 26 bytes)
+   const static uint8_t CodeBits   = UserBits+ParityBits; // 160+48 = 208 code bits = 26 bytes
+   const static uint8_t CodeBytes  = (CodeBits+ 7)/ 8;    //
+   const static uint8_t CodeWords  = (CodeBits+31)/32;    // 
+   const static uint8_t MaxCheckWeight = 24;
+   // const static uint8_t MaxBitWeight   =  8;
 
   public:
-
-   uint8_t BitWeight[CodeBits];
-   uint8_t CheckWeight[ParityBits];
-   uint8_t ParityCheck[ParityBits][MaxCheckWeight];
-
+/*
+   uint8_t BitWeight[CodeBits];                           // How many checks involved for every bit
+   uint8_t CheckWeight[ParityBits];                       // How many bits in every parity check
+   uint8_t ParityCheck[ParityBits][MaxCheckWeight];       // For every parity check: list of bits to be taken from the codeword
+*/
   public:
+/*
    LDPC_Decoder() { Configure(); }
-   int Configure(void)
-   { return Configure(LDPC_ParityCheck); }
 
-   int Configure(const uint32_t ParityCheckConfig[ParityBits][CodeWords])
-   { for(int Bit=0; Bit<CodeBits; Bit++)
+   int8_t Configure(void) { return Configure(LDPC_ParityCheck); }
+
+   int8_t Configure(const uint32_t ParityCheckConfig[ParityBits][CodeWords])
+   { for(uint8_t Bit=0; Bit<CodeBits; Bit++)
        BitWeight[Bit]=0;
-     for(int Row=0; Row<ParityBits; Row++)
-     { int Weight=0;
-       uint32_t Mask=1; int Idx=0; uint32_t Word=ParityCheckConfig[Row][Idx];
-       for(int Bit=0; Bit<CodeBits; Bit++)
+     for(uint8_t Row=0; Row<ParityBits; Row++)
+     { uint8_t Weight=0;
+       uint32_t Mask=1; uint8_t Idx=0; uint32_t Word=ParityCheckConfig[Row][Idx];
+       for(uint8_t Bit=0; Bit<CodeBits; Bit++)
        { if(Word&Mask) { ParityCheck[Row][Weight++]=Bit; BitWeight[Bit]++; }
          Mask<<=1; if(Mask==0) { Idx++; Word=ParityCheckConfig[Row][Idx]; Mask=1; }
        }
@@ -265,90 +360,124 @@ class LDPC_Decoder
      // { printf(BitWeight[Bit]); }
      return 0; }
 
+   void PrintCode(void)
+   { printf("LDPC_ParityCheckIndex[%d][%d] = {\n", ParityBits, MaxCheckWeight);
+     for(uint8_t Row=0; Row<ParityBits; Row++)
+     { printf(" {");
+       for(uint8_t Bit=0; Bit<CheckWeight[Row]; Bit++)
+       { printf(" %3d,", ParityCheck[Row][Bit]); }
+       printf(" },\n"); }
+     printf(" } ;\n");
+   }
+
    void PrintConfig(void) const
    { printf("LDPC_Decoder[%d,%d] Check index table:\n", UserBits, CodeBits);
-     for(int Row=0; Row<ParityBits; Row++)
+     for(uint8_t Row=0; Row<ParityBits; Row++)
      { printf("Check[%d]:", CheckWeight[Row]);
-       for(int Bit=0; Bit<CheckWeight[Row]; Bit++)
+       for(uint8_t Bit=0; Bit<CheckWeight[Row]; Bit++)
        { printf(" %3d", ParityCheck[Row][Bit]); }
        printf("\n");
      }
      printf("BitWeight[%d]:\n", CodeBits);
-     int Bit;
+     uint8_t Bit;
      for(Bit=0; Bit<CodeBits; Bit++)
      { if((Bit&0x1F)==0x00) printf("%03d:", Bit);
        printf(" %d", BitWeight[Bit]);
        if((Bit&0x1F)==0x1F) printf("\n"); }
      if((Bit&0x1F)!=0x00) printf("\n");
    }
-
+*/
   public:
 
-   int InpBit[CodeBits]; // a-priori bits
-   int OutBit[CodeBits]; // a-posteriori bits
+   int8_t  InpBit[CodeBits]; // a-priori bits
+   int16_t OutBit[CodeBits]; // a-posteriori bits
 
    void PrintInpBit(void)
    { printf("InpBit[%d]\n", CodeBits);
-     for(int Bit=0; Bit<CodeBits; Bit++)
+     for(uint8_t Bit=0; Bit<CodeBits; Bit++)
      { if((Bit&0xF)==0x0) printf("%03d:", Bit);
        printf(" %+5d", InpBit[Bit]);
        if((Bit&0xF)==0xF) printf("\n"); }
    }
 
+   void Input(const uint8_t *Data, uint8_t *Err)
+   { uint8_t Mask=1; uint8_t Idx=0; uint8_t DataByte=0; uint8_t ErrByte=0;
+     for(uint8_t Bit=0; Bit<CodeBits; Bit++)
+     { if(Mask==1) { DataByte=Data[Idx];  ErrByte=Err[Idx]; }
+       int8_t Inp;
+       if(ErrByte&Mask) Inp=0;
+                   else Inp=(DataByte&Mask) ? +32:-32;
+       InpBit[Bit] = Inp;
+       Mask<<=1; if(Mask==0) { Idx++; Mask=1; }
+     }
+   }
+
    void Input(const uint32_t Data[CodeWords])
-   { uint32_t Mask=1; int Idx=0; uint32_t Word=Data[Idx];
-     for(int Bit=0; Bit<CodeBits; Bit++)
-     { InpBit[Bit] = (Word&Mask) ? +64:-64;
+   { uint32_t Mask=1; uint8_t Idx=0; uint32_t Word=Data[Idx];
+     for(uint8_t Bit=0; Bit<CodeBits; Bit++)
+     { InpBit[Bit] = (Word&Mask) ? +32:-32;
        Mask<<=1; if(Mask==0) { Word=Data[++Idx]; Mask=1; }
      }
    }
 
    void Input(const float *Data, float RefAmpl=1.0)
    { for(int Bit=0; Bit<CodeBits; Bit++)
-     { InpBit[Bit] = floor(64*Data[Bit]/RefAmpl+0.5); }
+     { InpBit[Bit] = floor(32*Data[Bit]/RefAmpl+0.5); }
    }
 
    void Output(uint32_t Data[CodeWords])
-   { uint32_t Mask=1; int Idx=0; uint32_t Word=0;
-     for(int Bit=0; Bit<CodeBits; Bit++)
+   { uint32_t Mask=1; uint8_t Idx=0; uint32_t Word=0;
+     for(uint8_t Bit=0; Bit<CodeBits; Bit++)
      { if(InpBit[Bit]>0) Word|=Mask;
        Mask<<=1; if(Mask==0) { Data[Idx++]=Word; Word=0; Mask=1; }
      } if(Mask>1) Data[Idx++]=Word;
    }
 
-   int ProcessChecks(void)
-   { for(int Bit=0; Bit<CodeBits; Bit++)
+   void Output(uint8_t Data[CodeBytes])
+   { uint8_t Mask=1; uint8_t Idx=0; uint8_t Byte=0;
+     for(uint8_t Bit=0; Bit<CodeBits; Bit++)
+     { if(InpBit[Bit]>0) Byte|=Mask;
+       Mask<<=1; if(Mask==0) { Data[Idx++]=Byte; Byte=0; Mask=1; }
+     } if(Mask>1) Data[Idx++]=Byte;
+   }
+
+   int8_t ProcessChecks(void)
+   { for(uint8_t Bit=0; Bit<CodeBits; Bit++)
        OutBit[Bit]=0;
-     int Count=0;
-     for(int Row=0; Row<ParityBits; Row++)
-     { int Ret=ProcessCheck(Row); 
+     uint8_t Count=0;
+     for(uint8_t Row=0; Row<ParityBits; Row++)
+     { int8_t Ret=ProcessCheck(Row); 
        if(Ret<=0) Count++; }
      // printf("%d parity checks fail\n", Count);
      if(Count==0) return 0;
-     for(int Bit=0; Bit<CodeBits; Bit++)
-     { int Ampl = (11*InpBit[Bit] + OutBit[Bit])/12;
-       // if(Ampl<(-128)) Ampl=(-128);
-       // else if(Ampl>127) Ampl=127;
+     for(uint8_t Bit=0; Bit<CodeBits; Bit++)
+     { int16_t Ampl = ((uint16_t)9*InpBit[Bit] + OutBit[Bit])/(uint16_t)10; // (uint16_t)(3*BitWeight[Bit]);
+       if(Ampl<(-128)) Ampl=(-127);
+       else if(Ampl>127) Ampl=127;
        InpBit[Bit] = Ampl; }
      // PrintInpBit();
      return Count; }
 
-   int ProcessCheck(int Row)
-   { int MinAmpl=128; int MinBit=0; int MinAmpl2=128; uint32_t Word=0; uint32_t Mask=1;
-     for(int Bit=0; Bit<CheckWeight[Row]; Bit++)
-     { int BitIdx=ParityCheck[Row][Bit]; int Ampl=InpBit[BitIdx];
+   int8_t ProcessCheck(uint8_t Row)
+   { int8_t MinAmpl=127; uint8_t MinBit=0; int8_t MinAmpl2=127; uint32_t Word=0; uint32_t Mask=1;
+     const uint8_t *CheckIndex = LDPC_ParityCheckIndex[Row];
+     uint8_t CheckWeight = *CheckIndex++;
+     for(uint8_t Bit=0; Bit<CheckWeight; Bit++)
+     { uint8_t BitIdx=CheckIndex[Bit]; int8_t Ampl=InpBit[BitIdx];
        if(Ampl>0) Word|=Mask;
        Mask<<=1;
-       Ampl=abs(Ampl);
+       if(Ampl<0) Ampl=(-Ampl);
        if(Ampl<MinAmpl) { MinAmpl2=MinAmpl; MinAmpl=Ampl; MinBit=Bit; }
        else if(Ampl<MinAmpl2) { MinAmpl2=Ampl; }
      }
-     int CheckFails = Count1s(Word)&1;
+     uint8_t CheckFails = Count1s(Word)&1;
      Mask=1;
-     for(int Bit=0; Bit<CheckWeight[Row]; Bit++)
-     { int BitIdx=ParityCheck[Row][Bit];
-       int Ampl = Bit==MinBit ? MinAmpl2 : MinAmpl;
+     for(uint8_t Bit=0; Bit<CheckWeight; Bit++)
+     { uint8_t BitIdx=CheckIndex[Bit];
+       int8_t Ampl = Bit==MinBit ? MinAmpl2 : MinAmpl;
        if(CheckFails) Ampl=(-Ampl);
+       // if( (BitIdx==166) || (BitIdx==183) )
+       //   printf("OutBit[%d] += %+d\n", BitIdx, (Word&Mask) ? Ampl:-Ampl);
        OutBit[BitIdx] += (Word&Mask) ? Ampl:-Ampl;
        Mask<<=1; }
      return CheckFails?-MinAmpl:MinAmpl; }

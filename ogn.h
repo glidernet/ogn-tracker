@@ -353,26 +353,27 @@ class OgnPosition
    int8_t FixMode;              // 0 = not set (from GSA) 1 = none, 2 = 2-D, 3 = 3-D
    int8_t Satellites;           // number of active satellites
 
-   int8_t  Year;                // 
-   int8_t  Month, Day;          // Date from GPS
+   int8_t  Year, Month, Day;    // Date (UTC) from GPS
    int8_t  Hour, Min, Sec;      // Time-of-day (UTC) from GPS
    int8_t  FracSec;             // [1/100 sec] some GPS-es give second fraction with the time-of-day
-
-   int32_t Latitude;            // [0.0001/60 deg] about 0.018m accuracy, to convert to FLARM units mult by. 5/3
-   int32_t Longitude;           // [0.0001/60 deg]
-   int32_t Altitude;            // [0.1 meter] height above Geoid (sea level)
-   int16_t GeoidSeparation;     // [0.1 meter] difference between Geoid and Ellipsoid 
-   int16_t Speed;               // [0.1 knot] speed-over-ground
-   int16_t Heading;             // [0.1 deg]  heading-over-ground
 
    uint8_t PDOP;                // [0.1] dilution of precision
    uint8_t HDOP;                // [0.1] horizontal dilution of precision
    uint8_t VDOP;                // [0.1] vertical dilution of precision
 
+   int16_t Speed;               // [0.1 knot] speed-over-ground
+   int16_t Heading;             // [0.1 deg]  heading-over-ground
+
    int16_t ClimbRate;           // [0.1 meter/sec)
    int16_t TurnRate;            // [0.1 deg/sec]
 
-   int16_t Temperature;         // [0.1 degC]
+   int16_t GeoidSeparation;     // [0.1 meter] difference between Geoid and Ellipsoid 
+   int32_t Altitude;            // [0.1 meter] height above Geoid (sea level)
+
+   int32_t Latitude;            // [0.0001/60 deg] about 0.018m accuracy (to convert to FLARM 1e-7deg units mult by. 5/3)
+   int32_t Longitude;           // [0.0001/60 deg]
+
+   int16_t Temperature;         // [0.1 deg Celsius]
 
   public:
 
@@ -556,7 +557,7 @@ class OgnPosition
      if(Value[4]!='.') return -1;
      int16_t FracMin=ReadDec4(Value+5); if(FracMin<0) return -1;
      // printf("Latitude: %c %02d %02d %04d\n", Sign, Deg, Min, FracMin);
-     Latitude = (int16_t)Deg*(int16_t)60 + Min;
+     Latitude = Times60((int16_t)Deg) + Min;
      Latitude = Latitude*(int32_t)10000 + FracMin;
      // printf("Latitude: %d\n", Latitude);
      if(Sign=='S') Latitude=(-Latitude);
@@ -569,7 +570,7 @@ class OgnPosition
      int8_t Min=ReadDec2(Value+3); if(Min<0) return -1;
      if(Value[5]!='.') return -1;
      int16_t FracMin=ReadDec4(Value+6); if(FracMin<0) return -1;
-     Longitude = (int16_t)Deg*(int16_t)60 + Min;
+     Longitude = Times60((int16_t)Deg) + Min;
      Longitude = Longitude*(int32_t)10000 + FracMin;
      if(Sign=='W') Longitude=(-Longitude);
      else if(Sign!='E') return -1;
@@ -721,61 +722,43 @@ class OgnPosition
            else { (*Str++)='+'; }
     return 1+Format_UnsDec(Str, Value, MinDigits, DecPoint); }
 
-  private:
-   template <class Type>
-     Type Times60(Type X) { return ((X<<4)-X)<<2; }
-
   public:
-   uint32_t getUnixTime(void) { return Times60((uint32_t)(Times60( (uint16_t)Hour) + Min)) + Sec; }
+
+   uint32_t getUnixTime(void)                               // return the Unix timestamp (tested 2000-2099)
+   { uint16_t Days = DaysSince00() + DaysSimce1jan();
+     return Times60(Times60(Times24((uint32_t)(Days+10957)))) + Times60((uint32_t)(Times60((uint16_t)Hour) + Min)) + Sec; }
 
   private:
 
-/*
-#ifndef __AVR__
-// copied from: http://stackoverflow.com/questions/16647819/timegm-cross-platform
+   uint8_t isLeapYear(void) { return (Year&3)==0; }
 
-   inline static uint8_t is_leap(int16_t year)
-   { if(year % 400 == 0) return 1;
-     if(year % 100 == 0) return 0;
-     if(year %   4 == 0) return 1;
-     return 0; }
+#ifdef __AVR__
+   int16_t DaysSimce1jan(void)
+   { static const uint8_t DaysDiff[12] PROGMEM = { 0, 3, 3, 6, 8, 11, 13, 16, 19, 21, 24, 26 } ;
+     uint16_t Days = Times28((uint16_t)(Month-(int8_t)1)) + pgm_read_byte(DaysDiff+(Month-1)) + Day - 1;
+     if(isLeapYear() && (Month>2) ) Days++;
+     return Days; }
+#else
+   int16_t DaysSimce1jan(void)
+   { static const uint8_t DaysDiff[12] = { 0, 3, 3, 6, 8, 11, 13, 16, 19, 21, 24, 26 } ;
+     uint16_t Days = Times28((uint16_t)(Month-(int8_t)1)) + DaysDiff[Month-1] + Day - 1;
+     if(isLeapYear() && (Month>2) ) Days++;
+     return Days; }
+#endif
 
-   inline static int32_t days_from_0000(int16_t year)
-   { year--; return 365 * (int32_t)year + (year / 400) - (year/100) + (year / 4); }
+   uint16_t DaysSince00(void)
+   { uint16_t Days = 365*Year + (Year>>2);
+     if(Year>0) Days++;
+     return Days; }
 
-   inline static int32_t days_from_1970(int16_t year)
-   { static const int32_t days_from_0000_to_1970 = days_from_0(1970);
-     return days_from_0000(year) - days_from_0000_to_1970; }
+   template <class Type>
+     static Type Times60(Type X) { return ((X<<4)-X)<<2; }
 
-   inline static int16_t days_from_1jan(int16_t year, int8_t month, int8_t day)
-   { static const int16_t days[2][12] =
-     {
-       { 0,31,59,90,120,151,181,212,243,273,304,334},
-       { 0,31,60,91,121,152,182,213,244,274,305,335}
-     };
-     return days[is_leap(year)][month-1] + day - 1; }
+   template <class Type>
+     static Type Times28(Type X) { X+=(X<<1)+(X<<2); return X<<2; }
 
-   inline static time_t internal_timegm(struct tm const *t)
-   { int16_t year = t->tm_year + 1900;
-     int8_t month = t->tm_mon;
-     if(month > 11)
-     { year += month/12;
-       month %= 12; }
-     else if(month < 0)
-     { int years_diff = (-month + 11)/12;
-       year -= years_diff;
-       month+=12 * years_diff; }
-     month++;
-     int8_t day = t->tm_mday;
-     int16_t day_of_year = days_from_1jan(year, month, day);
-     int32_t days_since_epoch = days_from_1970(year) + day_of_year;
-
-     const time_t seconds_in_day = 3600 * 24;
-     time_t result = seconds_in_day * days_since_epoch + 3600 * t->tm_hour + 60 * t->tm_min + t->tm_sec;
-
-     return result; }
-#endif // __AVR__
-*/
+   template <class Type>
+     static Type Times24(Type X) { X+=(X<<1);        return X<<3; }
 
 } ;
 
