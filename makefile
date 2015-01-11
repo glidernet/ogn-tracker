@@ -85,6 +85,7 @@ H_SRC     += timer_const.h
 
 
 CPP_SRC   = ogn_lib.cpp
+# CPP_SRC  += spirit1.cpp
 
 DEFS       = -DSTM32L1XX_XL -DUSE_STDPERIPH_DRIVER
 

@@ -28,7 +28,7 @@
 #include "SPIRIT_Config.h"
 
 #ifdef __cplusplus
-  "C" {
+  extern "C" {
 #endif
 
 
