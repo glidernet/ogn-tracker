@@ -226,7 +226,7 @@ void EXTI0_IRQHandler(void)
 {
    task_message sp1_msg;
    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-
+   
    if(EXTI_GetITStatus(SPR1_GPIO0_EXTI_LINE) != RESET)
    {
         /* Clear the GPIO0 EXTI line pending bit */
@@ -389,7 +389,6 @@ void Spirit1_Config(void)
 {
    GPIO_InitTypeDef GPIO_InitStructure;
    EXTI_InitTypeDef EXTI_InitStructure;
-   NVIC_InitTypeDef NVIC_InitStructure;
 
    xSP1Timer = xTimerCreate(
       "SP1Timer",
@@ -434,13 +433,6 @@ void Spirit1_Config(void)
    EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
    EXTI_InitStructure.EXTI_LineCmd = ENABLE;
    EXTI_Init(&EXTI_InitStructure);
-
-   /* enable Spirit1 GPIO0 input line interrupt */
-   NVIC_InitStructure.NVIC_IRQChannel = SPR1_GPIO0_EXTI_IRQ;
-   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = configSPIRIT1_INTERRUPT_PRIORITY;
-   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-   NVIC_Init(&NVIC_InitStructure);
 
    /* No packet in TX buffer */
    Packet_TxBuff_Len = 0;
@@ -622,7 +614,8 @@ void vTaskSP1(void* pvParameters)
    SpiritIrqs xIrqStatus;
    xQueueHandle* control_queue;
    rcv_packet_str* rcv_packet_ptr;
-
+   NVIC_InitTypeDef NVIC_InitStructure;
+    
    Spirit1ExitShutdown();
 
    if (SpiritGeneralGetDevicePartNumber() != 0x0130)
@@ -669,6 +662,13 @@ void vTaskSP1(void* pvParameters)
 
    /* Create queue for SP1 task messages received */
    xQueueSP1 = xQueueCreate(10, sizeof(task_message));
+
+   /* enable Spirit1 GPIO0 input line interrupt */
+   NVIC_InitStructure.NVIC_IRQChannel = SPR1_GPIO0_EXTI_IRQ;
+   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = configSPIRIT1_INTERRUPT_PRIORITY;
+   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+   NVIC_Init(&NVIC_InitStructure);
 
    for(;;)
    {

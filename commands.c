@@ -31,7 +31,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.2.2";
+static const char * const pcVersion = "0.3.0";
 /* -------- functions -------- */
 
 /**
@@ -572,7 +572,7 @@ static portBASE_TYPE prvOperModeCommand( char *pcWriteBuffer,
        }
        else
        {
-            sprintf(pcWriteBuffer, "unsupported mode, supported: ogn, cw\r\n");
+            sprintf(pcWriteBuffer, "unsupported mode, supported: ogn, idle, cw, rx\r\n");
             return pdFALSE;            
        }
        SetOption(OPT_OPER_MODE, &new_mode);
@@ -732,7 +732,7 @@ static const CLI_Command_Definition_t TxPowerCommand       = { "tx_power",     "
 static const CLI_Command_Definition_t XtalCorrCommand      = { "xtal_corr",    "xtal_corr: Crystal freq. correction [ppm].\r\n", prvXtalCorrCommand,  -1 };
 static const CLI_Command_Definition_t FreqOfsCommand       = { "freq_ofs",     "freq_ofs:  RF frequency offset [Hz].\r\n",       prvFreqOfsCommand,   -1 };
 static const CLI_Command_Definition_t IWDGDisCommand       = { "iwdg",         "iwdg en/dis: control ind. watchdog\r\n",         prvIWDGDisCommand,   -1 };
-static const CLI_Command_Definition_t OperModeCommand      = { "mode",         "mode [ogn|cw]: set/check oper. mode\r\n",        prvOperModeCommand,  -1 };
+static const CLI_Command_Definition_t OperModeCommand      = { "mode",         "mode [ogn|idle|cw|rx]: set/check oper. mode\r\n", prvOperModeCommand,  -1 };
 static const CLI_Command_Definition_t SetChannelCommand    = { "channel",      "channel 0-6: set/check operating channel\r\n",   prvSetChannelCommand, -1 };
 static const CLI_Command_Definition_t MemStatCommand       = { "mem_stat",     "mem_stat: memory statistics\r\n",                prvMemStatCommand, 0 };
 static const CLI_Command_Definition_t MaxTxPowerCommand    = { "max_tx_power", "max_tx_power: set max. measured power [dBm].\r\n", prvMaxTxPowerCommand,  -1 };
