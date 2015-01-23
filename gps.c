@@ -17,7 +17,6 @@
 #include "display.h"
 #include "timer_const.h"
 
-// #define GPS_DEBUG
 /* -------- constants -------- */
 /* http://support.maestro-wireless.com/knowledgebase.php?article=6 */
 static const char * const pcResetNMEA    = "$PSRF101,-2686727,-4304282,3851642,75000,95629,1684,12,4*24\r\n";
@@ -34,7 +33,7 @@ cir_buf_str* nmea_buffer;
 xQueueHandle gps_que;
 static TimerHandle_t xGPSValidTimer;
 static uint8_t GPS_fix_found;
-
+static uint8_t debug_mode;
 
 /* -------- functions -------- */
 
@@ -79,7 +78,7 @@ void vGPSValidTimerCallback(TimerHandle_t pxTimer)
 void GPS_Valid_Position(void)
 {
     xTimerStart(xGPSValidTimer, portMAX_DELAY);
-     
+    
     if (!GPS_fix_found)    /* detect only once */
     {
         GPS_Send_Disp_Status(DISP_GPS_FIX);
@@ -99,19 +98,21 @@ uint32_t GPS_GetPosition(char *Output) { return OGN_GetPosition(Output); }
 void Handle_NMEA_String(const char* str, uint8_t len)
 {
     OGN_Parse_res_t ret_value;
-#ifdef GPS_DEBUG
     static char DebugStr[120];
-    int Ret=OGN_Parse_NMEA(str, len);
-    sprintf(DebugStr, "NMEA:%6.6s[%2d] => %d\r\n", str, len, Ret);
-    Console_Send(DebugStr, 0);
-#else
+
     ret_value = OGN_Parse_NMEA(str, len);
+    if (debug_mode)
+    {
+        sprintf(DebugStr, "NMEA:%6.6s[%2d] => %d\r\n", str, len, (int)ret_value);
+        Console_Send(DebugStr, 0);
+    }
+
     if (ret_value == OGN_PARSE_POS_VALID_CURRENT)
     {
         GPS_Valid_Position();
-    }
-#endif
-  return; }
+    }   
+    return; 
+}
 
 /**
 * @brief  GPS Cold Reset.
@@ -144,6 +145,10 @@ void GPS_On(void)
     }
 }
 
+void GPS_Debug_on(void)
+{
+    debug_mode = 1;
+}
 
 /**
 * @brief  Configures the GPS Task Peripherals.
@@ -154,6 +159,8 @@ void GPS_On(void)
 void GPS_Config(void)
 {
    GPIO_InitTypeDef GPIO_InitStructure;
+   
+   debug_mode = 0;
    uint32_t* gps_speed = (uint32_t*)GetOption(OPT_GPS_SPEED);
    
    if (gps_speed)

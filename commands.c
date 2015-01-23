@@ -31,7 +31,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.3.0";
+static const char * const pcVersion = "0.3.1";
 /* -------- functions -------- */
 
 /**
@@ -708,6 +708,15 @@ static portBASE_TYPE prvBackupRegCommand( char *pcWriteBuffer,
     return pdFALSE;
 }
 
+static portBASE_TYPE prvDebugGPSCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{
+    GPS_Debug_on();
+    sprintf(pcWriteBuffer,"GPS Debug enabled\r\n");
+    return pdFALSE;
+}
+
 // ---------------------------------------------------------------------------------------------------------------------------
 
 static const CLI_Command_Definition_t VerCommand           = { "ver",            "ver: version number and MCU ID\r\n",           prvVerCommand,           0 };
@@ -736,7 +745,8 @@ static const CLI_Command_Definition_t OperModeCommand      = { "mode",         "
 static const CLI_Command_Definition_t SetChannelCommand    = { "channel",      "channel 0-6: set/check operating channel\r\n",   prvSetChannelCommand, -1 };
 static const CLI_Command_Definition_t MemStatCommand       = { "mem_stat",     "mem_stat: memory statistics\r\n",                prvMemStatCommand, 0 };
 static const CLI_Command_Definition_t MaxTxPowerCommand    = { "max_tx_power", "max_tx_power: set max. measured power [dBm].\r\n", prvMaxTxPowerCommand,  -1 };
-static const CLI_Command_Definition_t BackupRegCommand     = { "backup_reg",   "backup_reg reg [value].\r\n",                  prvBackupRegCommand,  -1 };
+static const CLI_Command_Definition_t BackupRegCommand     = { "backup_reg",   "backup_reg reg [value].\r\n",                    prvBackupRegCommand,  -1 };
+static const CLI_Command_Definition_t DebugGPSCommand      = { "debug_gps",    "debug_gps - enable GPS logging.\r\n",            prvDebugGPSCommand,  0 };
 
 /**
   * @brief  Function registers all console commands.
@@ -773,6 +783,7 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&OperModeCommand);
    FreeRTOS_CLIRegisterCommand(&MemStatCommand);
    FreeRTOS_CLIRegisterCommand(&BackupRegCommand);
+   FreeRTOS_CLIRegisterCommand(&DebugGPSCommand);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------
