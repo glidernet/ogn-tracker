@@ -58,8 +58,27 @@ void EXTI15_10_IRQHandler(void)
       EXTI_ClearITPendingBit(EXTI_Line13);  
       xTimerStartFromISR(xPowerDownTimer, &xHigherPriorityTaskWoken);     
    }
-   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-   
+   portYIELD_FROM_ISR(xHigherPriorityTaskWoken); 
+}
+
+/* interrupt for rising B1 button line */
+void EXTI2_IRQHandler(void)
+{      
+   if(EXTI_GetITStatus(EXTI_Line2) != RESET)
+   {
+      /* Clear the EXTI line 2 pending bit */
+      EXTI_ClearITPendingBit(EXTI_Line2); 
+      if (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2) == Bit_SET)
+      {
+         /* turn off RX LED */
+         GPIO_SetBits(GPIOB, GPIO_Pin_1);
+      }
+      else
+      {
+         /* turn on RX LED */
+         GPIO_ResetBits(GPIOB, GPIO_Pin_1);
+      }
+   }
 }
 
 /* -------- functions -------- */
@@ -261,6 +280,29 @@ void Control_Config(void)
    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
    NVIC_Init(&NVIC_InitStructure);
   
+   /* Configure PC2 Pin (Button B1) as GPIO interrupt */  
+   GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_IN;
+   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+   GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
+   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+   GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_2;
+   GPIO_Init(GPIOC, &GPIO_InitStructure);
+
+   SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource2); 
+
+   EXTI_InitStructure.EXTI_Line    = EXTI_Line2;
+   EXTI_InitStructure.EXTI_Mode    = EXTI_Mode_Interrupt;
+   EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising_Falling;
+   EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+   EXTI_Init(&EXTI_InitStructure);
+   
+   /* enable B1 Button input lines interrupt */
+   NVIC_InitStructure.NVIC_IRQChannel = EXTI2_IRQn;
+   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = configPWR_BTN_INTERRUPT_PRIORITY;
+   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+   NVIC_Init(&NVIC_InitStructure);
+   
    IWDG_Config();
    HPT_Config();
 

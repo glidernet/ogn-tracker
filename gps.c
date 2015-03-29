@@ -172,7 +172,7 @@ void GPS_Config(void)
    xGPSValidTimer = xTimerCreate(
      "GPSTimer",
      /* The timer period in ticks. */
-     2000,
+     2500,
      /* The timer will stop when expire. */
      pdFALSE,
      /* unique id */

@@ -14,6 +14,7 @@ extern "C" {
 #define GPS_VALID_TIMER     3
 #define DISP_GPS_TIMER      4
 #define SP1_TIMER_ID        5
+#define DISP_RX_TIMER       6
 
 /* miliseconds to timer tick macro */
 #define TIMER_MS(x) (x)

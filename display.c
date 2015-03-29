@@ -16,6 +16,12 @@
 #define GPS_LED_PORT  GPIOC
 #define GPS_LED_CLK   RCC_AHBPeriph_GPIOC
 
+/* - RX LED pin mappings - */
+#define RX_LED_PIN   GPIO_Pin_1
+#define RX_LED_PORT  GPIOB
+#define RX_LED_CLK   RCC_AHBPeriph_GPIOB
+
+
 /* - GPS LED states - */ 
 typedef enum
 {
@@ -38,6 +44,7 @@ xQueueHandle        display_que;
 
 /* ------ GPS LED variables ------ */
 static TimerHandle_t     xGPSLEDTimer;    /* one timer for controlling all GPS LED states transition */
+static TimerHandle_t     xRXLEDTimer;     /* one timer for controlling all RX LED states transition */
 static GPS_LED_status_t  gps_led_status;  /* current state of GPS LED */
 
 /* -------- interrupt handlers -------- */
@@ -62,8 +69,8 @@ void GPS_LED_Start(GPS_LED_status_t new_status)
     /* store new status value in global variable */
     gps_led_status = new_status;
     /* toggle GPS LED according to current index in table */ 
-    if (gps_led_idx == 0)  GPIO_SetBits(GPS_LED_PORT, GPS_LED_PIN);
-    else                   GPIO_ResetBits(GPS_LED_PORT, GPS_LED_PIN);
+    if (gps_led_idx == 0)  GPIO_ResetBits(GPS_LED_PORT, GPS_LED_PIN);
+    else                   GPIO_SetBits(GPS_LED_PORT, GPS_LED_PIN);
     
     /* get new timeout value according to GPS LED state and time index */
     new_tick = gps_led_times[gps_led_status][gps_led_idx++];
@@ -86,6 +93,18 @@ void vGPSLEDTimerCallback(TimerHandle_t pxTimer)
 }
 
 /**
+* @brief  RX LED timer callback.
+* @brief  Callback is called when current RX LED time is finished.
+* @param  Timer handle
+* @retval None
+*/
+void vRXLEDTimerCallback(TimerHandle_t pxTimer)
+{
+    /* turn off RX LED */
+    GPIO_SetBits(RX_LED_PORT, RX_LED_PIN);
+}
+
+/**
 * @brief  Configures the Display Task Peripherals.
 * @param  None
 * @retval None
@@ -98,6 +117,8 @@ void Display_Config(void)
     
     /* GPIO PC5 - GPS Status*/  
     RCC_AHBPeriphClockCmd(GPS_LED_CLK, ENABLE);
+    /* GPIO PB1 - RX Status*/
+    RCC_AHBPeriphClockCmd(RX_LED_CLK, ENABLE);
 
     GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_OUT;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
@@ -106,7 +127,7 @@ void Display_Config(void)
     GPIO_InitStructure.GPIO_Pin   = GPS_LED_PIN;
     GPIO_Init(GPS_LED_PORT, &GPIO_InitStructure);
    
-    GPIO_SetBits(GPS_LED_PORT, GPS_LED_PIN);
+    GPIO_ResetBits(GPS_LED_PORT, GPS_LED_PIN);
     /* when power button is pressed timer is restarted */
     xGPSLEDTimer = xTimerCreate("GPS LED",
        /* The timer period in ticks. */
@@ -118,6 +139,30 @@ void Display_Config(void)
        /* Each timer calls the same callback when it expires. */
        vGPSLEDTimerCallback
     );
+    
+    /* when power button is pressed timer is restarted */
+    xRXLEDTimer = xTimerCreate("RX LED",
+       /* The timer period in ticks. */
+       2000,
+       /* The timer will stop when expire. */
+       pdFALSE,
+       /* unique id */
+       (void*)DISP_RX_TIMER,
+       /* Each timer calls the same callback when it expires. */
+       vRXLEDTimerCallback
+    );
+    
+    GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_OUT;
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+    GPIO_InitStructure.GPIO_Pin   = RX_LED_PIN;
+    GPIO_Init(RX_LED_PORT, &GPIO_InitStructure);
+   
+    /* turn on RX LED */
+    GPIO_ResetBits(RX_LED_PORT, RX_LED_PIN);
+    /* start dedicated one second timer */
+    xTimerStart(xRXLEDTimer, 0);
     
     display_que = xQueueCreate(5, sizeof(task_message));
 }
