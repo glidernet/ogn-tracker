@@ -26,6 +26,7 @@ typedef struct
    uint8_t   gpsdump;          // GPS dump to console
    float     MaxTxPower;       // [dBm]
    uint8_t   gps_always_on;    // Used for GPS without power control
+   uint8_t   gps_ant;          // GPS antenna status: 0 - internal, 1 - external
 } options_str;
 
 /* -------- variables -------- */
@@ -52,6 +53,7 @@ void ResetOptions(void)
   options.gpsdump       =    0;         // Disabled
   options.MaxTxPower    = 14.5F;        // Maximum measured power
   options.gps_always_on =    0;         // Disabled
+  options.gps_ant       =    0;         // Internal antenna
 }
 
 /**
@@ -219,6 +221,13 @@ void SetGPSAlwON(uint8_t new_value)
 { options.gps_always_on = new_value;
   WriteBlock(OFFSETOF(options_str, gps_always_on), sizeof(options.gps_always_on)); }
   
+uint8_t* GetGPSAnt(void)
+{ return &options.gps_ant; }
+
+void SetGPSAnt(uint8_t new_value)
+{ options.gps_ant = new_value;
+  WriteBlock(OFFSETOF(options_str, gps_ant), sizeof(options.gps_ant)); }
+  
 /* ------------------------------------------------------ */
 /**
   * @brief  Entry point function for accessing option values.
@@ -240,6 +249,7 @@ void* GetOption(option_types opt_code)
     case OPT_GPSDUMP:    { ret_val = GetGPSDump();   break; }
     case OPT_MAX_TX_PWR: { ret_val = GetMaxTxPower(); break;}
     case OPT_GPS_ALW_ON: { ret_val = GetGPSAlwON();  break; }
+    case OPT_GPS_ANT:    { ret_val = GetGPSAnt();    break; }
     default: break; }
   return ret_val; }
 
@@ -257,6 +267,7 @@ void SetOption(option_types opt_code, void* value)
     case OPT_GPSDUMP:    { SetGPSDump  (*(uint8_t  *) value); break; }
     case OPT_MAX_TX_PWR: { SetMaxTxPower  (*(float *) value); break; }
     case OPT_GPS_ALW_ON: { SetGPSAlwON (*(uint8_t  *) value); break; }
+    case OPT_GPS_ANT:    { SetGPSAnt   (*(uint8_t  *) value); break; }
     default: break; }
 }
 

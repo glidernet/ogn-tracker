@@ -717,6 +717,41 @@ static portBASE_TYPE prvDebugGPSCommand( char *pcWriteBuffer,
     return pdFALSE;
 }
 
+static portBASE_TYPE prvGPSAntCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ 
+    BaseType_t  param_len;
+    uint8_t gps_ant = 0;
+    
+    const char* param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
+    if(param)
+    {  
+       if (!strcmp(param, "int"))
+       {
+           gps_ant = 0;
+       }
+       else if (!strcmp(param, "ext"))
+       {
+           gps_ant = 1;
+       }
+       SetOption(OPT_GPS_ANT, &gps_ant);
+    } 
+    
+    gps_ant = *(uint8_t *)GetOption(OPT_GPS_ANT);
+    if (gps_ant)
+    {
+        GPIO_SetBits(GPIOC, GPIO_Pin_8);
+        sprintf(pcWriteBuffer, "GPS external antenna used.\r\n");
+    }
+    else
+    {
+        GPIO_ResetBits(GPIOC, GPIO_Pin_8);
+        sprintf(pcWriteBuffer, "GPS internal antenna used.\r\n");       
+    }
+    return pdFALSE;
+}
+
 // ---------------------------------------------------------------------------------------------------------------------------
 
 static const CLI_Command_Definition_t VerCommand           = { "ver",            "ver: version number and MCU ID\r\n",           prvVerCommand,           0 };
@@ -747,6 +782,7 @@ static const CLI_Command_Definition_t MemStatCommand       = { "mem_stat",     "
 static const CLI_Command_Definition_t MaxTxPowerCommand    = { "max_tx_power", "max_tx_power: set max. measured power [dBm].\r\n", prvMaxTxPowerCommand,  -1 };
 static const CLI_Command_Definition_t BackupRegCommand     = { "backup_reg",   "backup_reg reg [value].\r\n",                    prvBackupRegCommand,  -1 };
 static const CLI_Command_Definition_t DebugGPSCommand      = { "debug_gps",    "debug_gps - enable GPS logging.\r\n",            prvDebugGPSCommand,  0 };
+static const CLI_Command_Definition_t GPSAntCommand        = { "gps_ant",      "gps_ant [int|ext] - select GPS antenna.\r\n",    prvGPSAntCommand,  -1 };
 
 /**
   * @brief  Function registers all console commands.
@@ -784,6 +820,7 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&MemStatCommand);
    FreeRTOS_CLIRegisterCommand(&BackupRegCommand);
    FreeRTOS_CLIRegisterCommand(&DebugGPSCommand);
+   FreeRTOS_CLIRegisterCommand(&GPSAntCommand);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------

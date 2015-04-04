@@ -302,6 +302,38 @@ void Control_Config(void)
    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
    NVIC_Init(&NVIC_InitStructure);
+
+   /* line PC4 (TRK_EN#) is used for controlling power of devices that are unable to perform software shut-down */
+   /* TRK_EN# should be put low when tracker is activated, and Hi-Z after shut-down */
+   
+   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOC, ENABLE);
+
+   GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_OUT;
+   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+   GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
+   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+   GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_4;
+   GPIO_Init(GPIOC, &GPIO_InitStructure);
+   
+   GPIO_ResetBits(GPIOC, GPIO_Pin_4);
+   
+   /* line PC8 (GPS_ANT_SW) is used for controlling GPS external antenna status */
+   GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_8;
+   GPIO_Init(GPIOC, &GPIO_InitStructure);
+   
+   /* Control GPS antenna type used */
+   uint8_t gps_ant = *(uint8_t *)GetOption(OPT_GPS_ANT);
+   if (gps_ant)
+   {
+      /* External antenna */
+      GPIO_SetBits(GPIOC, GPIO_Pin_8);
+   }
+   else
+   {
+      /* Internal antenna */
+      GPIO_ResetBits(GPIOC, GPIO_Pin_8);
+   }   
+       
    
    IWDG_Config();
    HPT_Config();

@@ -17,7 +17,8 @@ typedef enum
    OPT_CHANNEL,
    OPT_GPSDUMP,
    OPT_MAX_TX_PWR,
-   OPT_GPS_ALW_ON
+   OPT_GPS_ALW_ON,
+   OPT_GPS_ANT
 } option_types;
 
 typedef enum
