@@ -19,6 +19,7 @@
 #include "spi.h"
 #include "spirit1.h"
 #include "gps.h"
+#include "control.h"
 
 /* -------- defines -------- */
 #define SPI_DATA_LEN 256
@@ -31,7 +32,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.3.2";
+static const char * const pcVersion = "0.4.0";
 /* -------- functions -------- */
 
 /**
@@ -752,6 +753,41 @@ static portBASE_TYPE prvGPSAntCommand( char *pcWriteBuffer,
     return pdFALSE;
 }
 
+static portBASE_TYPE prvVoltCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{
+    __IO uint16_t ADCdata_vref = 0;
+    __IO uint16_t ADCdata_vbat = 0;
+    int vref = 0, vbat = 0;
+    
+    /* Internal STM32L reference voltage typical value */
+    /* It could be calibrated if needed */
+    const uint32_t vrefint = 1224; /* 1224 mV */
+    
+    ADC_Config(ADC_Channel_17); 
+    ADCdata_vref = ADC_GetConversionValue(ADC1);
+    ADC_DeInit(ADC1);
+    
+    ADC_Config(ADC_Channel_10); 
+    ADCdata_vbat = ADC_GetConversionValue(ADC1);
+    ADC_DeInit(ADC1);
+    
+    if (ADCdata_vref) vref = (4095*vrefint)/ADCdata_vref;
+    if (ADCdata_vbat) vbat = (ADCdata_vbat*vrefint)/ADCdata_vref;
+    /* VBat is 2 times lowered for measurement in HW */
+    vbat *= 2;
+    
+    sprintf(pcWriteBuffer,"Vdd: %d[mV], Vbat: %d[mV]\r\n", vref, vbat);
+    
+    /* Return ADC to idle state */
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, DISABLE);
+    RCC_HSICmd(DISABLE);
+    
+    return pdFALSE;
+}
+
+
 // ---------------------------------------------------------------------------------------------------------------------------
 
 static const CLI_Command_Definition_t VerCommand           = { "ver",            "ver: version number and MCU ID\r\n",           prvVerCommand,           0 };
@@ -783,6 +819,7 @@ static const CLI_Command_Definition_t MaxTxPowerCommand    = { "max_tx_power", "
 static const CLI_Command_Definition_t BackupRegCommand     = { "backup_reg",   "backup_reg reg [value].\r\n",                    prvBackupRegCommand,  -1 };
 static const CLI_Command_Definition_t DebugGPSCommand      = { "debug_gps",    "debug_gps - enable GPS logging.\r\n",            prvDebugGPSCommand,  0 };
 static const CLI_Command_Definition_t GPSAntCommand        = { "gps_ant",      "gps_ant [int|ext] - select GPS antenna.\r\n",    prvGPSAntCommand,  -1 };
+static const CLI_Command_Definition_t VoltCommand          = { "volt",         "volt: show voltages.\r\n",                       prvVoltCommand, 0 };
 
 /**
   * @brief  Function registers all console commands.
@@ -821,6 +858,8 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&BackupRegCommand);
    FreeRTOS_CLIRegisterCommand(&DebugGPSCommand);
    FreeRTOS_CLIRegisterCommand(&GPSAntCommand);
+   FreeRTOS_CLIRegisterCommand(&VoltCommand);
+   
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------

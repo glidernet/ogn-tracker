@@ -12,6 +12,7 @@ extern "C" {
 #define SHDN_MAGIC_NUM (1234)
 #define SHDN_REG_NUM   (0)
 
+void ADC_Config(uint8_t chn_num);
 void Control_Config(void);
 void vTaskControl(void* pvParameters);
 xQueueHandle* Get_ControlQueue();
