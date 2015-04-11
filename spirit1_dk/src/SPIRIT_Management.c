@@ -96,6 +96,11 @@ void SpiritManagementSetFrequencyBase(uint32_t lFBase)
   {
     band = VERY_LOW_BAND;
   }
+  else
+  {
+    band = 0;
+    SpiritReportError(SPI1_WRONG_BAND);
+  }
   
   int32_t FOffset  = SpiritRadioGetFrequencyOffset();
   uint32_t lChannelSpace  = SpiritRadioGetChannelSpace();
@@ -277,7 +282,7 @@ void SpiritManagementWaCmdStrobeTx(void)
 {
   if(s_cCommunicationState != COMMUNICATION_STATE_TX)
   {
-    uint32_t xtal_frequency = SpiritRadioGetXtalFrequency();
+    /*uint32_t xtal_frequency = SpiritRadioGetXtalFrequency();*/
     
     /* To achive the max output power */
     if(s_nDesiredFrequency>=150000000 && s_nDesiredFrequency<=470000000)

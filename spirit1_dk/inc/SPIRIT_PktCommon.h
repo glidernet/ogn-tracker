@@ -315,7 +315,7 @@ typedef enum
  *         This parameter is an uint16_t.
  * @retval None.
  */
-#define BUILD_PCKTLEN0(nLength) (nLength & 0xFF)
+#define BUILD_PCKTLEN0(nLength) ((nLength) & 0xFF)
 
 
 /**
@@ -324,7 +324,7 @@ typedef enum
  *         This parameter is an uint16_t.
  * @retval None.
  */
-#define BUILD_PCKTLEN1(nLength) (nLength >> 8)
+#define BUILD_PCKTLEN1(nLength) ((nLength) >> 8)
 
 /**
  *@}

@@ -111,8 +111,8 @@ void SpiritIrqDeInit(SpiritIrqs* pxIrqInit)
   {
     uint32_t tempValue = 0x00000000;
     
-    /* Sets the bitfields of passed structure to one */
-    *pxIrqInit = (*(SpiritIrqs*)&tempValue);
+    /* Sets the bitfields of passed structure to zero */
+    *(uint32_t*)pxIrqInit = tempValue;
   }
 
   /* Writes the IRQ_MASK registers */
@@ -140,7 +140,7 @@ void SpiritIrqInit(SpiritIrqs* pxIrqInit)
 
   /* Cast the bitfields structure in an array of char using */
   tmpPoint = (uint8_t*)(pxIrqInit);
-  for(char i=0; i<4; i++)
+  for(unsigned char i=0; i<4; i++)
   {
     tempRegValue[3-i]= tmpPoint[i];
   }
@@ -172,7 +172,7 @@ void SpiritIrq(IrqList xIrq, SpiritFunctionalState xNewState)
   g_xStatus = SpiritSpiReadRegisters(IRQ_MASK3_BASE, 4, tempRegValue);
 
   /* Build the IRQ mask word */
-  for(char i=0; i<4; i++)
+  for(unsigned char i=0; i<4; i++)
   {
     tempValue += ((uint32_t)tempRegValue[i])<<(8*(3-i));
   }
@@ -188,7 +188,7 @@ void SpiritIrq(IrqList xIrq, SpiritFunctionalState xNewState)
   }
 
   /* Build the array of bytes to write in the IRQ_MASK registers */
-  for(char j=0; j<4; j++)
+  for(unsigned char j=0; j<4; j++)
   {
     tempRegValue[j] = (uint8_t)(tempValue>>(8*(3-j)));
   }

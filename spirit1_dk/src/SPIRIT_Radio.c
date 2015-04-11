@@ -502,6 +502,11 @@ uint8_t SpiritRadioSearchWCP(uint32_t lFc)
   {
     BFactor = VERY_LOW_BAND_FACTOR;
   }
+  else 
+  {
+    BFactor = 0; 
+	SpiritReportError(SPI1_WRONG_BAND);
+  }
   
   /* Calculates the VCO frequency VCOFreq = lFc*B */
   vcofreq = (lFc/1000000)*BFactor;
@@ -840,6 +845,11 @@ uint8_t SpiritRadioSetFrequencyBase(uint32_t lFBase)
   else if(IS_FREQUENCY_BAND_VERY_LOW(lFBase))
   {
     band = VERY_LOW_BAND;
+  }
+  else
+  {
+    band = 0;
+    SpiritReportError(SPI1_WRONG_BAND);
   }
   
   int32_t FOffset  = SpiritRadioGetFrequencyOffset();
@@ -1452,6 +1462,11 @@ uint8_t SpiritRadioGetdBm2Reg(uint32_t lFBase, float fPowerdBm)
   {
     i=4;
   }
+  else
+  {
+    i = 0;
+    SpiritReportError(SPI1_WRONG_BAND);
+  }
   
   j=1;
   if(fPowerdBm>0 && 13.0/fPowerFactors[i][2]-fPowerFactors[i][3]/fPowerFactors[i][2]<fPowerdBm)
@@ -1503,6 +1518,11 @@ float SpiritRadioGetReg2dBm(uint32_t lFBase, uint8_t cPowerReg)
   else if(IS_FREQUENCY_BAND_VERY_LOW(lFBase))
   {
     i=4;
+  }
+  else
+  {
+    i = 0;
+    SpiritReportError(SPI1_WRONG_BAND);
   }
   
   j=1;

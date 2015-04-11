@@ -359,7 +359,7 @@ void SpiritTimerSetWakeUpTimerPrescaler(uint8_t cPrescaler)
 void SpiritTimerGetWakeUpTimer(float* pfWakeUpMsec, uint8_t* pcCounter , uint8_t* pcPrescaler)
 {
   uint8_t tempRegValue[2];
-  uint32_t xtal=SpiritRadioGetXtalFrequency();
+  /*uint32_t xtal=SpiritRadioGetXtalFrequency();*/
   float rco_freq;
   
   rco_freq=(float)SpiritTimerGetRcoFrequency();
@@ -462,7 +462,7 @@ void SpiritTimerSetWakeUpTimerReloadPrescaler(uint8_t cPrescaler)
 void SpiritTimerGetWakeUpTimerReload(float* pfWakeUpReloadMsec, uint8_t* pcCounter , uint8_t* pcPrescaler)
 {
   uint8_t tempRegValue[2];
-  uint32_t xtal=SpiritRadioGetXtalFrequency();
+  /*uint32_t xtal=SpiritRadioGetXtalFrequency();*/
   float rco_freq;
   
   rco_freq=(float)SpiritTimerGetRcoFrequency();
