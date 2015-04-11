@@ -1,24 +1,24 @@
 /**
- * @file    SPIRIT_General.c
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
- * @version V3.0.1
- * @date    November 19, 2012
- * @brief   Configuration and management of SPIRIT General functionalities.
- * @details
- *
- * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
- * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
- * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
- * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
- * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
- * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
- *
- * THIS SOURCE CODE IS PROTECTED BY A LICENSE.
- * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
- * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
- *
- * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
- */
+* @file    SPIRIT_General.c
+* @author  VMA division - AMS
+* @version 3.2.0
+* @date    February 1, 2015
+* @brief   Configuration and management of SPIRIT General functionalities.
+* @details
+*
+* THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
+* WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
+* TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
+* DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
+* FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
+* CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
+*
+* THIS SOURCE CODE IS PROTECTED BY A LICENSE.
+* FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
+* IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
+*
+* <h2><center>&copy; COPYRIGHT 2015 STMicroelectronics</center></h2>
+*/
 
 /* Includes ------------------------------------------------------------------*/
 #include "SPIRIT_General.h"
@@ -72,11 +72,6 @@
  * @{
  */
 
-/**
- * @brief  Spirit version global variable.
- *         This static variable of @ref SpiritVersion type.
- */
-static SpiritVersion s_xSpiritVersion = SPIRIT_VERSION_3_0;
 
 /**
  *@}
@@ -409,25 +404,15 @@ uint16_t SpiritGeneralGetDevicePartNumber(void)
 }
 
 /**
- * @brief  Sets SPIRIT RF board version.
- * @param  SPIRIT RF board version.
- * @retval None.
- */
-void SpiritGeneralSetSpiritVersion(SpiritVersion xSpiritVersion)
-{
-  s_xSpiritVersion = xSpiritVersion;
-
-}
-
-/**
  * @brief  Returns SPIRIT RF board version.
  * @param  None.
- * @retval SPIRIT RF board version.
+ * @retval SPIRIT RF board version: 0x30 is the only admitted value
  */
-SpiritVersion SpiritGeneralGetSpiritVersion(void)
+uint8_t SpiritGeneralGetSpiritVersion(void)
 {
-  return s_xSpiritVersion;
-
+  uint8_t ver; 
+  SpiritSpiReadRegisters(DEVICE_INFO0_VERSION, 1, &ver);
+  return ver;
 }
 
 /**
@@ -445,4 +430,4 @@ SpiritVersion SpiritGeneralGetSpiritVersion(void)
  */
 
 
-/******************* (C) COPYRIGHT 2012 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

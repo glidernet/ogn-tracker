@@ -1,64 +1,64 @@
 /**
- * @file    SPIRIT_Radio.h
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
- * @version V3.0.1
- * @date    November 19, 2012
- * @brief   Configuration and management of SPIRIT RF Analog and Digital part.
- * @details
- *
- * In order to configure the Radio main parameters, the user can
- * fit <i>SRadioInit</i> structure the and call the <i>SpiritRadioInit()</i>
- * function passing its pointer as an argument.
- *
- * <b>Example:</b>
- * @code
- *
- * SRadioInit radioInit = {
- *     0,                       // Xtal offset in ppm
- *     433.4e6,                 // base frequency
- *     20e3,                    // channel space
- *     0,                       // channel number
- *     FSK,                     // modulation select
- *     38400,                   // datarate
- *     20e3,                    // frequency deviation
- *     100.5e3                  // channel filter bandwidth
- * };
- *
- * ...
- *
- * SpiritRadioInit(&radioInit);
- * @endcode
- *
- * Another important parameter for the radio configuration is the
- * transmission power.
- * The user is allowed to configure it using the function <i>SpiritRadioSetPALeveldBm()</i>
- * which sets the PA LEVEL specified by the first argument to the
- * power expressed in dBm by the second parameter.
- *
- * <b>Example:</b>
- * @code
- *
- *  SpiritRadioSetPALeveldBm(0 , 10.0);
- *
- * @endcode
- *
- *
- * @note The effective power that is set can be a little different from the
- * passed argument in dBm because the function performs an approximation.
- *
- * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
- * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
- * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
- * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
- * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
- * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
- *
- * THIS SOURCE CODE IS PROTECTED BY A LICENSE.
- * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
- * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
- *
- * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
- */
+* @file    SPIRIT_Radio.h
+* @author  VMA division - AMS
+* @version 3.2.0
+* @date    February 1, 2015
+* @brief   Configuration and management of SPIRIT RF Analog and Digital part.
+* @details
+*
+* In order to configure the Radio main parameters, the user can
+* fit <i>SRadioInit</i> structure the and call the <i>SpiritRadioInit()</i>
+* function passing its pointer as an argument.
+*
+* <b>Example:</b>
+* @code
+*
+* SRadioInit radioInit = {
+*     0,                       // Xtal offset in ppm
+*     433.4e6,                 // base frequency
+*     20e3,                    // channel space
+*     0,                       // channel number
+*     FSK,                     // modulation select
+*     38400,                   // datarate
+*     20e3,                    // frequency deviation
+*     100.5e3                  // channel filter bandwidth
+* };
+*
+* ...
+*
+* SpiritRadioInit(&radioInit);
+* @endcode
+*
+* Another important parameter for the radio configuration is the
+* transmission power.
+* The user is allowed to configure it using the function <i>SpiritRadioSetPALeveldBm()</i>
+* which sets the PA LEVEL specified by the first argument to the
+* power expressed in dBm by the second parameter.
+*
+* <b>Example:</b>
+* @code
+*
+*  SpiritRadioSetPALeveldBm(0 , 10.0);
+*
+* @endcode
+*
+*
+* @note The effective power that is set can be a little different from the
+* passed argument in dBm because the function performs an approximation.
+*
+* THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
+* WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
+* TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
+* DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
+* FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
+* CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
+*
+* THIS SOURCE CODE IS PROTECTED BY A LICENSE.
+* FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
+* IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
+*
+* <h2><center>&copy; COPYRIGHT 2015 STMicroelectronics</center></h2>
+*/
 
 
 /* Define to prevent recursive inclusion -------------------------------------*/
@@ -135,7 +135,7 @@ typedef enum
   FSK         = 0x00, /*!< 2-FSK modulation selected */
   GFSK_BT05   = 0x50, /*!< GFSK modulation selected with BT=0.5 */
   GFSK_BT1    = 0x10, /*!< GFSK modulation selected with BT=1 */
-  ASK_OOK     = 0x20, /*!< ASK or OOK modulation selected. ASK will use power rampling */
+  ASK_OOK     = 0x20, /*!< ASK or OOK modulation selected. ASK will use power ramping */
   MSK         = 0x30  /*!< MSK modulation selected */
 
 }ModulationSelect;
@@ -340,7 +340,7 @@ typedef struct
  * @{
  */
 #define F_OFFSET_DIVIDER           262144             /*!< 2^18 factor dividing fxo in foffset formula */
-#define PPM_FACTOR                 1000000            /*!< 10^6 factor to use with Xtal_offset_ppm <= but should be int, not double (Pawel Jalocha) */
+#define PPM_FACTOR                 1000000            /*!< 10^6 factor to use with Xtal_offset_ppm */
 
 
 #define F_OFFSET_LOWER_LIMIT(F_Xo)			((-(int32_t)F_Xo)/F_OFFSET_DIVIDER*2048)
@@ -495,7 +495,7 @@ typedef struct
  * @{
  */
 
-void SpiritRadioInit(SRadioInit* pxSRadioInitStruct);
+uint8_t SpiritRadioInit(SRadioInit* pxSRadioInitStruct);
 void SpiritRadioGetInfo(SRadioInit* pxSRadioInitStruct);
 void SpiritRadioSetXtalFlag(XtalFlag xXtal);
 XtalFlag SpiritRadioGetXtalFlag(void);
@@ -511,7 +511,8 @@ uint32_t SpiritRadioGetChannelSpace(void);
 void SpiritRadioSetFrequencyOffsetPpm(int16_t nXtalPpm);
 void SpiritRadioSetFrequencyOffset(int32_t lFOffset);
 int32_t SpiritRadioGetFrequencyOffset(void);
-void SpiritRadioSetFrequencyBase(uint32_t lFBase);
+void SpiritRadioVcoCalibrationWAFB(SpiritFunctionalState xNewstate);
+uint8_t SpiritRadioSetFrequencyBase(uint32_t lFBase);
 uint32_t SpiritRadioGetFrequencyBase(void);
 uint32_t SpiritRadioGetCenterFrequency(void);
 void SpiritRadioSearchDatarateME(uint32_t lDatarate, uint8_t* pcM, uint8_t* pcE);
@@ -528,6 +529,8 @@ ModulationSelect SpiritRadioGetModulation(void);
 void SpiritRadioCWTransmitMode(SpiritFunctionalState xNewState);
 void SpiritRadioSetOokPeakDecay(OokPeakDecay xOokDecay);
 OokPeakDecay SpiritRadioGetOokPeakDecay(void);
+uint8_t SpiritRadioGetdBm2Reg(uint32_t lFBase, float fPowerdBm);
+float SpiritRadioGetReg2dBm(uint32_t lFBase, uint8_t cPowerReg);
 void SpiritRadioSetPATabledBm(uint8_t cPALevelMaxIndex, uint8_t cWidth, PALoadCapacitor xCLoad, float* pfPAtabledBm);
 void SpiritRadioGetPATabledBm(uint8_t* pcPALevelMaxIndex, float* pfPAtabledBm);
 void SpiritRadioSetPATable(uint8_t cPALevelMaxIndex, uint8_t cWidth, PALoadCapacitor xCLoad, uint8_t* pcPAtable);
@@ -558,7 +561,6 @@ void SpiritRadioSetAFCSlowGain(uint8_t cGain);
 uint8_t SpiritRadioGetAFCSlowGain(void);
 int8_t SpiritRadioGetAFCCorrectionReg(void);
 int32_t SpiritRadioGetAFCCorrectionHz(void);
-void SpiritRadioAutoSetFOffset(void);
 void SpiritRadioAGC(SpiritFunctionalState xNewState);
 void SpiritRadioSetAGCMode(AGCMode xMode);
 AGCMode SpiritRadioGetAGCMode(void);
@@ -614,4 +616,4 @@ SpiritFunctionalState SpiritRadioGetDigDiv(void);
 
 #endif
 
-/******************* (C) COPYRIGHT 2012 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

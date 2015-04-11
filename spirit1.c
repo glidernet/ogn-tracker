@@ -625,7 +625,6 @@ void vTaskSP1(void* pvParameters)
    }
 
    SpiritRadioSetXtalFrequency(26e6);
-   SpiritGeneralSetSpiritVersion(SPIRIT_VERSION_3_0);
 
     /* Spirit IRQ configuration */
    SpiritGpioInit(&xGpioIRQ);

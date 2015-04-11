@@ -1,29 +1,30 @@
 /**
- * @file    SPIRIT_PktMbus.c
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
- * @version V3.0.1
- * @date    November 19, 2012
- * @brief   Configuration and management of SPIRIT MBUS packets.
- * @details
- *
- * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
- * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
- * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
- * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
- * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
- * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
- *
- * THIS SOURCE CODE IS PROTECTED BY A LICENSE.
- * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
- * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
- *
- * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
- */
+* @file    SPIRIT_PktMbus.c
+* @author  VMA division - AMS
+* @version 3.2.0
+* @date    February 1, 2015
+* @brief   Configuration and management of SPIRIT MBUS packets.
+* @details
+*
+* THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
+* WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
+* TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
+* DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
+* FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
+* CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
+*
+* THIS SOURCE CODE IS PROTECTED BY A LICENSE.
+* FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
+* IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
+*
+* <h2><center>&copy; COPYRIGHT 2015 STMicroelectronics</center></h2>
+*/
 
 
 
 /* Includes ------------------------------------------------------------------*/
 #include "SPIRIT_PktMbus.h"
+#include "SPIRIT_Radio.h"
 #include "MCU_Interface.h"
 
 /**
@@ -109,7 +110,9 @@ void SpiritPktMbusInit(PktMbusInit* pxPktMbusInit)
 
   /* Packet format config */
   SpiritPktMbusSetFormat();
-
+  SpiritPktCommonFilterOnCrc(S_DISABLE);
+  SpiritRadioCsBlanking(S_ENABLE);
+  
   /* Preamble, postamble and submode config */
   tempRegValue[0] = pxPktMbusInit->cPreambleLength;
   tempRegValue[1] = pxPktMbusInit->cPostambleLength;
@@ -334,4 +337,4 @@ uint16_t SpiritPktMbusGetPayloadLength(void)
 
 
 
-/******************* (C) COPYRIGHT 2012 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

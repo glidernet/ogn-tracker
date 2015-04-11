@@ -1,45 +1,45 @@
 /**
- * @file    SPIRIT_PktCommon.h
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
- * @version V3.0.1
- * @date    November 19, 2012
- * @brief   Configuration and management of the common features of SPIRIT packets.
- * @details
- *
- * This module provides all the common functions and definitions used by the
- * packets modules.
- * Here are also defined all the generic enumeration types that are redefined
- * in the specific packets modules, but every enumeration value is referred
- * to this module. So the user who wants to configure the preamble of a Basic,
- * or a STack packet has to use the enumeration values defined here.
- *
- * <b>Example:</b>
- * @code
- *
- *   ...
- *
- *   SpiritPktBasicSetPreambleLength(PKT_PREAMBLE_LENGTH_18BYTES);
- *
- *   ...
- *
- * @endcode
- *
- * @note Is recommended for the user to not use these API directly
- * importing this module in his application.
- *
- * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
- * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
- * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
- * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
- * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
- * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
- *
- * THIS SOURCE CODE IS PROTECTED BY A LICENSE.
- * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
- * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
- *
- * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
- */
+* @file    SPIRIT_PktCommon.h
+* @author  VMA division - AMS
+* @version 3.2.0
+* @date    February 1, 2015
+* @brief   Configuration and management of the common features of SPIRIT packets.
+* @details
+*
+* This module provides all the common functions and definitions used by the
+* packets modules.
+* Here are also defined all the generic enumeration types that are redefined
+* in the specific packets modules, but every enumeration value is referred
+* to this module. So the user who wants to configure the preamble of a Basic,
+* or a STack packet has to use the enumeration values defined here.
+*
+* <b>Example:</b>
+* @code
+*
+*   ...
+*
+*   SpiritPktBasicSetPreambleLength(PKT_PREAMBLE_LENGTH_18BYTES);
+*
+*   ...
+*
+* @endcode
+*
+* @note Is recommended for the user to not use these API directly
+* importing this module in his application.
+*
+* THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
+* WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
+* TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
+* DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
+* FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
+* CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
+*
+* THIS SOURCE CODE IS PROTECTED BY A LICENSE.
+* FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
+* IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
+*
+* <h2><center>&copy; COPYRIGHT 2015 STMicroelectronics</center></h2>
+*/
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __SPIRIT_PKT_COMMON_H
@@ -315,7 +315,7 @@ typedef enum
  *         This parameter is an uint16_t.
  * @retval None.
  */
-#define BUILD_PCKTLEN0(nLength) ((nLength) & 0xFF)
+#define BUILD_PCKTLEN0(nLength) (nLength & 0xFF)
 
 
 /**
@@ -324,7 +324,7 @@ typedef enum
  *         This parameter is an uint16_t.
  * @retval None.
  */
-#define BUILD_PCKTLEN1(nLength) ((nLength) >> 8)
+#define BUILD_PCKTLEN1(nLength) (nLength >> 8)
 
 /**
  *@}
@@ -389,6 +389,7 @@ uint8_t SpiritPktCommonGetReceivedNackRx(void);
 uint8_t SpiritPktCommonGetTransmittedSeqNumber(void);
 uint8_t SpiritPktCommonGetNReTx(void);
 void SpiritPktCommonFilterOnControlField(SpiritFunctionalState xNewState);
+SpiritFunctionalState SpiritPktCommonGetFilterOnControlField(void);
 
 /**
  *@}
@@ -409,4 +410,4 @@ void SpiritPktCommonFilterOnControlField(SpiritFunctionalState xNewState);
 
 #endif
 
-/******************* (C) COPYRIGHT 2012 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

@@ -1,9 +1,9 @@
 /**
 * @file    SPIRIT_Management.c
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
- * @version V3.0.1
- * @date    November 19, 2012
- * @brief   The management layer for SPIRIT1 library.
+* @author  VMA division - AMS
+* @version 3.2.0
+* @date    February 1, 2015
+* @brief   The management layer for SPIRIT1 library.
 * @details
 *
 * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
@@ -17,7 +17,7 @@
 * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
 * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
 *
-* <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
+* <h2><center>&copy; COPYRIGHT 2015 STMicroelectronics</center></h2>
 */  
 
 
@@ -25,9 +25,9 @@
 #include "SPIRIT_Management.h"
 
 /**
- * @addtogroup SPIRIT_Libraries
- * @{
- */
+* @addtogroup SPIRIT_Libraries
+* @{
+*/
 
 
 /**
@@ -96,11 +96,6 @@ void SpiritManagementSetFrequencyBase(uint32_t lFBase)
   {
     band = VERY_LOW_BAND;
   }
-  else
-  {
-    band = 0;
-    SpiritReportError(SPI1_WRONG_BAND);
-  }
   
   int32_t FOffset  = SpiritRadioGetFrequencyOffset();
   uint32_t lChannelSpace  = SpiritRadioGetChannelSpace();
@@ -112,58 +107,55 @@ void SpiritManagementSetFrequencyBase(uint32_t lFBase)
   /* Reads the reference divider */
   uint8_t cRefDiv = (uint8_t)SpiritRadioGetRefDiv()+1;
   
-  if(SpiritGeneralGetSpiritVersion() != SPIRIT_VERSION_2_0) 
+  switch(band)
   {
-    switch(band)
+  case VERY_LOW_BAND:
+    if(Fc<161281250)
     {
-    case VERY_LOW_BAND:
-      if(Fc<161281250)
-      {
-        SpiritCalibrationSelectVco(VCO_L);
-      }
-      else
-      {
-        SpiritCalibrationSelectVco(VCO_H);
-      }
-      break;
-      
-    case LOW_BAND:
-      if(Fc<322562500)
-      {
-        SpiritCalibrationSelectVco(VCO_L);
-      }
-      else
-      {
-        SpiritCalibrationSelectVco(VCO_H);
-      }
-      break;
-      
-    case MIDDLE_BAND:
-      if(Fc<430083334)
-      {
-        SpiritCalibrationSelectVco(VCO_L);
-      }
-      else
-      {
-        SpiritCalibrationSelectVco(VCO_H);
-      }
-      break;
-      
-    case HIGH_BAND:
-      if(Fc<860166667)
-      {
-        SpiritCalibrationSelectVco(VCO_L);
-      }
-      else
-      {
-        SpiritCalibrationSelectVco(VCO_H);
-      }
+      SpiritCalibrationSelectVco(VCO_L);
+    }
+    else
+    {
+      SpiritCalibrationSelectVco(VCO_H);
+    }
+    break;
+    
+  case LOW_BAND:
+    if(Fc<322562500)
+    {
+      SpiritCalibrationSelectVco(VCO_L);
+    }
+    else
+    {
+      SpiritCalibrationSelectVco(VCO_H);
+    }
+    break;
+    
+  case MIDDLE_BAND:
+    if(Fc<430083334)
+    {
+      SpiritCalibrationSelectVco(VCO_L);
+    }
+    else
+    {
+      SpiritCalibrationSelectVco(VCO_H);
+    }
+    break;
+    
+  case HIGH_BAND:
+    if(Fc<860166667)
+    {
+      SpiritCalibrationSelectVco(VCO_L);
+    }
+    else
+    {
+      SpiritCalibrationSelectVco(VCO_H);
     }
   }
-
+  
   /* Search the VCO charge pump word and set the corresponding register */
   wcp = SpiritRadioSearchWCP(Fc);
-
+  
   synthWord = (uint32_t)(lFBase*(((double)(FBASE_DIVIDER*cRefDiv*s_vectcBHalfFactor[band]))/SpiritRadioGetXtalFrequency()));
   
   /* Build the array of registers values for the analog part */
@@ -176,7 +168,7 @@ void SpiritManagementSetFrequencyBase(uint32_t lFBase)
   g_xStatus = SpiritSpiWriteRegisters(SYNT3_BASE, 4, anaRadioRegArray);
 }
 
-void SpiritManagementWaVcoCalibration(void)
+uint8_t SpiritManagementWaVcoCalibration(void)
 {
   uint8_t s_cVcoWordRx;
   uint8_t s_cVcoWordTx;
@@ -184,7 +176,6 @@ void SpiritManagementWaVcoCalibration(void)
   uint8_t cRestore = 0;
   uint8_t cStandby = 0;
   uint32_t xtal_frequency = SpiritRadioGetXtalFrequency();
-  SpiritVersion spirit_version = SpiritGeneralGetSpiritVersion();
   
   /* Enable the reference divider if the XTAL is between 48 and 52 MHz */
   if(xtal_frequency>26000000)
@@ -211,6 +202,10 @@ void SpiritManagementWaVcoCalibration(void)
     SpiritCmdStrobeReady();
     do{
       SpiritRefreshStatus();
+      if(g_xStatus.MC_STATE == 0x13)
+      {
+        return 1;
+      }
     }while(g_xStatus.MC_STATE != MC_STATE_READY); 
   }
   
@@ -218,6 +213,10 @@ void SpiritManagementWaVcoCalibration(void)
   
   do{
     SpiritRefreshStatus();
+    if(g_xStatus.MC_STATE == 0x13)
+    {
+      return 1;
+    }
   }while(g_xStatus.MC_STATE != MC_STATE_LOCK);
   
   s_cVcoWordTx = SpiritCalibrationGetVcoCalData();
@@ -228,16 +227,15 @@ void SpiritManagementWaVcoCalibration(void)
     SpiritRefreshStatus();
   }while(g_xStatus.MC_STATE != MC_STATE_READY); 
   
-  /* Enable the reference divider if the XTAL is between 48 and 52 MHz */
-  if(xtal_frequency>26000000 && spirit_version == SPIRIT_VERSION_2_1)
-  {
-    SpiritManagementSetFrequencyBase(nFreq+480300);
-  }
-  
+    
   SpiritCmdStrobeLockRx();
   
   do{
     SpiritRefreshStatus();
+    if(g_xStatus.MC_STATE == 0x13)
+    {
+      return 1;
+    }
   }while(g_xStatus.MC_STATE != MC_STATE_LOCK);
   
   s_cVcoWordRx = SpiritCalibrationGetVcoCalData();
@@ -246,6 +244,10 @@ void SpiritManagementWaVcoCalibration(void)
   
   do{
     SpiritRefreshStatus();
+    if(g_xStatus.MC_STATE == 0x13)
+    {
+      return 1;
+    }
   }while(g_xStatus.MC_STATE != MC_STATE_READY);
   
   if(cStandby == 1)
@@ -255,7 +257,7 @@ void SpiritManagementWaVcoCalibration(void)
   SpiritCalibrationVco(S_DISABLE);
   
   /* Disable the reference divider if the XTAL is between 48 and 52 MHz */
-  if(cRestore || (xtal_frequency>26000000 && spirit_version == SPIRIT_VERSION_2_1))
+  if(cRestore)
   {
     SpiritRadioSetRefDiv(S_DISABLE);    
     SpiritManagementSetFrequencyBase(nFreq);
@@ -266,54 +268,8 @@ void SpiritManagementWaVcoCalibration(void)
   
   SpiritCalibrationSetVcoCalDataTx(s_cVcoWordTx);
   SpiritCalibrationSetVcoCalDataRx(s_cVcoWordRx);
-}
-
-void SpiritManagementWaRcoCalibration(void)
-{
-  uint32_t xtal_frequency = SpiritRadioGetXtalFrequency();
-  SpiritVersion spirit_version = SpiritGeneralGetSpiritVersion();
   
-  if(spirit_version == SPIRIT_VERSION_2_1 && xtal_frequency<48000000)
-  {
-    uint8_t tmp= 0x02;SpiritSpiWriteRegisters(0x50, 1, &tmp); 
-    SpiritCmdStrobeStandby(); 
-    tmp= 0x29;SpiritSpiWriteRegisters(0xB4, 1, &tmp); 
-    tmp= 0x06;SpiritSpiWriteRegisters(0x50, 1, &tmp); 
-    SpiritCmdStrobeReady();
-  }
-}
-
-
-void SpiritManagementWaRxStartup(void)
-{
-  SpiritVersion spirit_version = SpiritGeneralGetSpiritVersion();
-
-  if(spirit_version == SPIRIT_VERSION_2_1)
-  {
-    for(volatile uint32_t i=0;i<0xFF;i++);
-    uint8_t tmp = 0x10; SpiritSpiWriteRegisters(0xa8, 1, &tmp);
-    tmp = 0x00; SpiritSpiWriteRegisters(0xa8, 1, &tmp);
-    {
-      //      uint8_t tmp1,tmp2 = 0x5F; SpiritSpiReadRegisters(0x9E, 1, &tmp1);
-      //      SpiritCmdStrobeCommand(CMD_RX); 
-      //      SpiritSpiWriteRegisters(0x9E, 1, &tmp2);
-      //      for(volatile uint32_t i=0;i<0x3F;i++);
-      //      SpiritSpiWriteRegisters(0x9E, 1, &tmp1);
-    }
-  }  
-}
-
-
-void SpiritManagementWaRxStartupInit(void)
-{
-  SpiritVersion spirit_version = SpiritGeneralGetSpiritVersion();
-  
-  if(spirit_version == SPIRIT_VERSION_2_1)
-  {
-      uint8_t tmp = 0xA8; SpiritSpiWriteRegisters(0xa9, 1, &tmp);
-      tmp = 0x4B; SpiritSpiWriteRegisters(0xaa, 1, &tmp);
-      tmp = 0xFC; SpiritSpiWriteRegisters(0xab, 1, &tmp);
-  }  
+  return 0;
 }
 
 
@@ -322,12 +278,7 @@ void SpiritManagementWaCmdStrobeTx(void)
   if(s_cCommunicationState != COMMUNICATION_STATE_TX)
   {
     uint32_t xtal_frequency = SpiritRadioGetXtalFrequency();
-    SpiritVersion spirit_version = SpiritGeneralGetSpiritVersion();
     
-    if(spirit_version == SPIRIT_VERSION_2_1  && xtal_frequency>26000000)
-    {
-      SpiritManagementSetFrequencyBase(s_nDesiredFrequency);      
-    }
     /* To achive the max output power */
     if(s_nDesiredFrequency>=150000000 && s_nDesiredFrequency<=470000000)
     {
@@ -336,14 +287,8 @@ void SpiritManagementWaCmdStrobeTx(void)
     }
     else
     {
-      if(spirit_version == SPIRIT_VERSION_3_0_D1 && s_nDesiredFrequency>=863000000 && s_nDesiredFrequency<=870000000) {
-        /* Optimal setting for Tx mode only */
-        SpiritRadioSetPACwc(LOAD_2_4_PF);
-      }
-      else {
-        /* Optimal setting for Tx mode only */
-        SpiritRadioSetPACwc(LOAD_0_PF);
-      }
+      /* Optimal setting for Tx mode only */
+      SpiritRadioSetPACwc(LOAD_0_PF);
     }
     
     uint8_t tmp = 0x11; SpiritSpiWriteRegisters(0xa9, 1, &tmp); /* Enable VCO_L buffer */
@@ -357,17 +302,8 @@ void SpiritManagementWaCmdStrobeTx(void)
 void SpiritManagementWaCmdStrobeRx(void)
 {
   if(s_cCommunicationState != COMMUNICATION_STATE_RX)
-  {
-    uint32_t xtal_frequency = SpiritRadioGetXtalFrequency();
-    SpiritVersion spirit_version = SpiritGeneralGetSpiritVersion();
-    
-    if(spirit_version == SPIRIT_VERSION_2_1 && xtal_frequency>26000000)
-    {
-      SpiritManagementSetFrequencyBase(s_nDesiredFrequency+480300);
-      SpiritManagementWaRxStartupInit();
-    }
-    
-    uint8_t tmp = 0x90; SpiritSpiWriteRegisters(PM_CONFIG1_BASE, 1, &tmp); /* Set SMPS switching frequency */    
+  {    
+    uint8_t tmp = 0x98; SpiritSpiWriteRegisters(PM_CONFIG1_BASE, 1, &tmp); /* Set SMPS switching frequency */    
     SpiritRadioSetPACwc(LOAD_0_PF); /* Set the correct CWC parameter */
     
     s_cCommunicationState = COMMUNICATION_STATE_RX;
@@ -381,20 +317,13 @@ void SpiritManagementWaTRxFcMem(uint32_t nDesiredFreq)
 }
 
 
-
-void SpiritManagementWaRcoRangeExtCalibration(void)
-{
-  uint32_t xtal_frequency = SpiritRadioGetXtalFrequency();
-  SpiritVersion spirit_version = SpiritGeneralGetSpiritVersion();
-  
-  if(spirit_version == SPIRIT_VERSION_2_1 && xtal_frequency<48000000)
-  {
-    uint8_t tmp= 0x02;SpiritSpiWriteRegisters(0x50, 1, &tmp); 
-    SpiritCmdStrobeStandby(); 
-    tmp= 0x29;SpiritSpiWriteRegisters(0xB4, 1, &tmp); 
-    tmp= 0x06;SpiritSpiWriteRegisters(0x50, 1, &tmp); 
-    SpiritCmdStrobeReady();
-  }
+void SpiritManagementWaExtraCurrent(void)
+{          
+  uint8_t tmp= 0xCA;SpiritSpiWriteRegisters(0xB2, 1, &tmp); 
+  tmp= 0x04;SpiritSpiWriteRegisters(0xA8, 1, &tmp); 
+  /* just a read to loose some microsecs more */
+  SpiritSpiReadRegisters(0xA8, 1, &tmp);
+  tmp= 0x00;SpiritSpiWriteRegisters(0xA8, 1, &tmp); 
 }
 
 /**
@@ -417,4 +346,4 @@ void SpiritManagementWaRcoRangeExtCalibration(void)
 */
 
 
-/******************* (C) COPYRIGHT 2012 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

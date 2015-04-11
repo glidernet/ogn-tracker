@@ -1,77 +1,77 @@
 /**
- * @file    SPIRIT_PktBasic.h
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
- * @version V3.0.1
- * @date    November 19, 2012
- * @brief   Configuration and management of SPIRIT Basic packets.
- * @details
- *
- * This module can be used to manage the configuration of Spirit Basic
- * packets.
- * The user can obtain a packet configuration filling the structure
- * <i>@ref PktBasicInit</i>, defining in it some general parameters
- * for the Spirit Basic packet format.
- * Another structure the user can fill is <i>@ref PktBasicAddressesInit</i>
- * to define the addresses which will be used during the communication.
- * Moreover, functions to set the payload length and the destination address
- * are provided.
- *
- * <b>Example:</b>
- * @code
- *
- * PktBasicInit basicInit={
- *   PKT_PREAMBLE_LENGTH_08BYTES,       // preamble length in bytes
- *   PKT_SYNC_LENGTH_4BYTES,            // sync word length in bytes
- *   0x1A2635A8,                        // sync word
- *   PKT_LENGTH_VAR,                    // variable or fixed payload length
- *   7,                                 // length field width in bits (used only for variable length)
- *   PKT_NO_CRC,                        // CRC mode
- *   PKT_CONTROL_LENGTH_0BYTES,         // control field length
- *   S_ENABLE,                          // address field
- *   S_DISABLE,                         // FEC
- *   S_ENABLE                           // whitening
- * };
- *
- * PktBasicAddressesInit addressInit={
- *   S_ENABLE,                          // enable/disable filtering on my address
- *   0x34,                              // my address (address of the current node)
- *   S_DISABLE,                         // enable/disable filtering on multicast address
- *   0xEE,                              // multicast address
- *   S_DISABLE,                         // enable/disable filtering on broadcast address
- *   0xFF                               // broadcast address
- * };
- *
- * ...
- *
- * SpiritPktBasicInit(&basicInit);
- * SpiritPktBasicAddressesInit(&addressInit);
- *
- * ...
- *
- * SpiritPktBasicSetPayloadLength(20);
- * SpiritPktBasicSetDestinationAddress(0x44);
- *
- * ...
- *
- * @endcode
- *
- * The module provides some other functions that can be used to modify
- * or read only some configuration parameters.
- *
- *
- * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
- * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
- * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
- * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
- * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
- * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
- *
- * THIS SOURCE CODE IS PROTECTED BY A LICENSE.
- * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
- * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
- *
- * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
- */
+* @file    SPIRIT_PktBasic.h
+* @author  VMA division - AMS
+* @version 3.2.0
+* @date    February 1, 2015
+* @brief   Configuration and management of SPIRIT Basic packets.
+* @details
+*
+* This module can be used to manage the configuration of Spirit Basic
+* packets.
+* The user can obtain a packet configuration filling the structure
+* <i>@ref PktBasicInit</i>, defining in it some general parameters
+* for the Spirit Basic packet format.
+* Another structure the user can fill is <i>@ref PktBasicAddressesInit</i>
+* to define the addresses which will be used during the communication.
+* Moreover, functions to set the payload length and the destination address
+* are provided.
+*
+* <b>Example:</b>
+* @code
+*
+* PktBasicInit basicInit={
+*   PKT_PREAMBLE_LENGTH_08BYTES,       // preamble length in bytes
+*   PKT_SYNC_LENGTH_4BYTES,            // sync word length in bytes
+*   0x1A2635A8,                        // sync word
+*   PKT_LENGTH_VAR,                    // variable or fixed payload length
+*   7,                                 // length field width in bits (used only for variable length)
+*   PKT_NO_CRC,                        // CRC mode
+*   PKT_CONTROL_LENGTH_0BYTES,         // control field length
+*   S_ENABLE,                          // address field
+*   S_DISABLE,                         // FEC
+*   S_ENABLE                           // whitening
+* };
+*
+* PktBasicAddressesInit addressInit={
+*   S_ENABLE,                          // enable/disable filtering on my address
+*   0x34,                              // my address (address of the current node)
+*   S_DISABLE,                         // enable/disable filtering on multicast address
+*   0xEE,                              // multicast address
+*   S_DISABLE,                         // enable/disable filtering on broadcast address
+*   0xFF                               // broadcast address
+* };
+*
+* ...
+*
+* SpiritPktBasicInit(&basicInit);
+* SpiritPktBasicAddressesInit(&addressInit);
+*
+* ...
+*
+* SpiritPktBasicSetPayloadLength(20);
+* SpiritPktBasicSetDestinationAddress(0x44);
+*
+* ...
+*
+* @endcode
+*
+* The module provides some other functions that can be used to modify
+* or read only some configuration parameters.
+*
+*
+* THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
+* WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
+* TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
+* DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
+* FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
+* CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
+*
+* THIS SOURCE CODE IS PROTECTED BY A LICENSE.
+* FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
+* IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
+*
+* <h2><center>&copy; COPYRIGHT 2015 STMicroelectronics</center></h2>
+*/
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __SPIRIT_PKT_BASIC_H
@@ -676,4 +676,4 @@ void SpiritPktBasicSetVarLengthWidth(uint16_t nMaxPayloadLength,SpiritFunctional
 
 #endif
 
-/******************* (C) COPYRIGHT 2012 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

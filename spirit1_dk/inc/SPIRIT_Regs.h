@@ -1,20 +1,20 @@
 /**
- * @file    SPIRIT_Regs.h
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
- * @version V3.0.1
- * @date    November 19, 2012
- * @brief   This file contains all the SPIRIT registers address and masks.
- * @details
- *
- * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
- * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
- * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
- * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
- * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
- * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
- *
- * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
- */
+* @file    SPIRIT_Regs.h
+* @author  VMA division - AMS
+* @version 3.2.0
+* @date    February 1, 2015
+* @brief   This file contains all the SPIRIT registers address and masks.
+* @details
+*
+* THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
+* WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
+* TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
+* DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
+* FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
+* CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
+*
+* <h2><center>&copy; COPYRIGHT 2015 STMicroelectronics</center></h2>
+*/
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __SPIRIT1_REGS_H
@@ -1659,9 +1659,9 @@
 #define	PCKT_FLT_OPTIONS_BASE					((uint8_t)0x4F) /*!< Options relative to packet filtering */
 
 #define	PCKT_FLT_OPTIONS_CRC_CHECK_MASK 			((uint8_t)0x01) /*!< Enable/disable of CRC check: packet is discarded if CRC is not valid [RX] */
-#define	PCKT_FLT_OPTIONS_DEST_VS_TX_ADDR_MASK			((uint8_t)0x02) /*!< Packet discarded if destination address differs from TX_ADDR register [RX] */
+#define	PCKT_FLT_OPTIONS_DEST_VS_BROADCAST_ADDR_MASK		((uint8_t)0x02) /*!< Packet discarded if destination address differs from BROADCAST register [RX] */
 #define	PCKT_FLT_OPTIONS_DEST_VS_MULTICAST_ADDR_MASK		((uint8_t)0x04) /*!< Packet discarded if destination address differs from MULTICAST register [RX] */
-#define	PCKT_FLT_OPTIONS_DEST_VS_BROADCAST_ADDR_MASK		((uint8_t)0x08) /*!< Packet discarded if destination address differs from MULTICAST register [RX] */
+#define	PCKT_FLT_OPTIONS_DEST_VS_TX_ADDR_MASK			((uint8_t)0x08) /*!< Packet discarded if destination address differs from TX_ADDR register [RX] */
 #define	PCKT_FLT_OPTIONS_SOURCE_FILTERING_MASK		        ((uint8_t)0x10) /*!< Packet discarded if source address (masked by the SOURCE_MASK register)
                                                                                      differs from SOURCE_ADDR register [RX] */
 #define	PCKT_FLT_OPTIONS_CONTROL_FILTERING_MASK		        ((uint8_t)0x20) /*!< Packet discarded if the x-byte (x=1¸4) control field  (masked by the CONTROLx_MASK register)
@@ -3221,4 +3221,4 @@
 
 #endif
 
-/******************* (C) COPYRIGHT 2012 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

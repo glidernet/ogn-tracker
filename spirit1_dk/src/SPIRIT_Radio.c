@@ -1,8 +1,8 @@
-	/**
+/**
 * @file    SPIRIT_Radio.c
-* @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
-* @version V3.0.1
-* @date    November 19, 2012
+* @author  VMA division - AMS
+* @version 3.2.0
+* @date    February 1, 2015
 * @brief   This file provides all the low level API to manage Analog and Digital
 *          radio part of SPIRIT.
 * @details
@@ -18,7 +18,7 @@
 * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
 * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
 *
-* <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
+* <h2><center>&copy; COPYRIGHT 2015 STMicroelectronics</center></h2>
 *
 */
 
@@ -97,7 +97,7 @@ static const uint16_t s_vectnBandwidth26M[90]=
 {
   8001, 7951, 7684, 7368, 7051, 6709, 6423, 5867, 5414, \
     4509, 4259, 4032, 3808, 3621, 3417, 3254, 2945, 2703, \
-      2247, 2124, 2011, 1900, 1807, 1706, 1624, 1471, 1350, \
+      2247, 2124, 2015, 1900, 1807, 1706, 1624, 1471, 1350, \
         1123, 1062, 1005,  950,  903,  853,  812,  735,  675, \
           561,  530,  502,  474,  451,  426,  406,  367,  337, \
             280,  265,  251,  237,  226,  213,  203,  184,  169, \
@@ -116,6 +116,32 @@ static const uint16_t s_vectnVCOFreq[16]=
     5161, 5232, 5303, 5375, 5448, 5519, 5592, 5663
 };
 
+/**
+* @brief  This variable is used to enable or disable
+*  the VCO calibration WA called at the end of the SpiritRadioSetFrequencyBase fcn.
+*  Default is enabled.
+*/
+static SpiritFunctionalState xDoVcoCalibrationWA=S_ENABLE;
+
+
+/**
+* @brief  These values are used to interpolate the power curves.
+*         Interpolation curves are linear in the following 3 regions:
+*       - reg value: 1 to 13    (up region)
+*       - reg value: 13 to 40   (mid region)
+*       - reg value: 41 to 90   (low region)
+*       power_reg = m*power_dBm + q
+*       For each band the order is: {m-up, q-up, m-mid, q-mid, m-low, q-low}.
+* @note The power interpolation curves have been extracted
+*       by measurements done on the divisional evaluation boards.
+*/
+static const float fPowerFactors[5][6]={ 
+  {-2.11,25.66,-2.11,25.66,-2.00,31.28},   /* 915 */
+  {-2.04,23.45,-2.04,23.45,-1.95,27.66},   /* 868 */
+  {-3.48,38.45,-1.89,27.66,-1.92,30.23},   /* 433 */
+  {-3.27,35.43,-1.80,26.31,-1.89,29.61},   /* 315 */
+  {-4.18,50.66,-1.80,30.04,-1.86,32.22},   /* 169 */
+};
 
 /**
 * @}
@@ -141,24 +167,20 @@ static const uint16_t s_vectnVCOFreq[16]=
 *         parameters in the pxSRadioInitStruct.
 * @param  pxSRadioInitStruct pointer to a SRadioInit structure that
 *         contains the configuration information for the analog radio part of SPIRIT.
-* @retval None.
+* @retval Error code: 0=no error, 1=error during calibration of VCO.
 */
-void SpiritRadioInit(SRadioInit* pxSRadioInitStruct)
+uint8_t SpiritRadioInit(SRadioInit* pxSRadioInitStruct)
 {
   int32_t FOffsetTmp;
   uint8_t anaRadioRegArray[8], digRadioRegArray[4];
   int16_t xtalOffsetFactor;
   uint8_t drM, drE, FdevM, FdevE, bwM, bwE;
-  
-  /* Get the RF board version */
-  SpiritVersion xSpiritVersion = SpiritGeneralGetSpiritVersion();
-  
+    
   /* Workaround for Vtune */
   uint8_t value = 0xA0; SpiritSpiWriteRegisters(0x9F, 1, &value);
   
-  /* Calculates the offset [Hz] respect to RF frequency and according to xtal_ppm parameter: (xtal_ppm*FBase)/10^6 */
-  /* FOffsetTmp = (int32_t)((pxSRadioInitStruct->nXtalOffsetPpm*pxSRadioInitStruct->lFrequencyBase)/PPM_FACTOR); <= original */
-  FOffsetTmp = (int32_t)( (pxSRadioInitStruct->nXtalOffsetPpm*(int32_t)(pxSRadioInitStruct->lFrequencyBase>>6)) ) / (int32_t)(PPM_FACTOR>>6); /* <= correct by Pawel Jalocha, 22-OCT-2014 to correct overflow that easily occures - should be safe to +/-100ppm */
+  /* Calculates the offset respect to RF frequency and according to xtal_ppm parameter: (xtal_ppm*FBase)/10^6 */
+  FOffsetTmp = (int32_t)(((float)pxSRadioInitStruct->nXtalOffsetPpm*pxSRadioInitStruct->lFrequencyBase)/PPM_FACTOR);
   
   /* Check the parameters */
   s_assert_param(IS_FREQUENCY_BAND(pxSRadioInitStruct->lFrequencyBase));
@@ -169,48 +191,43 @@ void SpiritRadioInit(SRadioInit* pxSRadioInitStruct)
   s_assert_param(IS_F_DEV(pxSRadioInitStruct->lFreqDev,s_lXtalFrequency));
   
   /* Disable the digital, ADC, SMPS reference clock divider if fXO>24MHz or fXO<26MHz */
-  if(xSpiritVersion != SPIRIT_VERSION_2_0)
-  {
-    /* Goes in STANDBY state */
-    SpiritSpiCommandStrobes(COMMAND_STANDBY);    
-    do{
-      /* Delay for state transition */
-      for(volatile uint8_t i=0; i!=0xFF; i++);
-      
-      /* Reads the MC_STATUS register */
-      SpiritRefreshStatus();
-    }while(g_xStatus.MC_STATE!=MC_STATE_STANDBY);
+  SpiritSpiCommandStrobes(COMMAND_STANDBY);    
+  do{
+    /* Delay for state transition */
+    for(volatile uint8_t i=0; i!=0xFF; i++);
     
-    if(s_lXtalFrequency<48000000)
-    {
-      SpiritRadioSetDigDiv(S_DISABLE);
-      s_assert_param(IS_CH_BW(pxSRadioInitStruct->lBandwidth,s_lXtalFrequency));
-    }
-    else
-    {      
-      SpiritRadioSetDigDiv(S_ENABLE);
-      s_assert_param(IS_CH_BW(pxSRadioInitStruct->lBandwidth,(s_lXtalFrequency>>1)));
-    }
-
-    /* Goes in READY state */
-    SpiritSpiCommandStrobes(COMMAND_READY);
-    do{
-      /* Delay for state transition */
-      for(volatile uint8_t i=0; i!=0xFF; i++);
-      
-      /* Reads the MC_STATUS register */
-     SpiritRefreshStatus();
-    }while(g_xStatus.MC_STATE!=MC_STATE_READY);
+    /* Reads the MC_STATUS register */
+    SpiritRefreshStatus();
+  }while(g_xStatus.MC_STATE!=MC_STATE_STANDBY);
+  
+  if(s_lXtalFrequency<48000000)
+  {
+    SpiritRadioSetDigDiv(S_DISABLE);
+    s_assert_param(IS_CH_BW(pxSRadioInitStruct->lBandwidth,s_lXtalFrequency));
   }
-
-  /* Calculates the FC_OFFSET parameter and cast as signed int: FOffsetTmp = (Fxtal/2^18)*FC_OFFSET - page 83 of the datasheet: http://www.st.com/st-web-ui/static/active/en/resource/technical/document/datasheet/DM00047607.pdf */
-  xtalOffsetFactor = (int32_t)(FOffsetTmp*((int32_t)FBASE_DIVIDER>>6))/(int32_t)(s_lXtalFrequency>>6); /* <= corrected to reduce the chance for an overflow: Pawel Jalocha, 22-OCT-2014 */
-  anaRadioRegArray[2] = ((xtalOffsetFactor>>8)&0x0F);         /*        ^                            */
-  anaRadioRegArray[3] = ( xtalOffsetFactor    &0xFF);         /*       here - this was the trick to make it work, but I don't know why would the division go wrong otherwise ? */
+  else
+  {      
+    SpiritRadioSetDigDiv(S_ENABLE);
+    s_assert_param(IS_CH_BW(pxSRadioInitStruct->lBandwidth,(s_lXtalFrequency>>1)));
+  }
+  
+  /* Goes in READY state */
+  SpiritSpiCommandStrobes(COMMAND_READY);
+  do{
+    /* Delay for state transition */
+    for(volatile uint8_t i=0; i!=0xFF; i++);
+    
+    /* Reads the MC_STATUS register */
+    SpiritRefreshStatus();
+  }while(g_xStatus.MC_STATE!=MC_STATE_READY);
+  
+  /* Calculates the FC_OFFSET parameter and cast as signed int: FOffsetTmp = (Fxtal/2^18)*FC_OFFSET */
+  xtalOffsetFactor = (int16_t)(((float)FOffsetTmp*FBASE_DIVIDER)/s_lXtalFrequency);
+  anaRadioRegArray[2] = (uint8_t)((((uint16_t)xtalOffsetFactor)>>8)&0x0F);
+  anaRadioRegArray[3] = (uint8_t)(xtalOffsetFactor);
   
   /* Calculates the channel space factor */
-  /* anaRadioRegArray[0] =((uint32_t)pxSRadioInitStruct->nChannelSpace<<9)/(s_lXtalFrequency>>6)+1; <= original */
-  anaRadioRegArray[0] =(((uint32_t)pxSRadioInitStruct->nChannelSpace<<9)+(s_lXtalFrequency>>7))/(s_lXtalFrequency>>6); /* <= corrected by Pawel Jalocha, 22-OCT-2014 for more precision on channel spacing */
+  anaRadioRegArray[0] =((uint32_t)pxSRadioInitStruct->nChannelSpace<<9)/(s_lXtalFrequency>>6)+1;
   
   SpiritManagementWaTRxFcMem(pxSRadioInitStruct->lFrequencyBase);
   
@@ -234,52 +251,38 @@ void SpiritRadioInit(SRadioInit* pxSRadioInitStruct)
   SpiritRadioSearchChannelBwME(pxSRadioInitStruct->lBandwidth, &bwM, &bwE);
   
   digRadioRegArray[3] = (uint8_t)((bwM<<4) | bwE);
+ 
+  uint8_t ifOffsetAna;
+  if(s_lXtalFrequency==24000000) {
+    ifOffsetAna = 0xB6;
+    anaRadioRegArray[1] = 0xB6;
+  }
+  if(s_lXtalFrequency==25000000) {
+    ifOffsetAna = 0xAC;
+    anaRadioRegArray[1] = 0xAC;
+  }
+  if(s_lXtalFrequency==26000000) {
+    ifOffsetAna = 0xA3;
+    anaRadioRegArray[1] = 0xA3;
+  }
+  if(s_lXtalFrequency==48000000) {
+    ifOffsetAna = 0x3B;
+    anaRadioRegArray[1] = 0xB6;
+  }
+  if(s_lXtalFrequency==50000000) {
+    ifOffsetAna = 0x36;
+    anaRadioRegArray[1] = 0xAC;
+  }
+  if(s_lXtalFrequency==52000000) {
+    ifOffsetAna = 0x31;
+    anaRadioRegArray[1] = 0xA3;
+  }
   
-  if(xSpiritVersion == SPIRIT_VERSION_3_0 || xSpiritVersion == SPIRIT_VERSION_3_0_D1)
-  {
-    uint8_t ifOffsetAna;
-    if(s_lXtalFrequency==24000000) {
-      ifOffsetAna = 0xB6;
-      anaRadioRegArray[1] = 0xB6;
-    }
-    if(s_lXtalFrequency==25000000) {
-      ifOffsetAna = 0xAC;
-      anaRadioRegArray[1] = 0xAC;
-    }
-    if(s_lXtalFrequency==26000000) {
-      ifOffsetAna = 0xA3;
-      anaRadioRegArray[1] = 0xA3;
-    }
-    if(s_lXtalFrequency==48000000) {
-      ifOffsetAna = 0x3B;
-      anaRadioRegArray[1] = 0xB6;
-    }
-    if(s_lXtalFrequency==50000000) {
-      ifOffsetAna = 0x36;
-      anaRadioRegArray[1] = 0xAC;
-    }
-    if(s_lXtalFrequency==52000000) {
-      ifOffsetAna = 0x31;
-      anaRadioRegArray[1] = 0xA3;
-    }
-    
-    g_xStatus = SpiritSpiWriteRegisters(IF_OFFSET_ANA_BASE, 1, &ifOffsetAna);
-  }
-  else
-  {
-    if(s_lXtalFrequency==24000000 || s_lXtalFrequency==48000000) {
-      anaRadioRegArray[1] = 0xB6;
-    }
-    if(s_lXtalFrequency==25000000 || s_lXtalFrequency==50000000) {
-      anaRadioRegArray[1] = 0xAC;
-    }
-    if(s_lXtalFrequency==26000000 || s_lXtalFrequency==52000000) {
-      anaRadioRegArray[1] = 0xA3;
-    }
-  }
+  g_xStatus = SpiritSpiWriteRegisters(IF_OFFSET_ANA_BASE, 1, &ifOffsetAna);
+
   
   /* Sets Xtal configuration */
-  if(s_lXtalFrequency>26000000) 
+  if(s_lXtalFrequency>26000000)
   {
     SpiritRadioSetXtalFlag(XTAL_FLAG((s_lXtalFrequency/2)));
   }
@@ -300,7 +303,12 @@ void SpiritRadioInit(SRadioInit* pxSRadioInitStruct)
   /* Enable the freeze option of the AFC on the SYNC word */
   SpiritRadioAFCFreezeOnSync(S_ENABLE);
   
-  SpiritRadioSetFrequencyBase(pxSRadioInitStruct->lFrequencyBase);
+  /* Set the IQC correction optimal value */
+  anaRadioRegArray[0]=0x80;
+  anaRadioRegArray[1]=0xE3;
+  g_xStatus = SpiritSpiWriteRegisters(0x99, 2, anaRadioRegArray);
+  
+  return SpiritRadioSetFrequencyBase(pxSRadioInitStruct->lFrequencyBase);
   
 }
 
@@ -318,7 +326,7 @@ void SpiritRadioGetInfo(SRadioInit* pxSRadioInitStruct)
   int16_t xtalOffsetFactor;
   
   /* Get the RF board version */
-  SpiritVersion xSpiritVersion = SpiritGeneralGetSpiritVersion();
+  //SpiritVersion xSpiritVersion = SpiritGeneralGetSpiritVersion();
   
   /* Reads the Analog Radio registers */
   SpiritSpiReadRegisters(SYNT3_BASE, 8, anaRadioRegArray);
@@ -345,8 +353,10 @@ void SpiritRadioGetInfo(SRadioInit* pxSRadioInitStruct)
   }
   else
   {
-    band = 0;
-    SpiritReportError(SPI1_WRONG_BAND);
+    /* if it is another value, set it to a valid one in order to avoid access violation */
+    uint8_t tmp=(anaRadioRegArray[3]&0xF8)|SYNT0_BS_6;
+    SpiritSpiWriteRegisters(SYNT0_BASE,1,&tmp);
+    band = HIGH_BAND;
   }
   
   /* Computes the synth word */
@@ -393,18 +403,14 @@ void SpiritRadioGetInfo(SRadioInit* pxSRadioInitStruct)
   uint8_t bwE = digRadioRegArray[3]&0x0F;
   
   uint8_t cDivider = 0;
-  uint8_t cCorrection = 0;
-  if(xSpiritVersion != SPIRIT_VERSION_2_0)
-  {  
-    cDivider = SpiritRadioGetDigDiv();
-    cCorrection = 1;
-  }
+  cDivider = SpiritRadioGetDigDiv();
   
   /* Calculates the datarate */
   pxSRadioInitStruct->lDatarate = ((s_lXtalFrequency>>(5+cDivider))*(256+digRadioRegArray[0]))>>(23-(digRadioRegArray[1]&0x0F));
   
   /* Calculates the frequency deviation */
-  pxSRadioInitStruct->lFreqDev = (((s_lXtalFrequency>>6)*(8+FDevM))>>(12-FDevE+cCorrection));
+  // (((s_lXtalFrequency>>6)*(8+FDevM))>>(12-FDevE+cCorrection));
+  pxSRadioInitStruct->lFreqDev =(uint32_t)((float)s_lXtalFrequency/(((uint32_t)1)<<18)*(uint32_t)((8.0+FDevM)/2*(1<<FDevE)));
   
   /* Reads the channel filter bandwidth from the look-up table and return it */
   pxSRadioInitStruct->lBandwidth = (uint32_t)(100.0*s_vectnBandwidth26M[bwM+(bwE*9)]*((s_lXtalFrequency>>cDivider)/26e6));
@@ -472,11 +478,7 @@ XtalFlag SpiritRadioGetXtalFlag(void)
 */
 uint8_t SpiritRadioSearchWCP(uint32_t lFc)
 {
-  volatile SpiritBool find = S_FALSE;
-  volatile SpiritBool find_up = S_FALSE;
-  int8_t i=8;
-  int8_t start = 0;
-  int8_t end = 15;
+  int8_t i;
   uint32_t vcofreq;
   uint8_t BFactor;
   
@@ -500,11 +502,6 @@ uint8_t SpiritRadioSearchWCP(uint32_t lFc)
   {
     BFactor = VERY_LOW_BAND_FACTOR;
   }
-  else 
-  {
-    BFactor = 0; 
-	SpiritReportError(SPI1_WRONG_BAND);
-  }
   
   /* Calculates the VCO frequency VCOFreq = lFc*B */
   vcofreq = (lFc/1000000)*BFactor;
@@ -513,52 +510,19 @@ uint8_t SpiritRadioSearchWCP(uint32_t lFc)
   if(vcofreq>=s_vectnVCOFreq[15])
   {
     i=15;
-    find =S_TRUE;
   }
-  while(!find)
+  else
   {
-    if(vcofreq>=s_vectnVCOFreq[i])
-    {
-      if(vcofreq<=s_vectnVCOFreq[i+1])
-      {
-        find = S_TRUE;
-        find_up = S_TRUE;
-      }
-      else
-      {
-        start = i;
-        i = i+ (end - start)/2;
-      }
-    }
-    else
-    {
-      if(vcofreq>=s_vectnVCOFreq[i-1])
-        find = S_TRUE;
-      else
-      {
-        end = i;
-        i = i - (end-start)/2;
-        if(end==i) {
-          i=0;
-        }        
-      }
-    }
+    /* Search the value */
+    for(i=0 ; i<15 && vcofreq>s_vectnVCOFreq[i] ; i++);
+    
+    /* Be sure that it is the best approssimation */
+    if (i!=0 && s_vectnVCOFreq[i]-vcofreq>vcofreq-s_vectnVCOFreq[i-1])
+      i--;
   }
-  if(find_up && i<15)
-  {
-    if((vcofreq - s_vectnVCOFreq[i])>=(s_vectnVCOFreq[i+1] - vcofreq))
-    {
-      i = i+1;
-    }
-  }
-  else if(!find_up && i<15)
-  {    
-    if((s_vectnVCOFreq[i]-vcofreq)>=(vcofreq - s_vectnVCOFreq[i-1]))
-    {
-      i=i-1;
-    }
-  }  
-  return  (uint8_t)(i%8);
+  
+  /* Return index */
+  return (i%8);
   
 }
 
@@ -767,13 +731,13 @@ void SpiritRadioSetFrequencyOffsetPpm(int16_t nXtalPpm)
   fBase = synthWord*(s_lXtalFrequency/(s_vectcBHalfFactor[band]*cRefDiv)/FBASE_DIVIDER);
   
   /* Calculates the offset respect to RF frequency and according to xtal_ppm parameter */
-  FOffsetTmp = (int32_t)((nXtalPpm*fBase)/PPM_FACTOR);
+  FOffsetTmp = (int32_t)(((float)nXtalPpm*fBase)/PPM_FACTOR);
   
   /* Check the Offset is in the correct range */
   s_assert_param(IS_FREQUENCY_OFFSET(FOffsetTmp,s_lXtalFrequency));
   
   /* Calculates the FC_OFFSET value to write in the corresponding register */  
-  xtalOffsetFactor = (FOffsetTmp*FBASE_DIVIDER)/s_lXtalFrequency;
+  xtalOffsetFactor = (int16_t)(((float)FOffsetTmp*FBASE_DIVIDER)/s_lXtalFrequency);
   
   /* Build the array related to the FC_OFFSET_1 and FC_OFFSET_0 register */
   tempArray[0]=(uint8_t)((((uint16_t)xtalOffsetFactor)>>8)&0x0F);
@@ -799,7 +763,7 @@ void SpiritRadioSetFrequencyOffset(int32_t lFOffset)
   s_assert_param(IS_FREQUENCY_OFFSET(lFOffset,s_lXtalFrequency));
   
   /* Calculates the offset value to write in the FC_OFFSET register */
-  offset = (lFOffset*FBASE_DIVIDER)/s_lXtalFrequency;
+  offset = (int16_t)(((float)lFOffset*FBASE_DIVIDER)/s_lXtalFrequency);
   
   /* Build the array related to the FC_OFFSET_1 and FC_OFFSET_0 register */
   tempArray[0]=(uint8_t)((((uint16_t)offset)>>8)&0x0F);
@@ -850,9 +814,9 @@ int32_t SpiritRadioGetFrequencyOffset(void)
 *         In this API the Xtal configuration is read out from
 *         the corresponding register. The user shall fix it before call this API.
 * @param  lFBase the base carrier frequency expressed in Hz as unsigned word.
-* @retval None.
+* @retval Error code: 0=no error, 1=error during calibration of VCO.
 */
-void SpiritRadioSetFrequencyBase(uint32_t lFBase)
+uint8_t SpiritRadioSetFrequencyBase(uint32_t lFBase)
 {
   uint32_t synthWord, Fc;
   uint8_t band, anaRadioRegArray[4], wcp;
@@ -877,11 +841,6 @@ void SpiritRadioSetFrequencyBase(uint32_t lFBase)
   {
     band = VERY_LOW_BAND;
   }
-  else
-  {
-    band = 0;
-    SpiritReportError(SPI1_WRONG_BAND);
-  }
   
   int32_t FOffset  = SpiritRadioGetFrequencyOffset();
   uint32_t lChannelSpace  = SpiritRadioGetChannelSpace();
@@ -893,53 +852,50 @@ void SpiritRadioSetFrequencyBase(uint32_t lFBase)
   /* Reads the reference divider */
   uint8_t cRefDiv = (uint8_t)SpiritRadioGetRefDiv()+1;
   
-  if(SpiritGeneralGetSpiritVersion() != SPIRIT_VERSION_2_0) 
+  /* Selects the VCO */
+  switch(band)
   {
-    /* Selects the VCO */
-    switch(band)
+  case VERY_LOW_BAND:
+    if(Fc<161281250)
     {
-    case VERY_LOW_BAND:
-      if(Fc<161281250)
-      {
-        SpiritCalibrationSelectVco(VCO_L);
-      }
-      else
-      {
-        SpiritCalibrationSelectVco(VCO_H);
-      }
-      break;
-      
-    case LOW_BAND:
-      if(Fc<322562500)
-      {
-        SpiritCalibrationSelectVco(VCO_L);
-      }
-      else
-      {
-        SpiritCalibrationSelectVco(VCO_H);
-      }
-      break;
-      
-    case MIDDLE_BAND:
-      if(Fc<430083334)
-      {
-        SpiritCalibrationSelectVco(VCO_L);
-      }
-      else
-      {
-        SpiritCalibrationSelectVco(VCO_H);
-      }
-      break;
-      
-    case HIGH_BAND:
-      if(Fc<860166667)
-      {
-        SpiritCalibrationSelectVco(VCO_L);
-      }
-      else
-      {
-        SpiritCalibrationSelectVco(VCO_H);
-      }
+      SpiritCalibrationSelectVco(VCO_L);
+    }
+    else
+    {
+      SpiritCalibrationSelectVco(VCO_H);
+    }
+    break;
+    
+  case LOW_BAND:
+    if(Fc<322562500)
+    {
+      SpiritCalibrationSelectVco(VCO_L);
+    }
+    else
+    {
+      SpiritCalibrationSelectVco(VCO_H);
+    }
+    break;
+    
+  case MIDDLE_BAND:
+    if(Fc<430083334)
+    {
+      SpiritCalibrationSelectVco(VCO_L);
+    }
+    else
+    {
+      SpiritCalibrationSelectVco(VCO_H);
+    }
+    break;
+    
+  case HIGH_BAND:
+    if(Fc<860166667)
+    {
+      SpiritCalibrationSelectVco(VCO_L);
+    }
+    else
+    {
+      SpiritCalibrationSelectVco(VCO_H);
     }
   }
   
@@ -957,9 +913,21 @@ void SpiritRadioSetFrequencyBase(uint32_t lFBase)
   /* Configures the needed Analog Radio registers */
   g_xStatus = SpiritSpiWriteRegisters(SYNT3_BASE, 4, anaRadioRegArray);
   
-  SpiritManagementWaVcoCalibration();
+  if(xDoVcoCalibrationWA==S_ENABLE)
+    return SpiritManagementWaVcoCalibration();
+  
+  return 0;
 }
 
+/**
+* @brief  To say to the set frequency base if do or not the VCO calibration WA.
+* @param  S_ENABLE or S_DISABLE the WA procedure.
+* @retval None.
+*/
+void SpiritRadioVcoCalibrationWAFB(SpiritFunctionalState xNewstate)
+{
+  xDoVcoCalibrationWA=xNewstate;
+}
 
 /**
 * @brief  Returns the base carrier frequency.
@@ -1032,10 +1000,7 @@ void SpiritRadioSearchDatarateME(uint32_t lDatarate, uint8_t* pcM, uint8_t* pcE)
   /* Check the parameters */
   s_assert_param(IS_DATARATE(lDatarate));
   
-  if(SpiritGeneralGetSpiritVersion() != SPIRIT_VERSION_2_0) 
-  {
-    cDivider = (uint8_t)SpiritRadioGetDigDiv();
-  }
+  cDivider = (uint8_t)SpiritRadioGetDigDiv();
   
   /* Search in the datarate array the exponent value */
   while(!find && i>=0)
@@ -1053,7 +1018,7 @@ void SpiritRadioSearchDatarateME(uint32_t lDatarate, uint8_t* pcM, uint8_t* pcE)
   *pcE = i;
   
   /* Calculates the mantissa value according to the datarate formula */
-  cMantissaTmp = (lDatarate*(1<<(23-i)))/(s_lXtalFrequency>>(5+cDivider))-256;
+  cMantissaTmp = (lDatarate*((uint32_t)1<<(23-i)))/(s_lXtalFrequency>>(5+cDivider))-256;
   
   /* Finds the mantissa value with less approximation */
   int16_t mantissaCalculation[3];
@@ -1068,7 +1033,7 @@ void SpiritRadioSearchDatarateME(uint32_t lDatarate, uint8_t* pcM, uint8_t* pcE)
       mantissaCalculation[j]=0x7FFF;
     }
   }
-  uint16_t mantissaCalculationDelta = 0xFFFF; // TODO qui si puo' ottimizzare un attimo il codice
+  uint16_t mantissaCalculationDelta = 0xFFFF;
   for(uint8_t j=0;j<3;j++)
   {
     if(S_ABS(mantissaCalculation[j])<mantissaCalculationDelta)
@@ -1094,87 +1059,56 @@ void SpiritRadioSearchDatarateME(uint32_t lDatarate, uint8_t* pcM, uint8_t* pcE)
 */
 void SpiritRadioSearchChannelBwME(uint32_t lBandwidth, uint8_t* pcM, uint8_t* pcE)
 {
-  volatile SpiritBool find = S_FALSE;
-  int8_t i=44, i_tmp;
-  int8_t start = 0;
-  int8_t end = 89;
+  int8_t i, i_tmp;
   uint8_t cDivider = 1;
   
-  if(SpiritGeneralGetSpiritVersion() != SPIRIT_VERSION_2_0) 
-  {
     /* Search in the channel filter bandwidth table the exponent value */
-    if(SpiritRadioGetDigDiv())
-    {
-      cDivider = 2;
-    }
-    else
-    {
-      cDivider = 1;
-    }
+  if(SpiritRadioGetDigDiv())
+  {
+    cDivider = 2;
   }
-  
+  else
+  {
+    cDivider = 1;
+  }
+    
   s_assert_param(IS_CH_BW(lBandwidth,s_lXtalFrequency/cDivider));
   
   uint32_t lChfltFactor = (s_lXtalFrequency/cDivider)/100;
   
-  while(!find)
+  for(i=0;i<90 && (lBandwidth<(uint32_t)((s_vectnBandwidth26M[i]*lChfltFactor)/2600));i++);
+  
+  if(i!=0)
   {
-    if(lBandwidth>(uint32_t)((s_vectnBandwidth26M[i]*lChfltFactor)/2600))
+    /* Finds the mantissa value with less approximation */
+    i_tmp=i;
+    int16_t chfltCalculation[3];
+    for(uint8_t j=0;j<3;j++) 
     {
-      if(lBandwidth<=(uint32_t)((s_vectnBandwidth26M[i-1]*lChfltFactor)/2600))
+      if(((i_tmp+j-1)>=0) || ((i_tmp+j-1)<=89))
       {
-        find = S_TRUE;
+        chfltCalculation[j] = lBandwidth - (uint32_t)((s_vectnBandwidth26M[i_tmp+j-1]*lChfltFactor)/2600);
       }
       else
       {
-        end = i;
-        i = i - (end-start)/2;        
+        chfltCalculation[j] = 0x7FFF;
       }
     }
-    else
+    uint16_t chfltDelta = 0xFFFF;
+    
+    for(uint8_t j=0;j<3;j++)
     {
-      if(lBandwidth>=(uint32_t)((s_vectnBandwidth26M[i+1]*lChfltFactor)/2600))
+      if(S_ABS(chfltCalculation[j])<chfltDelta)
       {
-        find = S_TRUE;
-      }
-      else
-      {
-        start = i;
-        i = i+ (end - start)/2;
-      }
+        chfltDelta = S_ABS(chfltCalculation[j]);
+        i=i_tmp+j-1;
+      }    
     }
   }
-  
-  /* Finds the mantissa value with less approximation */
-  i_tmp=i;
-  int16_t chfltCalculation[3];
-  for(uint8_t j=0;j<3;j++) 
-  {
-    if(((i_tmp+j-1)>=0) || ((i_tmp+j-1)<=89))
-    {
-      chfltCalculation[j] = lBandwidth - (uint32_t)((s_vectnBandwidth26M[i_tmp+j-1]*lChfltFactor)/2600);
-    }
-    else
-    {
-      chfltCalculation[j] = 0x7FFF;
-    }
-  }
-  uint16_t chfltDelta = 0xFFFF;
-  
-  for(uint8_t j=0;j<3;j++)
-  {
-    if(S_ABS(chfltCalculation[j])<chfltDelta)
-    {
-      chfltDelta = S_ABS(chfltCalculation[j]);
-      i=i_tmp+j-1;
-    }    
-  }
-  
-  *pcE = (uint8_t)(i/9);
-  *pcM = (uint8_t)(i%9);
+  (*pcE) = (uint8_t)(i/9);
+  (*pcM) = (uint8_t)(i%9);
   
 }
-
 
 /**
 * @brief  Returns the mantissa and exponent, whose value used in the frequency deviation formula
@@ -1186,62 +1120,33 @@ void SpiritRadioSearchChannelBwME(uint32_t lBandwidth, uint8_t* pcM, uint8_t* pc
 */
 void SpiritRadioSearchFreqDevME(uint32_t lFDev, uint8_t* pcM, uint8_t* pcE)
 {
-  volatile SpiritBool find = S_FALSE;
-  int8_t i=9;
-  uint8_t cMantissaTmp;
-  uint8_t cAdder = 0;
+  uint8_t i;
+  uint32_t a,bp,b=0;
+  float xtalDivtmp=(float)s_lXtalFrequency/(((uint32_t)1)<<18);
   
   /* Check the parameters */
   s_assert_param(IS_F_DEV(lFDev,s_lXtalFrequency));
   
-  if(SpiritGeneralGetSpiritVersion() != SPIRIT_VERSION_2_0) 
+  for(i=0;i<10;i++)
   {
-    cAdder++;
+    a=(uint32_t)(xtalDivtmp*(uint32_t)(7.5*(1<<i)));
+    if(lFDev<a)
+      break;
+  }
+  (*pcE) = i;
+  
+  for(i=0;i<8;i++)
+  {
+    bp=b;
+    b=(uint32_t)(xtalDivtmp*(uint32_t)((8.0+i)/2*(1<<(*pcE))));
+    if(lFDev<b)
+      break;
   }
   
-  /* Search in the frequency deviation array the exponent value */
-  while(!find && i>=0)
-  {
-    if((uint32_t)lFDev>=(s_lXtalFrequency>>(cAdder+15-i)))
-    {
-      find = S_TRUE;
-    }
-    else
-    {
-      i--;
-    }
-  }
-  i<0 ? i=0 : i;
-  *pcE = i;
+  (*pcM)=i;
+  if((lFDev-bp)<(b-lFDev))
+    (*pcM)--;
   
-  cMantissaTmp = ((lFDev<<(12-i+cAdder))/(s_lXtalFrequency>>6)); 
-  if(cMantissaTmp>7) {
-    cMantissaTmp -= 8;
-  }
-  
-  /* Finds the mantissa value with less approximation */
-  int16_t mantissaCalculation[3];
-  for(uint8_t j=0;j<3;j++) 
-  {
-    if((cMantissaTmp+j-1)<8)
-    {
-      mantissaCalculation[j] = lFDev - (((s_lXtalFrequency>>6)*(8+cMantissaTmp+j-1))>>(12-i+cAdder));
-    }
-    else
-    {
-      mantissaCalculation[j] = 0x7FFF;
-    }
-  }
-  uint16_t mantissaDelta = 0xFFFF;
-  
-  for(uint8_t j=0;j<3;j++)
-  {
-    if(S_ABS(mantissaCalculation[j])<mantissaDelta)
-    {
-      mantissaDelta = S_ABS(mantissaCalculation[j]);
-      *pcM=cMantissaTmp+j-1;
-    }    
-  }
 }
 
 
@@ -1287,13 +1192,10 @@ uint32_t SpiritRadioGetDatarate(void)
   /* Reads the datarate registers for mantissa and exponent */
   g_xStatus = SpiritSpiReadRegisters(MOD1_BASE, 2, tempRegValue);
   
-  if(SpiritGeneralGetSpiritVersion() != SPIRIT_VERSION_2_0) 
-  {
-    /* Calculates the datarate */
-    cDivider = 1-SpiritRadioGetDigDiv(); 
-  }  
-  return (((s_lXtalFrequency>>(5+cDivider))*(256+tempRegValue[0]))>>(23-(tempRegValue[1]&0x0F)));
+  /* Calculates the datarate */
+  cDivider = (uint8_t)SpiritRadioGetDigDiv(); 
   
+  return (((s_lXtalFrequency>>(5+cDivider))*(256+tempRegValue[0]))>>(23-(tempRegValue[1]&0x0F)));
 }
 
 
@@ -1335,21 +1237,18 @@ void SpiritRadioSetFrequencyDev(uint32_t lFDev)
 uint32_t SpiritRadioGetFrequencyDev(void)
 {
   uint8_t tempRegValue, FDevM, FDevE;  
-  uint8_t cAdder = 0;
+
   
   /* Reads the frequency deviation register for mantissa and exponent */
   g_xStatus = SpiritSpiReadRegisters(FDEV0_BASE, 1, &tempRegValue);
   FDevM = tempRegValue&0x07;
   FDevE = (tempRegValue&0xF0)>>4;
   
-  if(SpiritGeneralGetSpiritVersion() != SPIRIT_VERSION_2_0) 
-  {
-    cAdder++;
-  }
-  
   /* Calculates the frequency deviation and return it */
-  return (((s_lXtalFrequency>>6)*(8+FDevM))>>(12-FDevE+cAdder));
+  //return (((s_lXtalFrequency>>6)*(8+FDevM))>>(13-FDevE));
   
+  return (uint32_t)((float)s_lXtalFrequency/(((uint32_t)1)<<18)*(uint32_t)((8.0+FDevM)/2*(1<<FDevE)));
+   
 }
 
 
@@ -1365,20 +1264,17 @@ uint32_t SpiritRadioGetFrequencyDev(void)
 void SpiritRadioSetChannelBW(uint32_t lBandwidth)
 {
   uint8_t bwM, bwE, tempRegValue;
-
-  if(SpiritGeneralGetSpiritVersion() != SPIRIT_VERSION_2_0) 
+  
+  /* Search in the channel filter bandwidth table the exponent value */
+  if(SpiritRadioGetDigDiv())
   {
-    /* Search in the channel filter bandwidth table the exponent value */
-    if(SpiritRadioGetDigDiv())
-    {
-      s_assert_param(IS_CH_BW(lBandwidth,(s_lXtalFrequency/2)));
-    }
-    else
-    {
-      s_assert_param(IS_CH_BW(lBandwidth,(s_lXtalFrequency)));
-    } 
+    s_assert_param(IS_CH_BW(lBandwidth,(s_lXtalFrequency/2)));
   }
-
+  else
+  {
+    s_assert_param(IS_CH_BW(lBandwidth,(s_lXtalFrequency)));
+  } 
+  
   /* Calculates the channel bandwidth mantissa and exponent */
   SpiritRadioSearchChannelBwME(lBandwidth, &bwM, &bwE);
   tempRegValue = (bwM<<4)|(bwE);
@@ -1525,6 +1421,98 @@ OokPeakDecay SpiritRadioGetOokPeakDecay(void)
   
 }
 
+/**
+* @brief  Returns the PA register value that corresponds to the passed dBm power.
+* @param  lFbase Frequency base expressed in Hz.
+* @param  fPowerdBm Desired power in dBm.
+* @retval Register value as byte.
+* @note The power interpolation curves used by this function have been extracted
+*       by measurements done on the divisional evaluation boards.
+*/
+uint8_t SpiritRadioGetdBm2Reg(uint32_t lFBase, float fPowerdBm)
+{
+  uint8_t i;
+  uint8_t j=0;
+  float fReg;
+  
+  if(IS_FREQUENCY_BAND_HIGH(lFBase))
+  {
+    i=0;
+    if(lFBase<900000000) i=1;// 868   
+  }
+  else if(IS_FREQUENCY_BAND_MIDDLE(lFBase))
+  {
+    i=2;
+  }
+  else if(IS_FREQUENCY_BAND_LOW(lFBase))
+  {
+    i=3;
+  }
+  else if(IS_FREQUENCY_BAND_VERY_LOW(lFBase))
+  {
+    i=4;
+  }
+  
+  j=1;
+  if(fPowerdBm>0 && 13.0/fPowerFactors[i][2]-fPowerFactors[i][3]/fPowerFactors[i][2]<fPowerdBm)
+      j=0;
+  else if(fPowerdBm<=0 && 40.0/fPowerFactors[i][2]-fPowerFactors[i][3]/fPowerFactors[i][2]>fPowerdBm)
+      j=2;
+
+  fReg=fPowerFactors[i][2*j]*fPowerdBm+fPowerFactors[i][2*j+1];
+  
+  if(fReg<1)
+    fReg=1;
+  else if(fReg>90) 
+    fReg=90;
+  
+  return ((uint8_t)fReg);
+}
+
+
+/**
+* @brief  Returns the dBm power that corresponds to the value of PA register.
+* @param  lFbase Frequency base expressed in Hz.
+* @param  cPowerReg Register value of the PA.
+* @retval Power in dBm as float.
+* @note The power interpolation curves used by this function have been extracted
+*       by measurements done on the divisional evaluation boards.
+*/
+float SpiritRadioGetReg2dBm(uint32_t lFBase, uint8_t cPowerReg)
+{
+  uint8_t i;
+  uint8_t j=0;
+  float fPower;
+  
+  if(cPowerReg==0 || cPowerReg>90)
+    return (-130.0);
+  
+  if(IS_FREQUENCY_BAND_HIGH(lFBase))
+  {
+    i=0;
+    if(lFBase<900000000) i=1;// 868   
+  }
+  else if(IS_FREQUENCY_BAND_MIDDLE(lFBase))
+  {
+    i=2;
+  }
+  else if(IS_FREQUENCY_BAND_LOW(lFBase))
+  {
+    i=3;
+  }
+  else if(IS_FREQUENCY_BAND_VERY_LOW(lFBase))
+  {
+    i=4;
+  }
+  
+  j=1;
+  if(cPowerReg<13) j=0;
+  else if(cPowerReg>40) j=2;
+  
+  fPower=(((float)cPowerReg)/fPowerFactors[i][2*j]-fPowerFactors[i][2*j+1]/fPowerFactors[i][2*j]);
+  
+  return fPower;
+}
 
 /**
 * @brief  Configures the Power Amplifier Table and registers with value expressed in dBm.
@@ -1544,8 +1532,8 @@ OokPeakDecay SpiritRadioGetOokPeakDecay(void)
 void SpiritRadioSetPATabledBm(uint8_t cPALevelMaxIndex, uint8_t cWidth, PALoadCapacitor xCLoad, float* pfPAtabledBm)
 {
   uint8_t palevel[9], address, paLevelValue;
-  float z;
-  
+  uint32_t lFBase=SpiritRadioGetFrequencyBase();
+
   /* Check the parameters */
   s_assert_param(IS_PA_MAX_INDEX(cPALevelMaxIndex));
   s_assert_param(IS_PA_STEP_WIDTH(cWidth));
@@ -1556,9 +1544,7 @@ void SpiritRadioSetPATabledBm(uint8_t cPALevelMaxIndex, uint8_t cWidth, PALoadCa
   for(int i=0; i<=cPALevelMaxIndex; i++)
   {
     s_assert_param(IS_PAPOWER_DBM(*pfPAtabledBm));
-    z=(*pfPAtabledBm+9.4089)/12.08;
-    paLevelValue=(uint8_t)round(0.082812*z*z*z*z+1.0653*z*z*z-0.82942*z*z-28.146*z+46.242);
-    paLevelValue>90 ? paLevelValue=90 : paLevelValue;
+    paLevelValue=SpiritRadioGetdBm2Reg(lFBase,(*pfPAtabledBm));
     palevel[cPALevelMaxIndex-i]=paLevelValue;
     pfPAtabledBm++;
   }
@@ -1588,7 +1574,7 @@ void SpiritRadioSetPATabledBm(uint8_t cPALevelMaxIndex, uint8_t cWidth, PALoadCa
 void SpiritRadioGetPATabledBm(uint8_t* pcPALevelMaxIndex, float* pfPAtabledBm)
 {
   uint8_t palevelvect[9];
-  float z;
+  uint32_t lFBase=SpiritRadioGetFrequencyBase();
   
   /* Reads the PA_LEVEL_x registers and the PA_POWER_0 register */
   g_xStatus = SpiritSpiReadRegisters(PA_POWER8_BASE, 9, palevelvect);
@@ -1596,8 +1582,7 @@ void SpiritRadioGetPATabledBm(uint8_t* pcPALevelMaxIndex, float* pfPAtabledBm)
   /* Fill the PAtable */
   for(int i=7; i>=0; i--)
   {
-    z= (palevelvect[i]-45.456)/26.037;
-    *pfPAtabledBm = 0.17524*z*z*z*z -0.63836*z*z*z -1.0048*z*z -10.236*z -8.7448;
+    (*pfPAtabledBm)=SpiritRadioGetReg2dBm(lFBase,palevelvect[i]);
     pfPAtabledBm++;
   }
   
@@ -1607,12 +1592,18 @@ void SpiritRadioGetPATabledBm(uint8_t* pcPALevelMaxIndex, float* pfPAtabledBm)
 }
 
 
+
+
+
+
 /**
 * @brief  Sets a specific PA_LEVEL register, with a value given in dBm.
 * @param  cIndex PA_LEVEL to set. This parameter shall be in the range [0:7].
 * @param  fPowerdBm PA value to write expressed in dBm . Be sure that this values is in the
 *         correct range [-PA_LOWER_LIMIT: PA_UPPER_LIMIT] dBm.
 * @retval None.
+* @note This function makes use of the @ref SpiritRadioGetdBm2Reg fcn to interpolate the 
+*       power value.
 */
 void SpiritRadioSetPALeveldBm(uint8_t cIndex, float fPowerdBm)
 {
@@ -1622,13 +1613,9 @@ void SpiritRadioSetPALeveldBm(uint8_t cIndex, float fPowerdBm)
   s_assert_param(IS_PA_MAX_INDEX(cIndex));
   s_assert_param(IS_PAPOWER_DBM(fPowerdBm));
   
-  /* Calculates the PA level value to write in the corresponding register using
-  an interpolation formula */
-  float z=(fPowerdBm+9.4089)/12.08;
-  paLevelValue=(uint8_t)round(0.082812*z*z*z*z+1.0653*z*z*z-0.82942*z*z-28.146*z+46.242);
-  
-  paLevelValue>90 ? paLevelValue=90 : paLevelValue;
-  
+  /* interpolate the power level */
+  paLevelValue=SpiritRadioGetdBm2Reg(SpiritRadioGetFrequencyBase(),fPowerdBm);
+
   /* Sets the base address */
   address=PA_POWER8_BASE+7-cIndex;
   
@@ -1644,6 +1631,8 @@ void SpiritRadioSetPALeveldBm(uint8_t cIndex, float fPowerdBm)
 * @retval float Settled power level expressed in dBm. A value
 *         higher than PA_UPPER_LIMIT dBm implies no output power
 *         (output stage is in high impedance).
+* @note This function makes use of the @ref SpiritRadioGetReg2dBm fcn to interpolate the 
+*       power value.
 */
 float SpiritRadioGetPALeveldBm(uint8_t cIndex)
 {
@@ -1658,12 +1647,7 @@ float SpiritRadioGetPALeveldBm(uint8_t cIndex)
   /* Reads the PA_LEVEL[cIndex] register */
   g_xStatus = SpiritSpiReadRegisters(address, 1, &paLevelValue);
   
-  //  float z= (paLevelValue-45.456)/26.037;
-  float z=(paLevelValue-45.5)/26.125;
-  
-  /* Calculates the power level in dBm using the linearization formula and return the value */
-  return -0.0045522*z*z*z*z-0.60856*z*z*z-0.3432*z*z-10.976*z-9.0615;
-  
+  return SpiritRadioGetReg2dBm(SpiritRadioGetFrequencyBase(),paLevelValue);
 }
 
 
@@ -1958,7 +1942,6 @@ void SpiritRadioPARamping(SpiritFunctionalState xNewState)
   g_xStatus = SpiritSpiWriteRegisters(PA_POWER0_BASE, 1, &tempRegValue);
   
 }
-
 
 /**
 * @brief  Returns the Power Ramping enable bit.
@@ -2270,36 +2253,24 @@ int8_t SpiritRadioGetAFCCorrectionReg(void)
 * @param  None.
 * @retval int32_t AFC correction expressed in Hz
 *         according to the following formula:<ul>
-*         <li> Fafc[Hz]= (Fxtal/(12*2^10))*2*AFC_CORR  where </li>
+*         <li> Fafc[Hz]= (Fdig/(12*2^10))*AFC_CORR  where </li>
 *         <li> AFC_CORR is the value read in the AFC_CORR register </li> </ul>
 */
 int32_t SpiritRadioGetAFCCorrectionHz(void)
 {
   int8_t correction;
+  uint32_t xtal = s_lXtalFrequency;
   
   /* Reads the AFC correction register */
   correction = SpiritRadioGetAFCCorrectionReg();
   
+  if(xtal>26000000)
+  {
+    xtal /= 2;
+  }
+  
   /* Calculates and return the Frequency Correction */
-  return (int32_t)(s_lXtalFrequency/(12*pow(2,10))*2*correction);
-  
-}
-
-
-/**
-* @brief  Corrects the frequency offset through the AFC mechanism.
-* @param  None.
-* @retval None.
-*/
-void SpiritRadioAutoSetFOffset(void)
-{
-  int32_t fOffset;
-  
-  /* Reads the AFC correction and the actual frequency offset */
-  fOffset = SpiritRadioGetFrequencyOffset() + SpiritRadioGetAFCCorrectionHz();
-  
-  /* Re-Sets the new frequency offset */
-  SpiritRadioSetFrequencyOffset(fOffset);
+  return (int32_t)(xtal/(12*pow(2,10))*correction);
   
 }
 
@@ -3009,7 +2980,7 @@ void SpiritRadioSetRefDiv(SpiritFunctionalState xNewState)
   
   /* Reads the SYNTH_CONFIG1_BASE and mask the REFDIV bit field */
   SpiritSpiReadRegisters(SYNTH_CONFIG1_BASE, 1, &tempRegValue);
-
+  
   if(xNewState == S_ENABLE)
   {
     tempRegValue |= 0x80;
@@ -3061,7 +3032,7 @@ void SpiritRadioSetDigDiv(SpiritFunctionalState xNewState)
   
   /* Reads the XO_RCO_TEST_BASE and mask the PD_CLKDIV bit field */
   SpiritSpiReadRegisters(XO_RCO_TEST_BASE, 1, &tempRegValue);
-
+  
   if(xNewState == S_ENABLE)
   {
     tempRegValue &= 0xf7;
@@ -3135,5 +3106,5 @@ void SpiritRadioSetXtalFrequency(uint32_t lXtalFrequency)
 
 
 
-/******************* (C) COPYRIGHT 2012 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/
 

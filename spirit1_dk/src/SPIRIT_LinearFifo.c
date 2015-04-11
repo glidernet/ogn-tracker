@@ -1,24 +1,24 @@
 /**
- * @file    SPIRIT_LinearFifo.c
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
- * @version V3.0.1
- * @date    November 19, 2012
- * @brief   Configuration and management of SPIRIT Fifo.
- * @details
- *
- * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
- * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
- * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
- * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
- * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
- * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
- *
- * THIS SOURCE CODE IS PROTECTED BY A LICENSE.
- * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
- * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
- *
- * <h2><center>&copy; COPYRIGHT 2011 STMicroelectronics</center></h2>
- */
+* @file    SPIRIT_LinearFifo.c
+* @author  VMA division - AMS
+* @version 3.2.0
+* @date    February 1, 2015
+* @brief   Configuration and management of SPIRIT Fifo.
+* @details
+*
+* THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
+* WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
+* TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
+* DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
+* FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
+* CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
+*
+* THIS SOURCE CODE IS PROTECTED BY A LICENSE.
+* FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
+* IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
+*
+* <h2><center>&copy; COPYRIGHT 2015 STMicroelectronics</center></h2>
+*/
 
 
 /* Includes ------------------------------------------------------------------*/
@@ -144,12 +144,8 @@ void SpiritLinearFifoSetAlmostFullThresholdRx(uint8_t cThrRxFifo)
   /* Check the parameters */
   s_assert_param(IS_FIFO_THR(cThrRxFifo));
 
-  /* Reads the register value */
-  g_xStatus = SpiritSpiReadRegisters(FIFO_CONFIG3_RXAFTHR_BASE, 1, &tempRegValue);
-
   /* Build the register value */
-  tempRegValue &= 0x80;
-  tempRegValue |= cThrRxFifo;
+  tempRegValue = cThrRxFifo & 0x7F;
 
   /* Writes the Almost Full threshold for RX in the corresponding register */
   g_xStatus = SpiritSpiWriteRegisters(FIFO_CONFIG3_RXAFTHR_BASE, 1, &tempRegValue);
@@ -190,12 +186,8 @@ void SpiritLinearFifoSetAlmostEmptyThresholdRx(uint8_t cThrRxFifo)
   /* Check the parameters */
   s_assert_param(IS_FIFO_THR(cThrRxFifo));
 
-  /* Reads the register value */
-  g_xStatus = SpiritSpiReadRegisters(FIFO_CONFIG2_RXAETHR_BASE, 1, &tempRegValue);
-
   /* Build the register value */
-  tempRegValue &= 0x80;
-  tempRegValue |= cThrRxFifo;
+  tempRegValue = cThrRxFifo & 0x7F;
 
   /* Writes the Almost Empty threshold for RX in the corresponding register */
   g_xStatus = SpiritSpiWriteRegisters(FIFO_CONFIG2_RXAETHR_BASE, 1, &tempRegValue);
@@ -328,4 +320,4 @@ uint8_t SpiritLinearFifoGetAlmostEmptyThresholdTx(void)
 
 
 
-/******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

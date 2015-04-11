@@ -1,8 +1,8 @@
 /**
  * @file    MCU_Interface.h
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
+ * @author  VMA division - AMS
  * @version V2.0.2
- * @date    Febrary 7, 2012
+ * @date    Febrary 7, 2015
  * @brief   Header file for low level SPIRIT SPI driver.
  * @details
  *
@@ -38,7 +38,7 @@
  * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
  * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
  *
- * <h2><center>&copy; COPYRIGHT 2011 STMicroelectronics</center></h2>
+ * <h2><center>&copy; COPYRIGHT 2015 STMicroelectronics</center></h2>
  */
 
 
@@ -87,6 +87,7 @@ typedef enum
    SPI1_WRONG_BAND = 1,
    SPI1_WRONG_SYNC_LEN 
 } spi1_err_types; 
+
 /**
  * @}
  */
@@ -122,6 +123,7 @@ void		SpiritReportError(spi1_err_types code);
 #define SpiritSpiWriteLinearFifo(cNbBytes, pcBuffer)                   SPI1WriteFifo(cNbBytes, pcBuffer)
 #define SpiritSpiReadLinearFifo(cNbBytes, pcBuffer)                    SPI1ReadFifo(cNbBytes, pcBuffer)
 
+
 /**
  * @}
  */
@@ -143,4 +145,4 @@ void		SpiritReportError(spi1_err_types code);
 
 #endif
 
-/******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

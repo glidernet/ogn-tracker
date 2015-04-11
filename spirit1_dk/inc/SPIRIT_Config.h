@@ -1,8 +1,8 @@
 /**
  * @file    SPIRIT_Config.h
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
+ * @author  VMA division - AMS
  * @version V2.0.2
- * @date    Febrary 7, 2012
+ * @date    Febrary 7, 2015
  * @brief   Spirit Configuration and useful defines .
  * @details
  *
@@ -22,7 +22,7 @@
  * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
  * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
  *
- * <h2><center>&copy; COPYRIGHT 2011 STMicroelectronics</center></h2>
+ * <h2><center>&copy; COPYRIGHT 2015 STMicroelectronics</center></h2>
  */
 
 
@@ -128,4 +128,4 @@ extern "C" {
 
 #endif
 
-/******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

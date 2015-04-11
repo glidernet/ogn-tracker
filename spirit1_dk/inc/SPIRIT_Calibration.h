@@ -1,53 +1,53 @@
 /**
- * @file    SPIRIT_Calibration.h
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
- * @version V3.0.1
- * @date    November 19, 2012
- * @brief   Configuration and management of SPIRIT VCO-RCO calibration.
- * @details
- *
- * This module allows the user to set some parameters which deal
- * with the oscillators calibration.
- * The state machine of Spirit contemplates some optional calibrating operations
- * in the transition between the READY and the LOCK state.
- * The user is allowed to enable or disable the automatic RCO/VCO calibration
- * by calling the functions <i>@ref SpiritCalibrationVco()</i> and <i>@ref SpiritCalibrationRco()</i>.
- * The following example shows how to do an initial calibration of VCO.
- *
- * <b>Example:</b>
- * @code
- *  uint8_t calData;
- *
- *  SpiritCalibrationVco(S_ENABLE);
- *  SpiritCmdStrobeLockTx();
- *
- *  while(g_xStatus.MC_STATE != MC_STATE_LOCK){
- *      SpiritRefreshStatus();
- *  }
- *
- *  calData = SpiritCalibrationGetVcoCalDataTx();
- *  SpiritCalibrationSetVcoCalDataTx(calData);
- *
- *  SpiritCmdStrobeReady();
- *  SpiritCalibrationVco(S_DISABLE);
- *
- * @endcode
- *
- * Similar operations can be done for the RCO calibrator.
- *
- * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
- * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
- * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
- * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
- * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
- * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
- *
- * THIS SOURCE CODE IS PROTECTED BY A LICENSE.
- * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
- * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
- *
- * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
- */
+* @file    SPIRIT_Calibration.h
+* @author  VMA division - AMS
+* @version 3.2.0
+* @date    February 1, 2015
+* @brief   Configuration and management of SPIRIT VCO-RCO calibration.
+* @details
+*
+* This module allows the user to set some parameters which deal
+* with the oscillators calibration.
+* The state machine of Spirit contemplates some optional calibrating operations
+* in the transition between the READY and the LOCK state.
+* The user is allowed to enable or disable the automatic RCO/VCO calibration
+* by calling the functions <i>@ref SpiritCalibrationVco()</i> and <i>@ref SpiritCalibrationRco()</i>.
+* The following example shows how to do an initial calibration of VCO.
+*
+* <b>Example:</b>
+* @code
+*  uint8_t calData;
+*
+*  SpiritCalibrationVco(S_ENABLE);
+*  SpiritCmdStrobeLockTx();
+*
+*  while(g_xStatus.MC_STATE != MC_STATE_LOCK){
+*      SpiritRefreshStatus();
+*  }
+*
+*  calData = SpiritCalibrationGetVcoCalDataTx();
+*  SpiritCalibrationSetVcoCalDataTx(calData);
+*
+*  SpiritCmdStrobeReady();
+*  SpiritCalibrationVco(S_DISABLE);
+*
+* @endcode
+*
+* Similar operations can be done for the RCO calibrator.
+*
+* THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
+* WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
+* TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
+* DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
+* FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
+* CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
+*
+* THIS SOURCE CODE IS PROTECTED BY A LICENSE.
+* FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
+* IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
+*
+* <h2><center>&copy; COPYRIGHT 2015 STMicroelectronics</center></h2>
+*/
 
 
 /* Define to prevent recursive inclusion -------------------------------------*/
@@ -207,4 +207,4 @@ void SpiritCalibrationSelectVco(VcoSel xVco);
 
 #endif
 
-/******************* (C) COPYRIGHT 2012 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/

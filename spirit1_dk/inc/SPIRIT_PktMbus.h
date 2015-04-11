@@ -1,52 +1,52 @@
 /**
- * @file    SPIRIT_PktMbus.h
- * @author  High End Analog & RF BU - AMS / ART Team IMS-Systems Lab
- * @version V3.0.1
- * @date    November 19, 2012
- * @brief   Configuration and management of SPIRIT MBUS packets.
- * @details
- *
- * This module can be used to manage the configuration of Spirit MBUS
- * packets.
- * The user can obtain a packet configuration filling the structure
- * <i>@ref PktMbusInit</i>, defining in it some general parameters
- * for the Spirit MBUS packet format.
- * Since the MBUS protocol is a standard, the configuration of a MBUS
- * packet is very simple to do.
- *
- * <b>Example:</b>
- * @code
- *
- * PktMbusInit mbusInit={
- *   MBUS_SUBMODE_S1_S2_LONG_HEADER,    // MBUS submode selection
- *   36,                                // added "01" chips on preamble
- *   16                                 // postamble length in "01" chips
- * };
- *
- * ...
- *
- * SpiritPktMbusInit(&mbusInit);
- *
- * ...
- *
- * @endcode
- *
- * The module provides some other functions that can be used to modify
- * or read only some configuration parameters.
- *
- * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
- * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
- * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
- * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
- * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
- * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
- *
- * THIS SOURCE CODE IS PROTECTED BY A LICENSE.
- * FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
- * IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
- *
- * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
- */
+* @file    SPIRIT_PktMbus.h
+* @author  VMA division - AMS
+* @version 3.2.0
+* @date    February 1, 2015
+* @brief   Configuration and management of SPIRIT MBUS packets.
+* @details
+*
+* This module can be used to manage the configuration of Spirit MBUS
+* packets.
+* The user can obtain a packet configuration filling the structure
+* <i>@ref PktMbusInit</i>, defining in it some general parameters
+* for the Spirit MBUS packet format.
+* Since the MBUS protocol is a standard, the configuration of a MBUS
+* packet is very simple to do.
+*
+* <b>Example:</b>
+* @code
+*
+* PktMbusInit mbusInit={
+*   MBUS_SUBMODE_S1_S2_LONG_HEADER,    // MBUS submode selection
+*   36,                                // added "01" chips on preamble
+*   16                                 // postamble length in "01" chips
+* };
+*
+* ...
+*
+* SpiritPktMbusInit(&mbusInit);
+*
+* ...
+*
+* @endcode
+*
+* The module provides some other functions that can be used to modify
+* or read only some configuration parameters.
+*
+* THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
+* WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
+* TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
+* DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
+* FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
+* CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
+*
+* THIS SOURCE CODE IS PROTECTED BY A LICENSE.
+* FOR MORE INFORMATION PLEASE CAREFULLY READ THE LICENSE AGREEMENT FILE LOCATED
+* IN THE ROOT DIRECTORY OF THIS FIRMWARE PACKAGE.
+*
+* <h2><center>&copy; COPYRIGHT 2015 STMicroelectronics</center></h2>
+*/
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __SPIRIT_PACKET_MBUS_H
@@ -185,4 +185,4 @@ uint16_t SpiritPktMbusGetPayloadLength(void);
 
 #endif
 
-/******************* (C) COPYRIGHT 2012 STMicroelectronics *****END OF FILE****/
+/******************* (C) COPYRIGHT 2015 STMicroelectronics *****END OF FILE****/
