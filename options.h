@@ -18,7 +18,8 @@ typedef enum
    OPT_GPSDUMP,
    OPT_MAX_TX_PWR,
    OPT_GPS_ALW_ON,
-   OPT_GPS_ANT
+   OPT_GPS_ANT,
+   OPT_JAM_RATIO
 } option_types;
 
 typedef enum
@@ -26,7 +27,8 @@ typedef enum
    MODE_OGN = 0,
    MODE_IDLE,
    MODE_CW,
-   MODE_RX
+   MODE_RX,
+   MODE_JAMMER
 } oper_modes;
 
 #ifdef __cplusplus

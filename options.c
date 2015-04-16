@@ -27,6 +27,7 @@ typedef struct
    float     MaxTxPower;       // [dBm]
    uint8_t   gps_always_on;    // Used for GPS without power control
    uint8_t   gps_ant;          // GPS antenna status: 0 - internal, 1 - external
+   uint8_t   jam_ratio;        // Jamming ratio: 0 - 100 %
 } options_str;
 
 /* -------- variables -------- */
@@ -54,6 +55,7 @@ void ResetOptions(void)
   options.MaxTxPower    = 14.5F;        // Maximum measured power
   options.gps_always_on =    0;         // Disabled
   options.gps_ant       =    0;         // Internal antenna
+  options.jam_ratio     =   10;         // 10%
 }
 
 /**
@@ -227,6 +229,14 @@ uint8_t* GetGPSAnt(void)
 void SetGPSAnt(uint8_t new_value)
 { options.gps_ant = new_value;
   WriteBlock(OFFSETOF(options_str, gps_ant), sizeof(options.gps_ant)); }
+
+uint8_t* GetJamRatio(void)
+{ return &options.jam_ratio; }
+  
+void SetJamRatio(uint8_t new_value)
+{ options.jam_ratio = new_value;
+  WriteBlock(OFFSETOF(options_str, jam_ratio), sizeof(options.jam_ratio)); }
+  
   
 /* ------------------------------------------------------ */
 /**
@@ -250,6 +260,7 @@ void* GetOption(option_types opt_code)
     case OPT_MAX_TX_PWR: { ret_val = GetMaxTxPower(); break;}
     case OPT_GPS_ALW_ON: { ret_val = GetGPSAlwON();  break; }
     case OPT_GPS_ANT:    { ret_val = GetGPSAnt();    break; }
+    case OPT_JAM_RATIO:  { ret_val = GetJamRatio();  break; }
     default: break; }
   return ret_val; }
 
@@ -268,6 +279,7 @@ void SetOption(option_types opt_code, void* value)
     case OPT_MAX_TX_PWR: { SetMaxTxPower  (*(float *) value); break; }
     case OPT_GPS_ALW_ON: { SetGPSAlwON (*(uint8_t  *) value); break; }
     case OPT_GPS_ANT:    { SetGPSAnt   (*(uint8_t  *) value); break; }
+    case OPT_JAM_RATIO:  { SetJamRatio (*(uint8_t  *) value); break; }
     default: break; }
 }
 

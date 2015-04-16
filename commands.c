@@ -32,7 +32,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.4.0";
+static const char * const pcVersion = "0.4.1";
 /* -------- functions -------- */
 
 /**
@@ -571,9 +571,13 @@ static portBASE_TYPE prvOperModeCommand( char *pcWriteBuffer,
        {
            new_mode = (uint8_t)MODE_RX;
        }
+       else if (!strcmp(param, "jammer"))
+       {
+           new_mode = (uint8_t)MODE_JAMMER;
+       }
        else
        {
-            sprintf(pcWriteBuffer, "unsupported mode, supported: ogn, idle, cw, rx\r\n");
+            sprintf(pcWriteBuffer, "unsupported mode, supported: ogn, idle, cw, rx, jammer\r\n");
             return pdFALSE;            
        }
        SetOption(OPT_OPER_MODE, &new_mode);
@@ -595,7 +599,10 @@ static portBASE_TYPE prvOperModeCommand( char *pcWriteBuffer,
             break;
         case MODE_RX:   
             sprintf(pcWriteBuffer, "mode rx enabled\r\n");
-            break;                 
+            break;
+        case MODE_JAMMER:   
+            sprintf(pcWriteBuffer, "mode jammer enabled (!)\r\n");
+            break;           
         default:
             sprintf(pcWriteBuffer, "unsupported mode\r\n");
             break;
@@ -787,6 +794,25 @@ static portBASE_TYPE prvVoltCommand( char *pcWriteBuffer,
     return pdFALSE;
 }
 
+static portBASE_TYPE prvJamRatioCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ 
+    BaseType_t  param_len;
+    uint8_t jam_ratio = 0;
+    
+    const char* param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
+    if(param)
+    {  
+       jam_ratio = atoi(param);
+       SetOption(OPT_JAM_RATIO, &jam_ratio);
+    } 
+    
+    jam_ratio = *(uint8_t *)GetOption(OPT_JAM_RATIO);
+    sprintf(pcWriteBuffer, "Jamming ratio: %d.\r\n", jam_ratio);
+    
+    return pdFALSE;
+}
 
 // ---------------------------------------------------------------------------------------------------------------------------
 
@@ -812,7 +838,7 @@ static const CLI_Command_Definition_t TxPowerCommand       = { "tx_power",     "
 static const CLI_Command_Definition_t XtalCorrCommand      = { "xtal_corr",    "xtal_corr: Crystal freq. correction [ppm].\r\n", prvXtalCorrCommand,  -1 };
 static const CLI_Command_Definition_t FreqOfsCommand       = { "freq_ofs",     "freq_ofs:  RF frequency offset [Hz].\r\n",       prvFreqOfsCommand,   -1 };
 static const CLI_Command_Definition_t IWDGDisCommand       = { "iwdg",         "iwdg en/dis: control ind. watchdog\r\n",         prvIWDGDisCommand,   -1 };
-static const CLI_Command_Definition_t OperModeCommand      = { "mode",         "mode [ogn|idle|cw|rx]: set/check oper. mode\r\n", prvOperModeCommand,  -1 };
+static const CLI_Command_Definition_t OperModeCommand      = { "mode",         "mode [ogn|idle|cw|rx|jammer]: set/check oper. mode\r\n", prvOperModeCommand,  -1 };
 static const CLI_Command_Definition_t SetChannelCommand    = { "channel",      "channel 0-6: set/check operating channel\r\n",   prvSetChannelCommand, -1 };
 static const CLI_Command_Definition_t MemStatCommand       = { "mem_stat",     "mem_stat: memory statistics\r\n",                prvMemStatCommand, 0 };
 static const CLI_Command_Definition_t MaxTxPowerCommand    = { "max_tx_power", "max_tx_power: set max. measured power [dBm].\r\n", prvMaxTxPowerCommand,  -1 };
@@ -820,6 +846,7 @@ static const CLI_Command_Definition_t BackupRegCommand     = { "backup_reg",   "
 static const CLI_Command_Definition_t DebugGPSCommand      = { "debug_gps",    "debug_gps - enable GPS logging.\r\n",            prvDebugGPSCommand,  0 };
 static const CLI_Command_Definition_t GPSAntCommand        = { "gps_ant",      "gps_ant [int|ext] - select GPS antenna.\r\n",    prvGPSAntCommand,  -1 };
 static const CLI_Command_Definition_t VoltCommand          = { "volt",         "volt: show voltages.\r\n",                       prvVoltCommand, 0 };
+static const CLI_Command_Definition_t JamRatioCommand      = { "jam_ratio",    "jam_ratio: [0-100].\r\n",                        prvJamRatioCommand, -1 };
 
 /**
   * @brief  Function registers all console commands.
@@ -859,6 +886,7 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&DebugGPSCommand);
    FreeRTOS_CLIRegisterCommand(&GPSAntCommand);
    FreeRTOS_CLIRegisterCommand(&VoltCommand);
+   FreeRTOS_CLIRegisterCommand(&JamRatioCommand);
    
 }
 

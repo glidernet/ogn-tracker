@@ -24,6 +24,9 @@
 /* -------- variables -------- */
 HPT_Event hpt_table[MAX_HPT_TABLE_LEN];
 TimerHandle_t xPowerDownTimer;
+TimerHandle_t xCtrlTaskTimer;
+/* data for jamming random packet */
+uint8_t jam_packet[OGN_PKT_LEN];
 
 /* pointer to TX packet data */
 uint8_t* TX_pkt_data = NULL;
@@ -119,6 +122,26 @@ void vPwrDownTimerCallback(TimerHandle_t pxTimer)
     }
 }
 
+void vCtrlTaskTimerCallback(TimerHandle_t pxTimer)
+{
+    xQueueHandle* sp1_task_queue = Get_SP1Queue();
+    task_message sp1_msg;
+    uint8_t jam_ratio = *(uint8_t *)GetOption(OPT_JAM_RATIO);
+
+    uint8_t rnd_100 = rand()%100;
+    if (rnd_100 < jam_ratio)
+    {
+        sp1_msg.msg_data   = 0;
+        sp1_msg.msg_len    = 0;
+        sp1_msg.msg_opcode = SP1_TX_PACKET;
+        sp1_msg.src_id     = CONSOLE_USART_SRC_ID;
+        /* TX packet */
+        xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
+    }
+    /* wait for another packet chance */
+    xTimerStart(xCtrlTaskTimer, 0);
+}
+
 
 /**
 * @brief  Configures the High Precision Timer Table for OGN oper. mode.
@@ -178,6 +201,36 @@ uint8_t Create_HPT_Table_Idle(HPT_Event* hpt_table_arr)
 {
    uint8_t pos = 0;
     
+   hpt_table_arr[pos].time    = TIMER_MS(925);
+   hpt_table_arr[pos].opcode  = HPT_IWDG_RELOAD;
+   pos++;
+   	
+   hpt_table_arr[pos].time    = TIMER_MS(1000);
+   hpt_table_arr[pos].opcode  = HPT_RESTART;
+   pos++;
+   
+   return pos; 
+}
+
+/**
+* @brief  Configures the High Precision Timer Table for jammer oper. mode.
+* @param  pointer to hpt_table data to be filled.
+* @retval length of filled data.
+*/
+uint8_t Create_HPT_Table_Idle_Freq(HPT_Event* hpt_table_arr)
+{
+   uint8_t pos = 0;
+    
+   hpt_table_arr[pos].time    = TIMER_MS(300);
+   hpt_table_arr[pos].opcode  = HPT_SP1_CHANNEL;
+   hpt_table_arr[pos].data1   = 4;  
+   pos++;
+   
+   hpt_table_arr[pos].time    = TIMER_MS(700);
+   hpt_table_arr[pos].opcode  = HPT_SP1_CHANNEL;
+   hpt_table_arr[pos].data1   = 2;  
+   pos++;
+   
    hpt_table_arr[pos].time    = TIMER_MS(925);
    hpt_table_arr[pos].opcode  = HPT_IWDG_RELOAD;
    pos++;
@@ -287,6 +340,18 @@ void Control_Config(void)
       ( void * )PWR_DOWN_TIMER_ID,
       /* Each timer calls the same callback when it expires. */
       vPwrDownTimerCallback
+    );
+    
+    xCtrlTaskTimer = xTimerCreate(
+      "CtrlTaskTimer",
+      /* The timer period in ms. */
+      TIMER_MS(1000),
+      /* The timer will stop when expire. */
+      pdFALSE,
+      /* unique id */
+      ( void * )CTRL_TASK_TIMER_ID,
+      /* Each timer calls the same callback when it expires. */
+      vCtrlTaskTimerCallback
     );
     
    /* Configure PC6 Pin (GPS_PPS) as GPIO interrupt */
@@ -407,12 +472,10 @@ void StartMode(oper_modes mode)
 {
     task_message sp1_msg;
     xQueueHandle* sp1_task_queue;
+    uint8_t i;
     
     switch(mode)
     {
-        case MODE_IDLE:          
-            break;
-            
         case MODE_CW:
             /* wait for Spirit1 task */
             vTaskDelay(1000);
@@ -441,6 +504,22 @@ void StartMode(oper_modes mode)
                 sp1_msg.src_id     = CONTROL_SRC_ID;
                 xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
             }
+            break;
+            
+         case MODE_JAMMER:
+            vTaskDelay(1000);
+            for (i=0;i<OGN_PKT_LEN;i++) jam_packet[i] = (uint8_t)rand();
+            sp1_task_queue = Get_SP1Queue();
+
+            sp1_msg.msg_data   = (uint32_t)&jam_packet;
+            sp1_msg.msg_len    = OGN_PKT_LEN;
+            sp1_msg.msg_opcode = SP1_COPY_OGN_PKT;
+            sp1_msg.src_id     = CONTROL_SRC_ID;
+            /* Send packet data to Spirit1 task */
+            xQueueSend(*sp1_task_queue, &sp1_msg, portMAX_DELAY);
+            /* Try to send packet every 2 ms */
+            xTimerChangePeriod(xCtrlTaskTimer, TIMER_MS(2), 0);
+            xTimerStart(xCtrlTaskTimer, 0);
             break;
         
         default:
@@ -569,6 +648,9 @@ void vTaskControl(void* pvParameters)
         case MODE_CW: 
         case MODE_RX:          
             Create_HPT_Table_Idle(hpt_table);
+            break;
+        case MODE_JAMMER:          
+            Create_HPT_Table_Idle_Freq(hpt_table);
             break;
     
         default:
