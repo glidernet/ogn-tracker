@@ -13,8 +13,7 @@ extern "C" {
 
 typedef enum
 {
-   HPT_END      = 1, /* End the table */
-   HPT_RESTART,      /* Restart the table */
+   HPT_RESTART = 0,  /* Restart the table */
    HPT_GPIO_UP,      /* Test GPIO up */
    HPT_GPIO_DOWN,    /* Test GPIO down */
    HPT_PREPARE_PKT,  /* Prepare OGN packet */
@@ -37,6 +36,7 @@ typedef struct
 void HPT_Config(void);
 void HPT_Start(HPT_Event* hpt_table);
 BaseType_t HPT_RestartFromISR(void);
+void HPT_Debug(uint8_t state);
 
 #ifdef __cplusplus
 }

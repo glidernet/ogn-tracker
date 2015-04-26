@@ -1,4 +1,5 @@
 #include "hpt_timer.h"
+#include <stdio.h>
 #include <stm32l1xx.h>
 #include <FreeRTOS.h>
 #include <FreeRTOS_CLI.h>
@@ -12,32 +13,37 @@
 #include "spirit1.h"
 #include "timer_const.h"
 
-//#define HPT_DEBUG
-
 /* -------- defines -------- */
 /* -------- variables -------- */
-TimerHandle_t xHPTimer;
-uint8_t       event_awaited;
-HPT_Event*    current_hpt_table;
+static TimerHandle_t xHPTimer;
+static uint8_t       event_awaited;
+static HPT_Event*    current_hpt_table;
+static char          log_buf[40];
+static char          debug_enabled = 0;
+static char          pps_synced = 0;
+
+const char* const hpt_opcodes_str[] = {
+    "**RSRT**",
+    "GPIO_UP ",    
+    "GPIO_DWN",   
+    "PREP_PKT",  
+    "COPY_PKT",     
+    "SP1_CHAN", 
+    "TX_PKT  ",      
+    "TX_LBT  ",   
+    "IWDG_RLD"   
+};
 
 /* -------- interrupt handlers -------- */
 /* -------- functions -------- */
-
 /**
-* @brief  Restart the current HPT table.
-* @param  None
+* @brief  Control HPT logging.
+* @param  0 - disabled, any other - enabled
 * @retval None
 */
-void HPT_Restart(void)
+void HPT_Debug(uint8_t state)
 {
-    if (current_hpt_table)
-    {
-       xTimerChangePeriod(xHPTimer, current_hpt_table[0].time, 0);
-       /* mark information about event number that is awaited*/
-       event_awaited = 0;
-       /* start the timer */
-       xTimerStart(xHPTimer, 0);
-    }
+    debug_enabled = state;
 }
 
 /**
@@ -47,22 +53,17 @@ void HPT_Restart(void)
 */
 BaseType_t HPT_RestartFromISR(void)
 {
-    BaseType_t xHigherPriorityTaskWokenCP = pdFALSE;
-    BaseType_t xHigherPriorityTaskWokenR  = pdFALSE;
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     
-    if (current_hpt_table)
+    if (!pps_synced && current_hpt_table)
     {
-       xTimerChangePeriodFromISR(xHPTimer, current_hpt_table[0].time, &xHigherPriorityTaskWokenCP);
+       xTimerChangePeriodFromISR(xHPTimer, current_hpt_table[0].time, &xHigherPriorityTaskWoken);
        /* mark information about event number that is awaited*/
        event_awaited = 0;
-       /* start the timer */
-       xTimerStartFromISR(xHPTimer, &xHigherPriorityTaskWokenR);
+       pps_synced = 1;
+       Console_Send("HPTimer synced to PPS\r\n", 0);
     }
-    if ((xHigherPriorityTaskWokenCP!=pdFALSE) || (xHigherPriorityTaskWokenR!=pdFALSE))
-        return pdTRUE;
-    else
-        return pdFALSE;
-    
+    return xHigherPriorityTaskWoken;
 }
 
 
@@ -73,46 +74,49 @@ BaseType_t HPT_RestartFromISR(void)
 */
 void vHPTimerCallback(TimerHandle_t pxTimer)
 {
-    uint8_t new_event_scheduled = 0;
     xQueueHandle* dest_queue;
     task_message  ctrl_msg;
-    uint32_t      data1;
-    
-    data1 = current_hpt_table[event_awaited].data1;
-    
-    switch (current_hpt_table[event_awaited].opcode)
+    uint32_t      curr_event_idx, curr_event_data1, current_time, wait_time;
+    hpt_opcodes   curr_event_opcode;
+       
+    curr_event_idx    = event_awaited;
+    curr_event_opcode = current_hpt_table[curr_event_idx].opcode;
+    curr_event_data1  = current_hpt_table[curr_event_idx].data1;
+   
+    if (curr_event_opcode == HPT_RESTART)
     {
-        case HPT_END:
-            xTimerStop(xHPTimer, 0);
-            new_event_scheduled = 1;
-            break;
-            
+        current_time = 0; 
+        /* get first event from table */
+        event_awaited = 0;
+    }
+    else
+    {
+        current_time = current_hpt_table[event_awaited].time;
+        /* get next event from table */
+        event_awaited++;
+    }
+    /* calculate number of ticks to wait until next event */   
+    wait_time = current_hpt_table[event_awaited].time - current_time;
+   
+    xTimerChangePeriod(xHPTimer, wait_time, 0);
+    /* start the timer */
+    xTimerStart(xHPTimer, 0);
+
+    /* perform event action */
+    switch (curr_event_opcode)
+    {       
         case HPT_RESTART:
-            #ifdef HPT_DEBUG
-            Console_Send("--HPT_RESTART--\r\n",0);
-            #endif
-            HPT_Restart();
-            new_event_scheduled = 1;
             break;
             
         case HPT_GPIO_UP:
             //GPIO_SetBits(...);
-            #ifdef HPT_DEBUG
-            Console_Send("HPT_GPIO_UP\r\n",0);
-            #endif
             break;
             
         case HPT_GPIO_DOWN:
             //GPIO_ResetBits(...);
-            #ifdef HPT_DEBUG
-            Console_Send("HPT_GPIO_DOWN\r\n",0);
-            #endif
             break;
             
         case HPT_PREPARE_PKT:            
-            #ifdef HPT_DEBUG
-            Console_Send("HPT_PREPARE_PKT\r\n",0);
-            #endif
             dest_queue = Get_ControlQueue();
             ctrl_msg.msg_data   = 0;
             ctrl_msg.msg_len    = 0;
@@ -122,9 +126,6 @@ void vHPTimerCallback(TimerHandle_t pxTimer)
             break;
             
         case HPT_COPY_PKT:            
-            #ifdef HPT_DEBUG
-            Console_Send("HPT_COPY_PKT\r\n",0);
-            #endif
             dest_queue = Get_ControlQueue();
             ctrl_msg.msg_data   = 0;
             ctrl_msg.msg_len    = 0;
@@ -134,11 +135,8 @@ void vHPTimerCallback(TimerHandle_t pxTimer)
             break;
             
         case HPT_SP1_CHANNEL:            
-            #ifdef HPT_DEBUG
-            Console_Send("HPT_SP1_CHANNEL\r\n",0);
-            #endif
             dest_queue = Get_SP1Queue();
-            ctrl_msg.msg_data   = data1;
+            ctrl_msg.msg_data   = curr_event_data1;
             ctrl_msg.msg_len    = 0;
             ctrl_msg.msg_opcode = SP1_CHG_CHANNEL;
             ctrl_msg.src_id     = HPT_SRC_ID;
@@ -146,9 +144,6 @@ void vHPTimerCallback(TimerHandle_t pxTimer)
             break;
         
         case HPT_TX_PKT:            
-            #ifdef HPT_DEBUG
-            Console_Send("HPT_TX_PKT\r\n",0);
-            #endif
             dest_queue = Get_SP1Queue();
             ctrl_msg.msg_data   = 0;
             ctrl_msg.msg_len    = 0;
@@ -158,11 +153,8 @@ void vHPTimerCallback(TimerHandle_t pxTimer)
             break;
             
         case HPT_TX_PKT_LBT:            
-            #ifdef HPT_DEBUG
-            Console_Send("HPT_TX_PKT_LBT\r\n",0);
-            #endif
             dest_queue = Get_SP1Queue();
-            ctrl_msg.msg_data   = data1;
+            ctrl_msg.msg_data   = curr_event_data1;
             ctrl_msg.msg_len    = 0;
             ctrl_msg.msg_opcode = SP1_TX_PACKET_LBT;
             ctrl_msg.src_id     = HPT_SRC_ID;
@@ -170,26 +162,22 @@ void vHPTimerCallback(TimerHandle_t pxTimer)
             break;
             
         case HPT_IWDG_RELOAD:            
-            #ifdef HPT_DEBUG
-            Console_Send("HPT_IWDG_RELOAD\r\n",0);
-            #endif
             IWDG_ReloadCounter();
             break;
+            
         default:
             break;
     }
-    /* In case of events not affecting hpt table timing next event from hpt table should be found */
-    if (!new_event_scheduled)
+    
+    if (debug_enabled)
     {
-        /* find current time from table */
-        uint32_t curr_time = current_hpt_table[event_awaited].time;
-        /* get next event from table */
-        event_awaited++;
-        /* calculate amount of time to wait until next event */
-        xTimerChangePeriod(xHPTimer, current_hpt_table[event_awaited].time - curr_time, 0);
-        /* start the timer */
-        xTimerStart(xHPTimer, 0);
-        /* that's all, we'll see again in next vHPTimerCallback call */
+        sprintf(log_buf, "%d(%s[%4d]), (%d)->%d \r\n", 
+            (int)curr_event_idx,
+            hpt_opcodes_str[curr_event_opcode],
+            (int)curr_event_data1,
+            (int)wait_time,
+            (int)event_awaited);
+        Console_Send(log_buf, 1);
     }
 }
 

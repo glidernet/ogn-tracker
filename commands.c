@@ -20,6 +20,7 @@
 #include "spirit1.h"
 #include "gps.h"
 #include "control.h"
+#include "hpt_timer.h"
 
 /* -------- defines -------- */
 #define SPI_DATA_LEN 256
@@ -32,7 +33,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.4.1";
+static const char * const pcVersion = "0.4.2";
 /* -------- functions -------- */
 
 /**
@@ -725,6 +726,18 @@ static portBASE_TYPE prvDebugGPSCommand( char *pcWriteBuffer,
     return pdFALSE;
 }
 
+static portBASE_TYPE prvDebugHPTCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{
+    static uint8_t debug_state = 1;
+    sprintf(pcWriteBuffer,"HPT debug switched\r\n");
+    HPT_Debug(debug_state);
+    if (debug_state) debug_state = 0; else debug_state = 1;
+    return pdFALSE;
+}
+
+
 static portBASE_TYPE prvGPSAntCommand( char *pcWriteBuffer,
                              size_t xWriteBufferLen,
                              const char *pcCommandString )
@@ -844,6 +857,7 @@ static const CLI_Command_Definition_t MemStatCommand       = { "mem_stat",     "
 static const CLI_Command_Definition_t MaxTxPowerCommand    = { "max_tx_power", "max_tx_power: set max. measured power [dBm].\r\n", prvMaxTxPowerCommand,  -1 };
 static const CLI_Command_Definition_t BackupRegCommand     = { "backup_reg",   "backup_reg reg [value].\r\n",                    prvBackupRegCommand,  -1 };
 static const CLI_Command_Definition_t DebugGPSCommand      = { "debug_gps",    "debug_gps - enable GPS logging.\r\n",            prvDebugGPSCommand,  0 };
+static const CLI_Command_Definition_t DebugHPTCommand      = { "debug_hpt",    "debug_hpt - enable HPT logging.\r\n",            prvDebugHPTCommand,  0 };
 static const CLI_Command_Definition_t GPSAntCommand        = { "gps_ant",      "gps_ant [int|ext] - select GPS antenna.\r\n",    prvGPSAntCommand,  -1 };
 static const CLI_Command_Definition_t VoltCommand          = { "volt",         "volt: show voltages.\r\n",                       prvVoltCommand, 0 };
 static const CLI_Command_Definition_t JamRatioCommand      = { "jam_ratio",    "jam_ratio: [0-100].\r\n",                        prvJamRatioCommand, -1 };
@@ -884,6 +898,7 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&MemStatCommand);
    FreeRTOS_CLIRegisterCommand(&BackupRegCommand);
    FreeRTOS_CLIRegisterCommand(&DebugGPSCommand);
+   FreeRTOS_CLIRegisterCommand(&DebugHPTCommand);
    FreeRTOS_CLIRegisterCommand(&GPSAntCommand);
    FreeRTOS_CLIRegisterCommand(&VoltCommand);
    FreeRTOS_CLIRegisterCommand(&JamRatioCommand);
