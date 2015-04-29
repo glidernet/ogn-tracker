@@ -23,6 +23,7 @@ CC_SRC    += control.c
 CC_SRC    += hpt_timer.c
 CC_SRC    += gps.c
 CC_SRC    += display.c
+CC_SRC    += background.c
 CC_SRC    += cmsis_lib/Source/stm32l1xx_usart.c
 CC_SRC    += cmsis_lib/Source/stm32l1xx_gpio.c
 CC_SRC    += cmsis_lib/Source/stm32l1xx_flash.c
@@ -83,6 +84,7 @@ H_SRC     += hpt_timer.h
 H_SRC     += ogn_lib.h
 H_SRC     += display.h
 H_SRC     += timer_const.h
+H_SRC     += background.h
 
 
 CPP_SRC   = ogn_lib.cpp

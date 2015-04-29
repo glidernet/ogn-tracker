@@ -37,6 +37,7 @@
 #include "spirit1.h"
 #include "control.h"
 #include "display.h"
+#include "background.h"
 
 /** @addtogroup Template_Project
   * @{
@@ -115,6 +116,7 @@ void prvSetupHardware(void)
    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
    srand(*(uint32_t*)0x1FF80050); /* Set CPU id as seed */
    
+   Background_Config();
    Console_Config();
    Display_Config();
    GPS_Config();
@@ -139,12 +141,13 @@ int main(void)
    HandlePowerUpMode();
    InitOptions();
    prvSetupHardware();
-      
-   xTaskCreate(vTaskConsole,   (char *)"Console", 1024, NULL, tskIDLE_PRIORITY+1, NULL);
-   xTaskCreate(vTaskDisplay,   (char *)"Display", 1024, NULL, tskIDLE_PRIORITY+1, NULL);
-   xTaskCreate(vTaskGPS,       (char *)"GPS",     1024, NULL, tskIDLE_PRIORITY+2, NULL);
-   xTaskCreate(vTaskSP1,       (char *)"SP1",     1024, NULL, tskIDLE_PRIORITY+3, NULL);
-   xTaskCreate(vTaskControl,   (char *)"Control", 1024, NULL, tskIDLE_PRIORITY+4, NULL);
+   
+   xTaskCreate(vTaskBackground,(char *)"Bkgnd",   256,  NULL, tskIDLE_PRIORITY+1, NULL);   
+   xTaskCreate(vTaskConsole,   (char *)"Console", 1024, NULL, tskIDLE_PRIORITY+2, NULL);
+   xTaskCreate(vTaskDisplay,   (char *)"Display", 256,  NULL, tskIDLE_PRIORITY+2, NULL);
+   xTaskCreate(vTaskGPS,       (char *)"GPS",     1024, NULL, tskIDLE_PRIORITY+3, NULL);
+   xTaskCreate(vTaskSP1,       (char *)"SP1",     1024, NULL, tskIDLE_PRIORITY+4, NULL);
+   xTaskCreate(vTaskControl,   (char *)"Control", 1024, NULL, tskIDLE_PRIORITY+5, NULL);
 
    vTaskStartScheduler();
    return 0;

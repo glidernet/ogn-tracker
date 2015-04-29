@@ -267,56 +267,6 @@ void IWDG_Config(void)
     }
 }
 
-void ADC_Config(uint8_t chn_num)
-{
-    ADC_InitTypeDef ADC_InitStructure;
-   
-    /* Enable The HSI (16Mhz) */
-    RCC_HSICmd(ENABLE);
-
-    /* Check that HSI oscillator is ready */
-    while(RCC_GetFlagStatus(RCC_FLAG_HSIRDY) == RESET);
-
-    /* ADC1 Configuration ------------------------------------------------------*/
-  
-    /* Enable ADC1 clock */
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
-  
-    ADC_StructInit(&ADC_InitStructure);
-    ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
-    ADC_InitStructure.ADC_ScanConvMode = DISABLE;
-    ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
-    ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
-    ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
-    ADC_InitStructure.ADC_NbrOfConversion = 1;
-    ADC_Init(ADC1, &ADC_InitStructure);
-
-    /* ADC1 regular channel configuration */
-    ADC_RegularChannelConfig(ADC1, chn_num, 1, ADC_SampleTime_192Cycles);
-
-    /* Define delay between ADC1 conversions */
-    ADC_DelaySelectionConfig(ADC1, ADC_DelayLength_Freeze);
-  
-    /* Enable ADC1 Power Down during Delay */
-    ADC_PowerDownCmd(ADC1, ADC_PowerDown_Idle_Delay, ENABLE);
-  
-    /* Enable ADC1 */
-    ADC_Cmd(ADC1, ENABLE);
-
-    /* Wait until ADC1 ON status */
-    while (ADC_GetFlagStatus(ADC1, ADC_FLAG_ADONS) == RESET)
-    {
-    }
-
-    /* Start ADC1 Software Conversion */
-    ADC_SoftwareStartConv(ADC1);
-
-    /* Wait until ADC Channel end of conversion */
-    while (ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == RESET)
-    {
-    }
-}
-
 /**
 * @brief  Configures the Control Task Peripherals.
 * @param  None
