@@ -21,6 +21,7 @@ void vTaskBackground(void* pvParameters);
 xQueueHandle* Get_BackgroundQue();
 int16_t BKGRD_Get_Volt_VDD();
 int16_t BKGRD_Get_Volt_VBat();
+int16_t BKGRD_Get_CPU_Temp();
 
 #ifdef __cplusplus
 }

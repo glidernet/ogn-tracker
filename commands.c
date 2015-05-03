@@ -34,7 +34,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.4.3";
+static const char * const pcVersion = "0.4.4";
 /* -------- functions -------- */
 
 /**
@@ -784,6 +784,19 @@ static portBASE_TYPE prvVoltCommand( char *pcWriteBuffer,
     return pdFALSE;
 }
 
+static portBASE_TYPE prvCPUTempCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ 
+    int16_t r_temp, f_temp, cpu_temp = BKGRD_Get_CPU_Temp();
+
+    r_temp = abs(cpu_temp/10); if (cpu_temp<0) r_temp = -r_temp;
+    f_temp = abs(cpu_temp)%10;
+    sprintf(pcWriteBuffer,"CPU Temp: %d.%d deg. C\r\n", r_temp, f_temp);
+      
+    return pdFALSE;
+}
+
 static portBASE_TYPE prvJamRatioCommand( char *pcWriteBuffer,
                              size_t xWriteBufferLen,
                              const char *pcCommandString )
@@ -837,6 +850,7 @@ static const CLI_Command_Definition_t DebugGPSCommand      = { "debug_gps",    "
 static const CLI_Command_Definition_t DebugHPTCommand      = { "debug_hpt",    "debug_hpt - enable HPT logging.\r\n",            prvDebugHPTCommand,  0 };
 static const CLI_Command_Definition_t GPSAntCommand        = { "gps_ant",      "gps_ant [int|ext] - select GPS antenna.\r\n",    prvGPSAntCommand,  -1 };
 static const CLI_Command_Definition_t VoltCommand          = { "volt",         "volt: show voltages.\r\n",                       prvVoltCommand, 0 };
+static const CLI_Command_Definition_t CPUTempCommand       = { "cpu_temp",     "cpu_temp: show internal CPU temp.\r\n",          prvCPUTempCommand, 0 };
 static const CLI_Command_Definition_t JamRatioCommand      = { "jam_ratio",    "jam_ratio: [0-100].\r\n",                        prvJamRatioCommand, -1 };
 
 /**
@@ -878,6 +892,7 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&DebugHPTCommand);
    FreeRTOS_CLIRegisterCommand(&GPSAntCommand);
    FreeRTOS_CLIRegisterCommand(&VoltCommand);
+   FreeRTOS_CLIRegisterCommand(&CPUTempCommand);
    FreeRTOS_CLIRegisterCommand(&JamRatioCommand);
    
 }
