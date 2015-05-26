@@ -446,6 +446,14 @@ void Spirit1_Config(void)
 */
 void static SpiritNotPresent(void)
 {
+   uint8_t oper_mode = *(uint8_t *)GetOption(OPT_OPER_MODE);
+   /* Tracker could work without Spirit module in MODE_IDLE */
+   if (oper_mode != MODE_IDLE)
+   {
+        oper_mode = MODE_IDLE;
+        SetOption(OPT_OPER_MODE, &oper_mode);
+        NVIC_SystemReset();
+   }
    for (;;)
    {
       vTaskDelay(1000);
