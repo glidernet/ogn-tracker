@@ -19,7 +19,8 @@ typedef enum
    OPT_MAX_TX_PWR,
    OPT_GPS_ALW_ON,
    OPT_GPS_ANT,
-   OPT_JAM_RATIO
+   OPT_JAM_RATIO,
+   OPT_MIN_BAT_LVL
 } option_types;
 
 typedef enum

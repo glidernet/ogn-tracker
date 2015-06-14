@@ -34,7 +34,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.4.4";
+static const char * const pcVersion = "0.4.5";
 /* -------- functions -------- */
 
 /**
@@ -817,6 +817,27 @@ static portBASE_TYPE prvJamRatioCommand( char *pcWriteBuffer,
     return pdFALSE;
 }
 
+static portBASE_TYPE prvMinBatLvlCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ 
+    BaseType_t  param_len;
+    uint16_t mbl = 0;
+    
+    const char* param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
+    if(param)
+    {  
+       mbl = atoi(param);
+       SetOption(OPT_MIN_BAT_LVL, &mbl);
+    } 
+    
+    mbl = *(uint16_t *)GetOption(OPT_MIN_BAT_LVL);
+    sprintf(pcWriteBuffer, "Min. battery level: %d [mV].\r\n", mbl);
+    
+    return pdFALSE;
+}
+
+
 // ---------------------------------------------------------------------------------------------------------------------------
 
 static const CLI_Command_Definition_t VerCommand           = { "ver",            "ver: version number and MCU ID\r\n",           prvVerCommand,           0 };
@@ -852,6 +873,8 @@ static const CLI_Command_Definition_t GPSAntCommand        = { "gps_ant",      "
 static const CLI_Command_Definition_t VoltCommand          = { "volt",         "volt: show voltages.\r\n",                       prvVoltCommand, 0 };
 static const CLI_Command_Definition_t CPUTempCommand       = { "cpu_temp",     "cpu_temp: show internal CPU temp.\r\n",          prvCPUTempCommand, 0 };
 static const CLI_Command_Definition_t JamRatioCommand      = { "jam_ratio",    "jam_ratio: [0-100].\r\n",                        prvJamRatioCommand, -1 };
+static const CLI_Command_Definition_t MinBatLvlCommand     = { "min_bat_lvl",  "min_bat_lvl: [0-6000].\r\n",                     prvMinBatLvlCommand, -1 };
+
 
 /**
   * @brief  Function registers all console commands.
@@ -894,6 +917,7 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&VoltCommand);
    FreeRTOS_CLIRegisterCommand(&CPUTempCommand);
    FreeRTOS_CLIRegisterCommand(&JamRatioCommand);
+   FreeRTOS_CLIRegisterCommand(&MinBatLvlCommand);
    
 }
 

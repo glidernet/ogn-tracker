@@ -7,6 +7,9 @@
 #include <timers.h>
 #include "timer_const.h"
 #include "messages.h"
+#include "console.h"
+#include "control.h"
+#include "options.h"
 
 /* ------- constants --------*/
 const uint16_t ADC_max_val  = 4095;
@@ -14,9 +17,10 @@ const uint32_t ts_cal1_temp = 30;
 const uint32_t ts_cal2_temp = 110;
 
 /* -------- defines -------- */
+#define BATT_LEVEL_INVALID (-1)
 /* -------- variables -------- */
 /* Background task queue */
-xQueueHandle background_que;
+xQueueHandle background_queue;
 static TimerHandle_t  xBKGNDTimer;
 
 /* --- ADC constants --- */
@@ -33,6 +37,18 @@ static int16_t s_temp_sens;
 
 /* -------- interrupt handlers -------- */
 /* -------- functions -------- */
+
+uint8_t CheckBatteryLevel(int16_t batt_level)
+{
+    uint8_t ret_val = 0;  
+    uint16_t mbl = *(uint16_t *)GetOption(OPT_MIN_BAT_LVL);
+    
+    if (batt_level != BATT_LEVEL_INVALID)
+    {
+        if (batt_level < mbl) ret_val = 1;       
+    }
+    return ret_val;
+}
 
 uint16_t ADC_Config_Measure(uint8_t chn_num)
 {
@@ -88,15 +104,18 @@ void MeasureADCs(int16_t* vdd, int16_t* vbat, int16_t* cpu_temp)
     ADCdata_tsens = ADC_Config_Measure(ADC_Channel_TempSensor); 
     ADCdata_vbat  = ADC_Config_Measure(ADC_Channel_10); 
     
-    if (ADCdata_vref) *vdd  = (ADC_max_val*vrefint)/ADCdata_vref;
-    if (ADCdata_vref) *vbat = (ADCdata_vbat*vrefint)/ADCdata_vref;
-    /* VBat is 2 times lower (HW) */
-    *vbat *= 2;
-    
+    if (ADCdata_vref) 
+    {
+        *vdd  = (ADC_max_val*vrefint)/ADCdata_vref;
+        *vbat = (ADCdata_vbat*vrefint)/ADCdata_vref;
+        /* VBat is 2 times lower (HW) */
+        *vbat *= 2;
+    }
+        
     /* Get temp. sensor readings in uV and calc. diff. from cal1 value */
-    tsens_diff = (1000*(*vdd)*ADCdata_tsens/ADC_max_val) - ts_cal1_uV;    
+    tsens_diff = (1000*((*vdd)*ADCdata_tsens/ADC_max_val)) - ts_cal1_uV;    
     *cpu_temp = 10*ts_cal1_temp + 10*tsens_diff/ts_adc_slope_uV;
-    
+
     /* Return ADC to idle state */
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, DISABLE);    
 }
@@ -116,9 +135,9 @@ int16_t BKGRD_Get_CPU_Temp()
     return s_temp_sens;
 }
 
-xQueueHandle* Get_BackgroundQue()
+xQueueHandle* Get_BackgroundQueue()
 {
-   return &background_que;
+   return &background_queue;
 }
 
 /**
@@ -135,15 +154,15 @@ void vBKGNDTimerCallback(TimerHandle_t pxTimer)
     msg.msg_len    = 0;
     msg.msg_opcode = BKGRD_ADC_MEASURE;
     msg.src_id     = BKGRD_SRC_ID;
-    xQueueSend(background_que, &msg, portMAX_DELAY); 
+    xQueueSend(background_queue, &msg, portMAX_DELAY); 
 }
 
 /**
-* @brief  Configures the Background Task Peripherals.
+* @brief  Configures the ADC conversion constants.
 * @param  None
 * @retval None
 */
-void Background_Config(void)
+void ADCs_Config(void)
 {
     /* Enable The HSI (16Mhz) - required by ADC */
     RCC_HSICmd(ENABLE);
@@ -157,15 +176,25 @@ void Background_Config(void)
     /* Calculate ADC slope */
     ts_adc_slope_uV = (ts_cal2_uV-ts_cal1_uV)/(ts_cal2_temp-ts_cal1_temp);
     
-    s_volt_vdd  = -1;
-    s_volt_vbat = -1;
+    s_volt_vdd  = BATT_LEVEL_INVALID;
+    s_volt_vbat = BATT_LEVEL_INVALID;
     /* Internal STM32L reference voltage typical value */
     /* It could be calibrated if needed */
     vrefint = 1224; /* 1224 mV */
+}
+
+/**
+* @brief  Configures the Background Task Peripherals.
+* @param  None
+* @retval None
+*/
+void Background_Config(void)
+{   
+    ADCs_Config();
     
     xBKGNDTimer = xTimerCreate("BKGND",
        /* The timer period in ticks. */
-       TIMER_MS(10000),
+       TIMER_MS(5000),
        /* The timer will repeat when expire. */
        pdTRUE,
        /* unique id */
@@ -174,7 +203,7 @@ void Background_Config(void)
        vBKGNDTimerCallback
     );
      
-    background_que = xQueueCreate(5, sizeof(task_message));
+    background_queue = xQueueCreate(5, sizeof(task_message));
 }
 
 
@@ -191,12 +220,17 @@ void vTaskBackground(void* pvParameters)
     
     for(;;)
     {
-        xQueueReceive(background_que, &msg, portMAX_DELAY);
+        xQueueReceive(background_queue, &msg, portMAX_DELAY);
       
         switch (msg.msg_opcode)
         {
             case BKGRD_ADC_MEASURE:
                 MeasureADCs(&s_volt_vdd, &s_volt_vbat, &s_temp_sens);
+                if (CheckBatteryLevel(s_volt_vbat))
+                {
+                    Console_Send("Battery level too low!\r\n", 1);
+                    PreShutDownSequence();
+                }               
                 break;
                 
             default:
