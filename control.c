@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 #include <stm32l1xx.h>
 #include <FreeRTOS.h>
 #include <FreeRTOS_CLI.h>
@@ -142,7 +143,6 @@ void vCtrlTaskTimerCallback(TimerHandle_t pxTimer)
     xTimerStart(xCtrlTaskTimer, 0);
 }
 
-
 /**
 * @brief  Configures the High Precision Timer Table for OGN oper. mode.
 * @param  pointer to hpt_table data to be filled.
@@ -150,97 +150,58 @@ void vCtrlTaskTimerCallback(TimerHandle_t pxTimer)
 */
 uint8_t Create_HPT_Table_OGN(HPT_Event* hpt_table_arr)
 {
-   uint8_t pos = 0;
+   const HPT_Event Table_OGN[] = 
+   {   /* time,          event,             event data (optional) */
+       { TIMER_MS(150),  HPT_COPY_PKT,      0   },  /* Copy packet to TX buffer (manchester encoding) */  
+       { TIMER_MS(300),  HPT_SP1_CHANNEL,   4   },  /* Change channel to 868.4 */
+       { TIMER_MS(400),  HPT_TX_PKT_LBT,    380 },  /* Start random transmit within next 380 ms */
+       { TIMER_MS(800),  HPT_SP1_CHANNEL,   2   },  /* Change channel to 868.2 */
+       { TIMER_MS(800),  HPT_TX_PKT_LBT,    380 },  /* Start random transmit within next 380 ms */
+       { TIMER_MS(925),  HPT_IWDG_RELOAD,   0   },  /* Kick Independent Watchdog */
+       { TIMER_MS(950),  HPT_PREPARE_PKT,   0   },  /* Prepare packet from GPS position */
+       { TIMER_MS(1000), HPT_RESTART,       0   }   /* Restart table */ 
+   }; 
    
-   hpt_table_arr[pos].time    = TIMER_MS(150);
-   hpt_table_arr[pos].opcode  = HPT_COPY_PKT;
-   pos++;
-   
-   hpt_table_arr[pos].time    = TIMER_MS(300);
-   hpt_table_arr[pos].opcode  = HPT_SP1_CHANNEL;
-   hpt_table_arr[pos].data1   = 4;  
-   pos++;
-   
-   hpt_table_arr[pos].time    = TIMER_MS(301);  /* Start of TX period */
-   hpt_table_arr[pos].opcode  = HPT_TX_PKT_LBT; /* LBT TX with random delay time */
-   hpt_table_arr[pos].data1   = 380;            /* Max. TX delay time */
-   pos++;
-   
-   hpt_table_arr[pos].time    = TIMER_MS(700);
-   hpt_table_arr[pos].opcode  = HPT_SP1_CHANNEL;
-   hpt_table_arr[pos].data1   = 2;  
-   pos++;
-   
-   hpt_table_arr[pos].time    = TIMER_MS(701);  /* Start of TX period */
-   hpt_table_arr[pos].opcode  = HPT_TX_PKT_LBT; /* LBT TX with random delay time */
-   hpt_table_arr[pos].data1   = 380;            /* Max. TX delay time */
-   pos++;
-   
-   hpt_table_arr[pos].time    = TIMER_MS(925);
-   hpt_table_arr[pos].opcode  = HPT_IWDG_RELOAD;
-   pos++;
-   
-   hpt_table_arr[pos].time    = TIMER_MS(950);
-   hpt_table_arr[pos].opcode  = HPT_PREPARE_PKT;
-   pos++;
-	
-   hpt_table_arr[pos].time    = TIMER_MS(1000);
-   hpt_table_arr[pos].opcode  = HPT_RESTART;
-   pos++;
-   
-   return pos;
-   
+   memcpy(hpt_table_arr, Table_OGN, sizeof(Table_OGN));
+   return (sizeof(Table_OGN)/sizeof(HPT_Event));
 }
 
 /**
-* @brief  Configures the High Precision Timer Table for CW oper. mode.
+* @brief  Configures the High Precision Timer Table for Idle mode, 
+* @brief  used also by CW oper. mode.
 * @param  pointer to hpt_table data to be filled.
 * @retval length of filled data.
 */
 uint8_t Create_HPT_Table_Idle(HPT_Event* hpt_table_arr)
 {
-   uint8_t pos = 0;
-    
-   hpt_table_arr[pos].time    = TIMER_MS(925);
-   hpt_table_arr[pos].opcode  = HPT_IWDG_RELOAD;
-   pos++;
-   	
-   hpt_table_arr[pos].time    = TIMER_MS(1000);
-   hpt_table_arr[pos].opcode  = HPT_RESTART;
-   pos++;
+   const HPT_Event Table_Idle[] = 
+   {   /* time,          event,             event data (optional) */ 
+       { TIMER_MS(925),  HPT_IWDG_RELOAD,   0   },  /* Kick Independent Watchdog */
+       { TIMER_MS(1000), HPT_RESTART,       0   }   /* Restart table */      
+   };  
    
-   return pos; 
+   memcpy(hpt_table_arr, Table_Idle, sizeof(Table_Idle));
+   return (sizeof(Table_Idle)/sizeof(HPT_Event));
 }
 
 /**
-* @brief  Configures the High Precision Timer Table for jammer oper. mode.
+* @brief  Configures the High Precision Timer Table for idle with freq. switch, 
+* @brief  used by jammer oper. mode.
 * @param  pointer to hpt_table data to be filled.
 * @retval length of filled data.
 */
 uint8_t Create_HPT_Table_Idle_Freq(HPT_Event* hpt_table_arr)
 {
-   uint8_t pos = 0;
-    
-   hpt_table_arr[pos].time    = TIMER_MS(300);
-   hpt_table_arr[pos].opcode  = HPT_SP1_CHANNEL;
-   hpt_table_arr[pos].data1   = 4;  
-   pos++;
-   
-   hpt_table_arr[pos].time    = TIMER_MS(700);
-   hpt_table_arr[pos].opcode  = HPT_SP1_CHANNEL;
-   hpt_table_arr[pos].data1   = 2;  
-   pos++;
-   
-   hpt_table_arr[pos].time    = TIMER_MS(925);
-   hpt_table_arr[pos].opcode  = HPT_IWDG_RELOAD;
-   pos++;
-   	
-   hpt_table_arr[pos].time    = TIMER_MS(1000);
-   hpt_table_arr[pos].opcode  = HPT_RESTART;
-   pos++;
-   
-   return pos;
-   
+   const HPT_Event Table_Idle_Freq[] = 
+   {   /* time,          event,             event data (optional) */
+       { TIMER_MS(300),  HPT_SP1_CHANNEL,   4   },  /* Change channel to 868.4 */
+       { TIMER_MS(800),  HPT_SP1_CHANNEL,   2   },  /* Change channel to 868.2 */
+       { TIMER_MS(925),  HPT_IWDG_RELOAD,   0   },  /* Kick Independent Watchdog */
+       { TIMER_MS(1000), HPT_RESTART,       0   }   /* Restart table */ 
+   };
+  
+   memcpy(hpt_table_arr, Table_Idle_Freq, sizeof(Table_Idle_Freq));
+   return (sizeof(Table_Idle_Freq)/sizeof(HPT_Event));  
 }
 
 /**

@@ -34,7 +34,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.4.5";
+static const char * const pcVersion = "0.5.0";
 /* -------- functions -------- */
 
 /**
@@ -828,7 +828,15 @@ static portBASE_TYPE prvMinBatLvlCommand( char *pcWriteBuffer,
     if(param)
     {  
        mbl = atoi(param);
-       SetOption(OPT_MIN_BAT_LVL, &mbl);
+       if (mbl <= 4000)
+       {
+           SetOption(OPT_MIN_BAT_LVL, &mbl);
+       }
+       else
+       {
+           sprintf(pcWriteBuffer, "Invalid battery level, allowed 0-4000.\r\n");
+           return pdFALSE;
+       }
     } 
     
     mbl = *(uint16_t *)GetOption(OPT_MIN_BAT_LVL);
@@ -863,7 +871,7 @@ static const CLI_Command_Definition_t XtalCorrCommand      = { "xtal_corr",    "
 static const CLI_Command_Definition_t FreqOfsCommand       = { "freq_ofs",     "freq_ofs:  RF frequency offset [Hz].\r\n",       prvFreqOfsCommand,   -1 };
 static const CLI_Command_Definition_t IWDGDisCommand       = { "iwdg",         "iwdg en/dis: control ind. watchdog\r\n",         prvIWDGDisCommand,   -1 };
 static const CLI_Command_Definition_t OperModeCommand      = { "mode",         "mode [ogn|idle|cw|rx|jammer]: set/check oper. mode\r\n", prvOperModeCommand,  -1 };
-static const CLI_Command_Definition_t SetChannelCommand    = { "channel",      "channel 0-6: set/check operating channel\r\n",   prvSetChannelCommand, -1 };
+static const CLI_Command_Definition_t SetChannelCommand    = { "channel",      "channel 0-6: set/check test modes operating channel\r\n",   prvSetChannelCommand, -1 };
 static const CLI_Command_Definition_t MemStatCommand       = { "mem_stat",     "mem_stat: memory statistics\r\n",                prvMemStatCommand, 0 };
 static const CLI_Command_Definition_t MaxTxPowerCommand    = { "max_tx_power", "max_tx_power: set max. measured power [dBm].\r\n", prvMaxTxPowerCommand,  -1 };
 static const CLI_Command_Definition_t BackupRegCommand     = { "backup_reg",   "backup_reg reg [value].\r\n",                    prvBackupRegCommand,  -1 };
@@ -873,7 +881,7 @@ static const CLI_Command_Definition_t GPSAntCommand        = { "gps_ant",      "
 static const CLI_Command_Definition_t VoltCommand          = { "volt",         "volt: show voltages.\r\n",                       prvVoltCommand, 0 };
 static const CLI_Command_Definition_t CPUTempCommand       = { "cpu_temp",     "cpu_temp: show internal CPU temp.\r\n",          prvCPUTempCommand, 0 };
 static const CLI_Command_Definition_t JamRatioCommand      = { "jam_ratio",    "jam_ratio: [0-100].\r\n",                        prvJamRatioCommand, -1 };
-static const CLI_Command_Definition_t MinBatLvlCommand     = { "min_bat_lvl",  "min_bat_lvl: [0-6000].\r\n",                     prvMinBatLvlCommand, -1 };
+static const CLI_Command_Definition_t MinBatLvlCommand     = { "min_bat_lvl",  "min_bat_lvl: [0-4000 mV].\r\n",                     prvMinBatLvlCommand, -1 };
 
 
 /**
