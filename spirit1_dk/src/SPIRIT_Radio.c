@@ -227,8 +227,9 @@ uint8_t SpiritRadioInit(SRadioInit* pxSRadioInitStruct)
   anaRadioRegArray[3] = (uint8_t)(xtalOffsetFactor);
   
   /* Calculates the channel space factor */
-  anaRadioRegArray[0] =((uint32_t)pxSRadioInitStruct->nChannelSpace<<9)/(s_lXtalFrequency>>6)+1;
-  
+  /*anaRadioRegArray[0] =((uint32_t)pxSRadioInitStruct->nChannelSpace<<9)/(s_lXtalFrequency>>6)+1;*/
+  /* corrected by Pawel Jalocha, 22-OCT-2014 for more precision on channel spacing */
+  anaRadioRegArray[0] =(((uint32_t)pxSRadioInitStruct->nChannelSpace<<9)+(s_lXtalFrequency>>7))/(s_lXtalFrequency>>6); 
   SpiritManagementWaTRxFcMem(pxSRadioInitStruct->lFrequencyBase);
   
   /* 2nd order DEM algorithm enabling */
