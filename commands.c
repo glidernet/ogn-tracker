@@ -34,7 +34,7 @@ uint8_t SPI1_rx_data[SPI_DATA_LEN];
 uint8_t OGN_packet[OGN_PKT_LEN];
 
 /* -------- constants -------- */
-static const char * const pcVersion = "0.5.1";
+static const char * const pcVersion = "0.6.0";
 /* -------- functions -------- */
 
 /**
@@ -845,6 +845,33 @@ static portBASE_TYPE prvMinBatLvlCommand( char *pcWriteBuffer,
     return pdFALSE;
 }
 
+static portBASE_TYPE prvGPSWdgTimeCommand( char *pcWriteBuffer,
+                             size_t xWriteBufferLen,
+                             const char *pcCommandString )
+{ 
+    BaseType_t  param_len;
+    uint16_t wdg_time = 0;
+    
+    const char* param = FreeRTOS_CLIGetParameter(pcCommandString, 1, &param_len);
+    if(param)
+    {  
+       wdg_time = atoi(param);
+       if ((wdg_time == 0) || ((wdg_time >= 10)&&(wdg_time <= 64000)))
+       {
+           SetOption(OPT_GPS_WDG_TIME, &wdg_time);
+       }
+       else
+       {
+           sprintf(pcWriteBuffer, "Invalid GPS watchdog time, allowed 0(disabled) or 10-64000 sec.\r\n");
+           return pdFALSE;
+       }
+    } 
+    
+    wdg_time = *(uint16_t *)GetOption(OPT_GPS_WDG_TIME);
+    sprintf(pcWriteBuffer, "GPS watchdog time: %d [sec].\r\n", wdg_time);
+    
+    return pdFALSE;
+}
 
 // ---------------------------------------------------------------------------------------------------------------------------
 
@@ -881,7 +908,8 @@ static const CLI_Command_Definition_t GPSAntCommand        = { "gps_ant",      "
 static const CLI_Command_Definition_t VoltCommand          = { "volt",         "volt: show voltages.\r\n",                       prvVoltCommand, 0 };
 static const CLI_Command_Definition_t CPUTempCommand       = { "cpu_temp",     "cpu_temp: show internal CPU temp.\r\n",          prvCPUTempCommand, 0 };
 static const CLI_Command_Definition_t JamRatioCommand      = { "jam_ratio",    "jam_ratio: [0-100].\r\n",                        prvJamRatioCommand, -1 };
-static const CLI_Command_Definition_t MinBatLvlCommand     = { "min_bat_lvl",  "min_bat_lvl: [0-4000 mV].\r\n",                     prvMinBatLvlCommand, -1 };
+static const CLI_Command_Definition_t MinBatLvlCommand     = { "min_bat_lvl",  "min_bat_lvl: [0-4000 mV].\r\n",                  prvMinBatLvlCommand, -1 };
+static const CLI_Command_Definition_t GPSWdgTimeCommand    = { "gps_wdg_time", "gps_wdg_time: [1-64k sec. (0-disabled)].\r\n",   prvGPSWdgTimeCommand, -1 };
 
 
 /**
@@ -915,6 +943,7 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&XtalCorrCommand);
    FreeRTOS_CLIRegisterCommand(&FreqOfsCommand);
    FreeRTOS_CLIRegisterCommand(&IWDGDisCommand);
+   FreeRTOS_CLIRegisterCommand(&GPSWdgTimeCommand);
    FreeRTOS_CLIRegisterCommand(&SetChannelCommand);
    FreeRTOS_CLIRegisterCommand(&OperModeCommand);
    FreeRTOS_CLIRegisterCommand(&MemStatCommand);
@@ -926,7 +955,6 @@ void RegisterCommands(void)
    FreeRTOS_CLIRegisterCommand(&CPUTempCommand);
    FreeRTOS_CLIRegisterCommand(&JamRatioCommand);
    FreeRTOS_CLIRegisterCommand(&MinBatLvlCommand);
-   
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------

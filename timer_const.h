@@ -15,8 +15,9 @@ extern "C" {
 #define DISP_GPS_TIMER      4
 #define SP1_TIMER_ID        5
 #define DISP_RX_TIMER       6
-#define CTRL_TASK_TIMER_ID   7
-#define BKGND_TASK_TIMER_ID  8
+#define CTRL_TASK_TIMER_ID  7
+#define BKGND_TASK_TIMER_ID 8
+#define GPS_WDG_TIMER    	9
 
 /* miliseconds to timer tick macro */
 #define TIMER_MS(x) (x)

@@ -29,6 +29,7 @@ typedef struct
    uint8_t   gps_ant;          // GPS antenna status: 0 - internal, 1 - external
    uint8_t   jam_ratio;        // Jamming ratio: 0 - 100 %
    uint16_t  min_bat_level;    // Minimum battery level
+   uint16_t  gps_wdg_time;     // GPS watchdog time [s]
 } options_str;
 
 /* -------- variables -------- */
@@ -58,7 +59,7 @@ void ResetOptions(void)
   options.gps_ant       =    0;         // Internal antenna
   options.jam_ratio     =   10;         // 10%
   options.min_bat_level = 3100;         // 3.1V
-
+  options.gps_wdg_time  = 60;           // 60 sec
 }
 
 /**
@@ -247,7 +248,14 @@ void SetMinBatLvl(uint16_t new_value)
 { options.min_bat_level = new_value;
   WriteBlock(OFFSETOF(options_str, min_bat_level), sizeof(options.min_bat_level)); }
   
-  
+uint16_t* GetGPSWdgTime(void)
+{ return &options.gps_wdg_time; }
+ 
+void SetGPSWdgTime(uint16_t new_value)
+{ options.gps_wdg_time = new_value;
+  WriteBlock(OFFSETOF(options_str, gps_wdg_time), sizeof(options.gps_wdg_time)); }
+
+ 
 /* ------------------------------------------------------ */
 /**
   * @brief  Entry point function for accessing option values.
@@ -272,6 +280,7 @@ void* GetOption(option_types opt_code)
     case OPT_GPS_ANT:    { ret_val = GetGPSAnt();    break; }
     case OPT_JAM_RATIO:  { ret_val = GetJamRatio();  break; }
     case OPT_MIN_BAT_LVL:{ ret_val = GetMinBatLvl(); break; }
+    case OPT_GPS_WDG_TIME:{ ret_val = GetGPSWdgTime(); break; }
     default: break; }
   return ret_val; }
 
@@ -292,6 +301,7 @@ void SetOption(option_types opt_code, void* value)
     case OPT_GPS_ANT:    { SetGPSAnt   (*(uint8_t  *) value); break; }
     case OPT_JAM_RATIO:  { SetJamRatio (*(uint8_t  *) value); break; }
     case OPT_MIN_BAT_LVL:{ SetMinBatLvl(*(uint16_t *) value); break; }
+    case OPT_GPS_WDG_TIME:{SetGPSWdgTime(*(uint16_t *) value); break;}
     default: break; }
 }
 

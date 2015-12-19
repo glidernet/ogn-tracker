@@ -20,7 +20,8 @@ typedef enum
    OPT_GPS_ALW_ON,
    OPT_GPS_ANT,
    OPT_JAM_RATIO,
-   OPT_MIN_BAT_LVL
+   OPT_MIN_BAT_LVL,
+   OPT_GPS_WDG_TIME
 } option_types;
 
 typedef enum

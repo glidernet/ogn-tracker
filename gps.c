@@ -32,6 +32,7 @@ static const char * const pcShutDownNMEA = "$PSRF117,16*0B\r\n";
 cir_buf_str* nmea_buffer;
 xQueueHandle gps_que;
 static TimerHandle_t xGPSValidTimer;
+static TimerHandle_t xGPSWdgTimer;
 static uint8_t GPS_fix_found;
 static uint8_t debug_mode;
 
@@ -69,6 +70,20 @@ void vGPSValidTimerCallback(TimerHandle_t pxTimer)
     GPS_Send_Disp_Status(DISP_GPS_NO_FIX);
     Console_Send("GPS fix lost.\r\n",0);
 }
+
+/**
+* @brief  GPS data timeout callback.
+* @brief  Callback is called when 
+* @brief  there is no data from GPS for OPT_GPS_WDG_TIME seconds.
+* @param  Timer handle
+* @retval None
+*/
+void vGPSWdgTimerCallback(TimerHandle_t pxTimer)
+{
+    Console_Send("!! GPS watchdog reset (use gps_wdg_time 0 to disable) !!\r\n", 1);
+    NVIC_SystemReset();
+}
+
 
 /**
 * @brief  Function called whenever valid GPS position is found.
@@ -162,7 +177,7 @@ void GPS_Config(void)
    
    debug_mode = 0;
    uint32_t* gps_speed = (uint32_t*)GetOption(OPT_GPS_SPEED);
-   
+   uint16_t* wdg_time  = (uint16_t*)GetOption(OPT_GPS_WDG_TIME);
    if (gps_speed)
    {
       USART3_Config(*gps_speed);
@@ -180,7 +195,20 @@ void GPS_Config(void)
      /* Each timer calls the same callback when it expires. */
      vGPSValidTimerCallback
    );
-        
+   
+   /* GPS watchdog timer */
+   xGPSWdgTimer = xTimerCreate(
+     "GPSWsgTimer",
+     /* The timer period in ticks. */
+     *wdg_time*1000*portTICK_PERIOD_MS,
+     /* The timer will stop when expire. */
+     pdFALSE,
+     /* unique id */
+     ( void * )GPS_WDG_TIMER,
+     /* Each timer calls the same callback when it expires. */
+     vGPSWdgTimerCallback
+   );
+         
    /* GPS ON/OFF pin configuration */
    RCC_AHBPeriphClockCmd(GPS_ON_OFF_CLK, ENABLE);
 
@@ -226,7 +254,8 @@ void vTaskGPS(void* pvParameters)
    GPS_On();
    /* Check GPS fix status */
    GPS_fix_found = 0;
-   xTimerStart(xGPSValidTimer, portMAX_DELAY);  
+   xTimerStart(xGPSValidTimer, portMAX_DELAY);
+   if (xGPSWdgTimer) xTimerStart(xGPSWdgTimer, portMAX_DELAY);
    
    for(;;)
    {
@@ -236,6 +265,7 @@ void vTaskGPS(void* pvParameters)
          case GPS_USART_SRC_ID:
          {
             /* Received NMEA sentence from real GPS */
+            if (xGPSWdgTimer) xTimerStart(xGPSWdgTimer, portMAX_DELAY);
             if (*(uint8_t*)GetOption(OPT_GPSDUMP))
             {
                 /* Send received NMEA sentence to console (with blocking) */
