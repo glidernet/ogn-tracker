@@ -265,13 +265,24 @@ void vTaskGPS(void* pvParameters)
          case GPS_USART_SRC_ID:
          {
             /* Received NMEA sentence from real GPS */
+            char* nmea_str= (char*)msg.msg_data;
             if (xGPSWdgTimer) xTimerStart(xGPSWdgTimer, portMAX_DELAY);
             if (*(uint8_t*)GetOption(OPT_GPSDUMP))
             {
                 /* Send received NMEA sentence to console (with blocking) */
-                Console_Send((char*)msg.msg_data, 1);
+                Console_Send(nmea_str, 1);
             }
-            Handle_NMEA_String((char*)msg.msg_data, msg.msg_len);
+            if (msg.msg_len >= 6) 
+            {
+                /* A2235-H possible bug: observed (very rarely) lack of CRC (*12) at the end of NMEA sentence */
+                /* cold reset triggered to get out of the state */
+                if ((nmea_str[0] == '$') && (nmea_str[msg.msg_len-5] != '*'))
+                {
+                    Console_Send("GPS bug detected - GPS cold reset should fix this.\r\nIf not - reconnect battery.\r\n", 1);
+                    GPS_Reset();
+                }                
+            }
+            Handle_NMEA_String(nmea_str, msg.msg_len);
             break;
          }
          case CONSOLE_USART_SRC_ID:

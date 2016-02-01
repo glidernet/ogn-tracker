@@ -547,6 +547,8 @@ class OgnPosition
      Packet.EncodeHeading(Heading);
      Packet.EncodeClimbRate(ClimbRate);
      Packet.EncodeTurnRate(TurnRate);
+     Packet.clrBaro();
+     
      return 0; }
 
   private:

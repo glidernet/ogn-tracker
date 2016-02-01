@@ -131,11 +131,18 @@ PktBasicInit xBasicInit_OGN = { // for sending OGN packets
 /**
 * @brief GPIO structure fitting
 */
-SGpioInit xGpioIRQ={
+SGpioInit xGpio0IRQ={
   SPIRIT_GPIO_0,
   SPIRIT_GPIO_MODE_DIGITAL_OUTPUT_LP,
   SPIRIT_GPIO_DIG_OUT_IRQ
 };
+
+SGpioInit xGpio1IRQ={
+  SPIRIT_GPIO_1,
+  SPIRIT_GPIO_MODE_DIGITAL_INPUT,
+  SPIRIT_GPIO_DIG_IN_DATA_WAKEUP
+};
+
 
 /* -------- constants -------- */
 /* Spirit1 Manchester encoding emulation */
@@ -634,8 +641,9 @@ void vTaskSP1(void* pvParameters)
 
    SpiritRadioSetXtalFrequency(26e6);
 
-    /* Spirit IRQ configuration */
-   SpiritGpioInit(&xGpioIRQ);
+    /* Spirit GPIO/IRQ configuration */
+   SpiritGpioInit(&xGpio0IRQ);
+   SpiritGpioInit(&xGpio1IRQ);
 
    xRadioInit.nXtalOffsetPpm  = *(int16_t *)GetOption(OPT_XTAL_CORR);
    xRadioInit.lFrequencyBase += *(int32_t *)GetOption(OPT_FREQ_OFS);
