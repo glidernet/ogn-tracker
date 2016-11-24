@@ -16,7 +16,6 @@ All parts (except NUCLEO) are created by OGN team, documentation available in do
 Software
 ========
 Currently SW is developed using:
-- CooCox CoIDE: http://www.coocox.org/CooCox_CoIDE.htm
 - GNU Tools for ARM Embedded Processors: https://launchpad.net/gcc-arm-embedded/
 - standalone makefile is as well available
 
